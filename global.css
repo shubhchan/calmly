@@ -1,0 +1,298 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Default (light) token values for web/RN-web builds.
+ * On iOS/Android these are NOT read from this file at all — NativeWind has no DOM,
+ * so [data-theme]/[data-accent] attribute selectors below never match on native.
+ * The single source of truth for native runtime values is the JS palette in
+ * src/theme/ThemeContext.tsx (applied via NativeWind's `vars()`), which mirrors
+ * these exact hex values. If you change a color here, change it there too.
+ */
+:root {
+  --color-bg-primary: #FDFBF7;
+  --color-bg-secondary: #FAF6ED;
+  --color-bg-tertiary: #F5F0DE;
+  --color-bg-card: #FFFFFF;
+  --color-bg-card-hover: #FAF6ED;
+
+  --color-text-primary: #1E232E;
+  --color-text-secondary: #34415A;
+  --color-text-tertiary: #425474;
+  --color-text-inverse: #FDFBF7;
+
+  --color-border-light: #E4DEBC;
+  --color-border-medium: #DBD4A9;
+
+  --color-accent-sage: #5A955A;
+  --color-accent-lavender: #877FC5;
+  --color-accent-sky: #6B9BCD;
+  --color-accent-peach: #EB876D;
+  --color-accent-rose: #EB697F;
+  --color-accent-ocean: #5F9BB4;
+
+  --color-success: #5A955A;
+  --color-warning: #EB876D;
+  --color-error: #EB697F;
+  --color-info: #6B9BCD;
+
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-soft-lg: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+
+  --space-18: 4.5rem;
+  --space-22: 5.5rem;
+  --space-26: 6.5rem;
+  --space-30: 7.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-primary: #151A23;
+    --color-bg-secondary: #1E232E;
+    --color-bg-tertiary: #293143;
+    --color-bg-card: #1E232E;
+    --color-bg-card-hover: #293143;
+
+    --color-text-primary: #FDFBF7;
+    --color-text-secondary: #E1EBF5;
+    --color-text-tertiary: #C3D7EB;
+    --color-text-inverse: #151A23;
+
+    --color-border-light: #34415A;
+    --color-border-medium: #425474;
+
+    --color-accent-sage: #74AC74;
+    --color-accent-lavender: #9F98D1;
+    --color-accent-sky: #87AFD7;
+    --color-accent-peach: #EF9F8A;
+    --color-accent-rose: #EF8799;
+    --color-accent-ocean: #7FAFC3;
+
+    --color-success: #74AC74;
+    --color-warning: #EF9F8A;
+    --color-error: #EF8799;
+    --color-info: #87AFD7;
+
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-soft-lg: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.35);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+    --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Theme overrides via data attributes */
+[data-theme="light"] {
+  --color-bg-primary: #FDFBF7;
+  --color-bg-secondary: #FAF6ED;
+  --color-bg-tertiary: #F5F0DE;
+  --color-bg-card: #FFFFFF;
+  --color-bg-card-hover: #FAF6ED;
+
+  --color-text-primary: #1E232E;
+  --color-text-secondary: #34415A;
+  --color-text-tertiary: #425474;
+  --color-text-inverse: #FDFBF7;
+
+  --color-border-light: #E4DEBC;
+  --color-border-medium: #DBD4A9;
+
+  --color-accent-sage: #5A955A;
+  --color-accent-lavender: #877FC5;
+  --color-accent-sky: #6B9BCD;
+  --color-accent-peach: #EB876D;
+  --color-accent-rose: #EB697F;
+  --color-accent-ocean: #5F9BB4;
+
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-soft-lg: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] {
+  --color-bg-primary: #151A23;
+  --color-bg-secondary: #1E232E;
+  --color-bg-tertiary: #293143;
+  --color-bg-card: #1E232E;
+  --color-bg-card-hover: #293143;
+
+  --color-text-primary: #FDFBF7;
+  --color-text-secondary: #E1EBF5;
+  --color-text-tertiary: #C3D7EB;
+  --color-text-inverse: #151A23;
+
+  --color-border-light: #34415A;
+  --color-border-medium: #425474;
+
+  --color-accent-sage: #74AC74;
+  --color-accent-lavender: #9F98D1;
+  --color-accent-sky: #87AFD7;
+  --color-accent-peach: #EF9F8A;
+  --color-accent-rose: #EF8799;
+  --color-accent-ocean: #7FAFC3;
+
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-soft-lg: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Accent color variations */
+[data-accent="sage"] {
+  --color-accent-primary: var(--color-accent-sage);
+  --color-accent-primary-hover: #477747;
+  --color-accent-bg: #F0F4F0;
+  --color-accent-border: #BAD6BA;
+}
+
+[data-accent="lavender"] {
+  --color-accent-primary: var(--color-accent-lavender);
+  --color-accent-primary-hover: #6E64A8;
+  --color-accent-bg: #F3F1FA;
+  --color-accent-border: #CFCBE9;
+}
+
+[data-accent="sky"] {
+  --color-accent-primary: var(--color-accent-sky);
+  --color-accent-primary-hover: #5282B0;
+  --color-accent-bg: #F0F5FA;
+  --color-accent-border: #C3D7EB;
+}
+
+[data-accent="peach"] {
+  --color-accent-primary: var(--color-accent-peach);
+  --color-accent-primary-hover: #E06E50;
+  --color-accent-bg: #FDF3F0;
+  --color-accent-border: #F7CFC4;
+}
+
+[data-accent="rose"] {
+  --color-accent-primary: var(--color-accent-rose);
+  --color-accent-primary-hover: #E04E65;
+  --color-accent-bg: #FDF0F3;
+  --color-accent-border: #F7C3CD;
+}
+
+[data-accent="ocean"] {
+  --color-accent-primary: var(--color-accent-ocean);
+  --color-accent-primary-hover: #4A8095;
+  --color-accent-bg: #EFF5F7;
+  --color-accent-border: #BFD7E1;
+}
+
+/* Dark mode accent variations */
+[data-theme="dark"][data-accent="sage"] {
+  --color-accent-primary: #74AC74;
+  --color-accent-primary-hover: #97C197;
+  --color-accent-bg: #2D4B2D;
+  --color-accent-border: #385E38;
+}
+
+[data-theme="dark"][data-accent="lavender"] {
+  --color-accent-primary: #9F98D1;
+  --color-accent-primary-hover: #B7B2DD;
+  --color-accent-bg: #473F6E;
+  --color-accent-border: #584E8A;
+}
+
+[data-theme="dark"][data-accent="sky"] {
+  --color-accent-primary: #87AFD7;
+  --color-accent-primary-hover: #A5C3E1;
+  --color-accent-bg: #2E4660;
+  --color-accent-border: #365475;
+}
+
+[data-theme="dark"][data-accent="peach"] {
+  --color-accent-primary: #EF9F8A;
+  --color-accent-primary-hover: #F3B7A7;
+  --color-accent-bg: #5D3A2B;
+  --color-accent-border: #7A4A3A;
+}
+
+[data-theme="dark"][data-accent="rose"] {
+  --color-accent-primary: #EF8799;
+  --color-accent-primary-hover: #F3A5B3;
+  --color-accent-bg: #5D2E3A;
+  --color-accent-border: #7A3D4D;
+}
+
+[data-theme="dark"][data-accent="ocean"] {
+  --color-accent-primary: #7FAFC3;
+  --color-accent-primary-hover: #9FC3D2;
+  --color-accent-bg: #27414C;
+  --color-accent-border: #30515E;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+[data-reduced-motion="true"] {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-medium);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
