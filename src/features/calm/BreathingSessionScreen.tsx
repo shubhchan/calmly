@@ -29,14 +29,20 @@ type Phase = 'inhale' | 'hold' | 'exhale' | 'holdExhale' | 'complete';
 export function BreathingSessionScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'BreathingSession'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { preset = 'box', duration = 60 } = route.params ?? {};
-  const pattern = presetPatterns[preset] ?? presetPatterns.box;
-  const totalCycleTime = pattern.inhale + pattern.hold + pattern.exhale + pattern.holdExhale;
-  const totalCycles = Math.floor((duration * 60) / totalCycleTime);
+  const { preset = 'box', duration = 60 } = (route?.params ?? {}) as { preset?: BreathingPreset; duration?: number };
+  const safePreset: BreathingPreset = (preset && presetPatterns[preset] ? preset : 'box');
+  const pattern = presetPatterns[safePreset] ?? presetPatterns.box;
+  const safeDuration = typeof duration === 'number' && Number.isFinite(duration) && duration > 0 ? duration : 60;
+  const safeInhale = pattern?.inhale ?? 0;
+  const safeHold = pattern?.hold ?? 0;
+  const safeExhale = pattern?.exhale ?? 0;
+  const safeHoldExhale = pattern?.holdExhale ?? 0;
+  const totalCycleTime = safeInhale + safeHold + safeExhale + safeHoldExhale;
+  const totalCycles = totalCycleTime > 0 ? Math.max(1, Math.floor((safeDuration * 60) / totalCycleTime)) : 1;
 
   const [phase, setPhase] = useState<Phase>('inhale');
   const [cycle, setCycle] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(pattern.inhale);
+  const [timeLeft, setTimeLeft] = useState(safeInhale > 0 ? safeInhale : 4);
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
@@ -49,14 +55,14 @@ export function BreathingSessionScreen() {
   }));
 
   const phaseConfig = {
-    inhale: { label: 'Breathe in', color: '#5A955A', duration: pattern.inhale, scale: 1.2 },
-    hold: { label: 'Hold', color: '#6B9BCD', duration: pattern.hold, scale: 1.2 },
-    exhale: { label: 'Breathe out', color: '#877FC5', duration: pattern.exhale, scale: 0.8 },
-    holdExhale: { label: 'Hold', color: '#EB876D', duration: pattern.holdExhale, scale: 0.8 },
+    inhale: { label: 'Breathe in', color: '#5A955A', duration: safeInhale, scale: 1.2 },
+    hold: { label: 'Hold', color: '#6B9BCD', duration: safeHold, scale: 1.2 },
+    exhale: { label: 'Breathe out', color: '#877FC5', duration: safeExhale, scale: 0.8 },
+    holdExhale: { label: 'Hold', color: '#EB876D', duration: safeHoldExhale, scale: 0.8 },
     complete: { label: 'Session complete', color: '#5A955A', duration: 0, scale: 1 },
   };
 
-  const currentConfig = phaseConfig[phase];
+  const currentConfig = phaseConfig[phase] ?? phaseConfig.inhale;
 
   useEffect(() => {
     if (!isRunning || isComplete) return;
@@ -77,15 +83,18 @@ export function BreathingSessionScreen() {
   const getNextPhaseDuration = () => {
     const phases: Phase[] = ['inhale', 'hold', 'exhale', 'holdExhale'];
     const currentIndex = phases.indexOf(phase);
-    const nextIndex = (currentIndex + 1) % phases.length;
-    const nextPhase = phases[nextIndex];
-    return phaseConfig[nextPhase].duration;
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+    const nextIndex = (safeIndex + 1) % phases.length;
+    const nextPhase = phases[nextIndex] ?? 'inhale';
+    return phaseConfig[nextPhase]?.duration ?? 0;
   };
 
   const nextPhase = () => {
     const phases: Phase[] = ['inhale', 'hold', 'exhale', 'holdExhale'];
     const currentIndex = phases.indexOf(phase);
-    const nextIndex = (currentIndex + 1) % phases.length;
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+    const nextIndex = (safeIndex + 1) % phases.length;
+    const next = phases[nextIndex] ?? 'inhale';
 
     if (nextIndex === 0) {
       setCycle((prev) => {
@@ -100,14 +109,15 @@ export function BreathingSessionScreen() {
     }
 
     if (!isComplete) {
-      setPhase(phases[nextIndex]);
-      animatePhaseTransition(phases[nextIndex]);
+      setPhase(next);
+      animatePhaseTransition(next);
     }
   };
 
   const animatePhaseTransition = (nextPhase: Phase) => {
-    const nextConfig = phaseConfig[nextPhase];
-    scale.value = withTiming(nextConfig.scale, { duration: 500, easing: Easing.out(Easing.quad) });
+    const nextConfig = phaseConfig[nextPhase] ?? phaseConfig.inhale;
+    const safeScale = nextConfig?.scale ?? 1;
+    scale.value = withTiming(safeScale, { duration: 500, easing: Easing.out(Easing.quad) });
     opacity.value = withTiming(0.3, { duration: 200 }, () => {
       opacity.value = withTiming(1, { duration: 300 });
     });
@@ -127,14 +137,17 @@ export function BreathingSessionScreen() {
   const resetSession = () => {
     setPhase('inhale');
     setCycle(0);
-    setTimeLeft(pattern.inhale);
+    setTimeLeft(safeInhale > 0 ? safeInhale : 4);
     setIsRunning(false);
     setIsComplete(false);
     scale.value = 1;
     opacity.value = 1;
   };
 
-  const progress = isComplete ? 1 : (cycle + (1 - timeLeft / currentConfig.duration)) / totalCycles;
+  const safeTotalCycles = totalCycles > 0 ? totalCycles : 1;
+  const safeCurrentDuration = currentConfig?.duration && currentConfig.duration > 0 ? currentConfig.duration : 1;
+  const safeProgress = isComplete ? 1 : (cycle + (1 - timeLeft / safeCurrentDuration)) / safeTotalCycles;
+  const progress = Number.isFinite(safeProgress) ? Math.max(0, Math.min(1, safeProgress)) : 0;
 
   return (
     <View className="flex-1 bg-[var(--color-bg-primary)] flex flex-col">
@@ -154,10 +167,10 @@ export function BreathingSessionScreen() {
               cy={140}
               r={120}
               fill="none"
-              stroke={currentConfig.color}
+              stroke={currentConfig?.color ?? '#5A955A'}
               strokeWidth={8}
               strokeDasharray={2 * Math.PI * 120}
-              strokeDashoffset={2 * Math.PI * 120 * (1 - Math.min(1, progress))}
+              strokeDashoffset={2 * Math.PI * 120 * (1 - Math.min(1, progress ?? 0))}
               strokeLinecap="round"
               transform="rotate(-90 140 140)"
             />
@@ -165,15 +178,15 @@ export function BreathingSessionScreen() {
         </Animated.View>
 
         <View className="mt-8 flex items-center">
-          <Text className="text-display-md font-bold text-center" style={{ color: currentConfig.color }}>
-            {currentConfig.label}
+          <Text className="text-display-md font-bold text-center" style={{ color: currentConfig?.color ?? '#5A955A' }}>
+            {currentConfig?.label ?? 'Breathe'}
           </Text>
           <Text className="text-display-xl font-bold mt-2" style={{ color: '#1E232E' }}>
-            {timeLeft}s
+            {(Number.isFinite(timeLeft) ? timeLeft : 0)}s
           </Text>
           {!isComplete && (
             <Text className="text-body-md mt-2 text-center" style={{ color: '#425474' }}>
-              Cycle {Math.min(cycle + 1, totalCycles)} of {totalCycles}
+              Cycle {Math.min(cycle + 1, safeTotalCycles)} of {safeTotalCycles}
             </Text>
           )}
         </View>
@@ -203,7 +216,7 @@ export function BreathingSessionScreen() {
         </View>
 
         <ProgressRing
-          progress={progress}
+          progress={Number.isFinite(progress) ? progress : 0}
           size={60}
           strokeWidth={4}
           showPercentage={true}
@@ -211,7 +224,7 @@ export function BreathingSessionScreen() {
         />
 
         <Text className="text-body-sm text-center mt-2" style={{ color: '#425474' }}>
-          {presetLabels[preset]} · {duration} min
+          {(presetLabels[safePreset] ?? presetLabels.box ?? 'Breathing')} · {safeDuration} min
         </Text>
       </View>
     </View>

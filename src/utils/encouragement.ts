@@ -93,31 +93,40 @@ const ENCOURAGEMENT_MESSAGES = {
 };
 
 function getRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+  const safe = arr ?? [];
+  if (safe.length === 0) return '' as unknown as T;
+  return safe[Math.floor(Math.random() * safe.length)] ?? safe[0] ?? ('' as unknown as T);
 }
+
+const FALLBACK_GENERAL = ["You're doing better than you know 🌱"];
 
 export function getEncouragement(
   category: keyof typeof ENCOURAGEMENT_MESSAGES,
   subcategory?: string,
   context?: { streak?: number }
 ): string {
-  const cat = ENCOURAGEMENT_MESSAGES[category];
-  if (!cat) return getRandom(ENCOURAGEMENT_MESSAGES.general);
+  try {
+    const safeCategory = (category ?? 'general') as keyof typeof ENCOURAGEMENT_MESSAGES;
+    const cat = (ENCOURAGEMENT_MESSAGES as any)?.[safeCategory];
+    if (!cat) return getRandom((ENCOURAGEMENT_MESSAGES as any)?.general ?? FALLBACK_GENERAL);
 
-  if (subcategory && typeof cat === 'object' && subcategory in cat) {
-    const messages = (cat as Record<string, string[]>)[subcategory];
-    let msg = getRandom(messages);
-    if (context?.streak !== undefined) {
-      msg = msg.replace('{streak}', context.streak.toString());
+    if (subcategory && typeof cat === 'object' && cat !== null && subcategory in cat) {
+      const messages = (cat as Record<string, string[]>)[subcategory] ?? [];
+      let msg = getRandom(messages ?? []) ?? getRandom((ENCOURAGEMENT_MESSAGES as any)?.general ?? FALLBACK_GENERAL);
+      if (context?.streak !== undefined && msg?.replace) {
+        msg = msg.replace('{streak}', (context?.streak ?? 0).toString());
+      }
+      return msg ?? getRandom((ENCOURAGEMENT_MESSAGES as any)?.general ?? FALLBACK_GENERAL);
     }
-    return msg;
-  }
 
-  if (Array.isArray(cat)) {
-    return getRandom(cat);
-  }
+    if (Array.isArray(cat)) {
+      return getRandom(cat ?? []) ?? getRandom((ENCOURAGEMENT_MESSAGES as any)?.general ?? FALLBACK_GENERAL);
+    }
 
-  return getRandom(ENCOURAGEMENT_MESSAGES.general);
+    return getRandom((ENCOURAGEMENT_MESSAGES as any)?.general ?? FALLBACK_GENERAL);
+  } catch {
+    return "You're doing better than you know 🌱";
+  }
 }
 
 export function getHabitEncouragement(type: 'complete' | 'streak' | 'missed' | 'empty', streak?: number): string {
@@ -133,7 +142,7 @@ export function getCalmEncouragement(type: 'complete'): string {
 }
 
 export function getGeneralEncouragement(): string {
-  return getRandom(ENCOURAGEMENT_MESSAGES.general);
+  return getRandom((ENCOURAGEMENT_MESSAGES as any)?.general ?? FALLBACK_GENERAL) ?? FALLBACK_GENERAL[0];
 }
 
 export function getGratitudeEncouragement(type: 'complete' | 'empty' | 'resurfaced'): string {

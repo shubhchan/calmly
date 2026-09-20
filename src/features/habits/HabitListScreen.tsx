@@ -30,7 +30,7 @@ const COLORS = [
   '#D8A8E8', '#A8D8E8', '#F5D8A8', '#E8A8D8', '#A8E8D8', '#E8D8A8',
 ];
 
-function getIconName(icon: string): string {
+function getIconName(icon?: string | null): string {
   const iconMap: Record<string, string> = {
     water: 'water',
     fitness: 'fitness',
@@ -57,7 +57,7 @@ function getIconName(icon: string): string {
     cloud: 'cloud',
     flame: 'flame',
   };
-  return iconMap[icon] || 'checkbox-outline';
+  return iconMap[icon ?? ''] || 'checkbox-outline';
 }
 
 export function HabitListScreen() {
@@ -74,11 +74,14 @@ export function HabitListScreen() {
         habitRepository.getAll(false),
         habitRepository.getTodayCompletions(),
       ]);
-      setHabits(allHabits);
-      setTodayCompletions(completions);
-      setShowEmptyState(allHabits.length === 0);
+      const safeHabits = allHabits ?? [];
+      setHabits(safeHabits);
+      setTodayCompletions(completions ?? {});
+      setShowEmptyState((safeHabits ?? []).length === 0);
     } catch (error) {
       console.error('Failed to load habits:', error);
+      setHabits((prev) => prev ?? []);
+      setTodayCompletions((prev) => prev ?? {});
     } finally {
       setLoading(false);
     }
@@ -89,6 +92,7 @@ export function HabitListScreen() {
   }, [loadData]);
 
   const toggleHabit = async (habit: Habit, completed: boolean) => {
+    if (!habit?.id) return;
     const today = new Date().toISOString().split('T')[0];
     try {
       if (completed) {
@@ -100,8 +104,8 @@ export function HabitListScreen() {
 
       if (!completed) {
         const streak = await habitRepository.getStreak(habit.id);
-        if (streak.current > 1) {
-          Alert.alert('🔥 Streak!', getHabitEncouragement('streak', streak.current));
+        if ((streak?.current ?? 0) > 1) {
+          Alert.alert('🔥 Streak!', getHabitEncouragement('streak', streak?.current ?? 0));
         } else {
           Alert.alert('Done!', getHabitEncouragement('complete'));
         }
@@ -116,17 +120,20 @@ export function HabitListScreen() {
   };
 
   const handleEditHabit = (habit: Habit) => {
+    if (!habit?.id) return;
     navigation.navigate('HabitForm', { id: habit.id });
   };
 
   const handleHabitPress = (habit: Habit) => {
+    if (!habit?.id) return;
     navigation.navigate('HabitDetail', { id: habit.id });
   };
 
   const handleDeleteHabit = async (habit: Habit) => {
+    if (!habit?.id) return;
     Alert.alert(
       'Delete habit?',
-      `This will remove "${habit.name}" and all its history.`,
+      `This will remove "${habit?.name ?? ''}" and all its history.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -142,10 +149,17 @@ export function HabitListScreen() {
   };
 
   const isDueToday = (habit: Habit): boolean => {
+    if (!habit) return true;
     const today = new Date();
     const dayOfWeek = today.getDay();
-    const frequency = habit.frequency;
-    const customDays = JSON.parse(habit.customDays || '[]');
+    const frequency = habit?.frequency;
+    let customDays: string[] = [];
+    try {
+      const parsed = JSON.parse(habit?.customDays || '[]');
+      customDays = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      customDays = [];
+    }
 
     if (frequency === 'daily') return true;
     if (frequency === 'weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5;
@@ -161,9 +175,10 @@ export function HabitListScreen() {
     );
   }
 
-  const dueHabits = habits.filter(isDueToday);
-  const completedCount = dueHabits.filter((h) => todayCompletions[h.id]).length;
-  const totalDue = dueHabits.length;
+  const dueHabits = (habits ?? []).filter(isDueToday);
+  const safeCompletions = todayCompletions ?? {};
+  const completedCount = (dueHabits ?? []).filter((h) => h?.id && safeCompletions[h.id]).length;
+  const totalDue = (dueHabits ?? []).length;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -198,9 +213,18 @@ export function HabitListScreen() {
         </View>
       ) : (
         <View style={styles.list}>
-          {dueHabits.map((habit) => (
+          {(dueHabits ?? []).map((habit) => {
+            let dayLabels: string[] = [];
+            try {
+              const parsed = JSON.parse(habit?.customDays || '[]');
+              const arr = Array.isArray(parsed) ? parsed : [];
+              dayLabels = arr.map((d: string) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d ?? '', 10)] ?? '');
+            } catch {
+              dayLabels = [];
+            }
+            return (
             <TouchableOpacity
-              key={habit.id}
+              key={habit?.id ?? Math.random().toString()}
               onPress={() => handleHabitPress(habit)}
               style={styles.habitCard}
               activeOpacity={0.8}
@@ -209,25 +233,23 @@ export function HabitListScreen() {
                 <View
                   style={[
                     styles.habitIcon,
-                    { backgroundColor: habit.color || COLORS[0] },
+                    { backgroundColor: habit?.color || COLORS[0] },
                   ]}
                 >
                   <Ionicons
-                    name={getIconName(habit.icon)}
+                    name={getIconName(habit?.icon)}
                     size={24}
                     color="white"
                   />
                 </View>
                 <View style={styles.habitInfo}>
-                  <Text style={styles.habitName}>{habit.name}</Text>
+                  <Text style={styles.habitName}>{habit?.name ?? ''}</Text>
                   <Text style={styles.habitFrequency}>
-                    {FREQUENCY_LABELS[habit.frequency] || habit.frequency}
-                    {habit.frequency === 'custom' && (
+                    {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
+                    {habit?.frequency === 'custom' && (
                       <>
                         {' • '}
-                        {JSON.parse(habit.customDays || '[]')
-                          .map((d: string) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d)])
-                          .join(', ')}
+                        {dayLabels.join(', ')}
                       </>
                     )}
                   </Text>
@@ -237,26 +259,27 @@ export function HabitListScreen() {
                 <TouchableOpacity
                   onPress={(e) => {
                     e.stopPropagation();
-                    toggleHabit(habit, todayCompletions[habit.id] || false);
+                    toggleHabit(habit, (safeCompletions[habit?.id] as boolean) || false);
                   }}
                   style={[
                     styles.checkButton,
-                    todayCompletions[habit.id] && styles.checkButtonDone,
+                    habit?.id && safeCompletions[habit.id] && styles.checkButtonDone,
                   ]}
                   activeOpacity={0.7}
                 >
                   <Ionicons
-                    name={todayCompletions[habit.id] ? 'checkmark' : 'checkmark-outline'}
+                    name={habit?.id && safeCompletions[habit.id] ? 'checkmark' : 'checkmark-outline'}
                     size={24}
-                    color={todayCompletions[habit.id] ? 'white' : '#5A955A'}
+                    color={habit?.id && safeCompletions[habit.id] ? 'white' : '#5A955A'}
                   />
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
-          ))}
-          {habits.length > dueHabits.length && (
+            );
+          })}
+          {(habits ?? []).length > (dueHabits ?? []).length && (
             <Text style={styles.notDueText}>
-              {habits.length - dueHabits.length} habit{habits.length - dueHabits.length > 1 ? 's' : ''} not due today
+              {(habits ?? []).length - (dueHabits ?? []).length} habit{(habits ?? []).length - (dueHabits ?? []).length > 1 ? 's' : ''} not due today
             </Text>
           )}
         </View>

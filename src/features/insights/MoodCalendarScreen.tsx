@@ -61,39 +61,48 @@ export function MoodCalendarScreen() {
   const loadMonthData = useCallback(async () => {
     setLoading(true);
     try {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const start = new Date(year, month, 1).getTime();
-      const end = new Date(year, month + 1, 0, 23, 59, 59).getTime();
+      const safeDate = currentDate ?? new Date();
+      const year = safeDate?.getFullYear?.() ?? new Date().getFullYear();
+      const month = safeDate?.getMonth?.() ?? 0;
 
-      const data = await insightsRepository.getMoodCalendarData(year, month);
+      const data = (await insightsRepository.getMoodCalendarData(year, month)) ?? {};
       
       const entriesByDay: Record<number, MoodEntry[]> = {};
-      Object.values(data).forEach(entry => {
-        const day = new Date(entry.createdAt).getDate();
+      Object.values(data ?? {}).forEach((entry: any) => {
+        if (!entry?.createdAt) return;
+        const d = new Date(entry.createdAt);
+        if (isNaN(d?.getTime?.() ?? NaN)) return;
+        const day = d.getDate();
+        if (day == null || isNaN(day)) return;
         if (!entriesByDay[day]) entriesByDay[day] = [];
         entriesByDay[day].push(entry);
       });
 
       const enriched: Record<number, DayMoodData> = {};
-      Object.entries(entriesByDay).forEach(([dayStr, entries]) => {
-        const day = parseInt(dayStr);
-        const latest = entries[0];
+      Object.entries(entriesByDay ?? {}).forEach(([dayStr, entries]) => {
+        const day = parseInt(dayStr ?? '', 10);
+        if (isNaN(day)) return;
+        const safeEntries = entries ?? [];
+        if (!safeEntries.length) return;
+        const latest = safeEntries[0];
+        if (!latest) return;
         enriched[day] = {
-          mood: latest.mood,
-          intensity: latest.intensity,
-          stress: latest.stress,
-          energy: latest.energy,
+          mood: (latest as any)?.mood ?? 'happy',
+          intensity: (latest as any)?.intensity ?? 0,
+          stress: (latest as any)?.stress ?? 0,
+          energy: (latest as any)?.energy ?? '',
           hasJournal: false,
           habitsCompleted: 0,
           habitsTotal: 0,
         };
       });
 
-      setMoodData(enriched);
+      setMoodData(enriched ?? {});
       setSelectedDay(null);
     } catch (error) {
       console.error('Failed to load mood calendar:', error);
+      setMoodData({});
+      setSelectedDay(null);
     } finally {
       setLoading(false);
     }
@@ -103,12 +112,18 @@ export function MoodCalendarScreen() {
     loadMonthData();
   }, [loadMonthData]);
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const monthName = currentDate.toLocaleString('default', { month: 'long' });
+  const safeCurrentDate = currentDate ?? new Date();
+  const year = safeCurrentDate?.getFullYear?.() ?? new Date().getFullYear();
+  const month = safeCurrentDate?.getMonth?.() ?? 0;
+  let monthName = '';
+  try {
+    monthName = safeCurrentDate?.toLocaleString?.('default', { month: 'long' }) ?? '';
+  } catch {
+    monthName = '';
+  }
 
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0)?.getDate?.() ?? 30;
+  const firstDay = new Date(year, month, 1)?.getDay?.() ?? 0;
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -121,21 +136,29 @@ export function MoodCalendarScreen() {
   };
 
   const handleDayPress = (day: number) => {
-    if (moodData[day]) {
+    if ((moodData ?? {})?.[day]) {
       setSelectedDay(day);
     }
   };
 
   const renderDay = (day: number) => {
     const isSelected = selectedDay === day;
-    const hasData = !!moodData[day];
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const thisDayStr = format(new Date(year, month, day), 'yyyy-MM-dd');
-    const isTodayDay = todayStr === thisDayStr;
+    const hasData = !!(moodData ?? {})?.[day];
+    let todayStr = '';
+    let thisDayStr = '';
+    let isTodayDay = false;
+    try {
+      todayStr = format(new Date(), 'yyyy-MM-dd') ?? '';
+      thisDayStr = format(new Date(year, month, day), 'yyyy-MM-dd') ?? '';
+      isTodayDay = !!todayStr && todayStr === thisDayStr;
+    } catch {
+      isTodayDay = false;
+    }
 
-    const dayData = hasData ? moodData[day] : null;
-    const moodColor = hasData ? MOOD_COLORS[dayData.mood as keyof typeof MOOD_COLORS] || '#5A955A' : '#5A955A';
-    const moodEmoji = hasData ? MOOD_EMOJIS[dayData.mood] || '😊' : '😊';
+    const dayData = hasData ? (moodData ?? {})[day] ?? null : null;
+    const moodKey = (dayData as any)?.mood ?? '';
+    const moodColor = hasData ? (MOOD_COLORS as any)?.[moodKey] || '#5A955A' : '#5A955A';
+    const moodEmoji = hasData ? (MOOD_EMOJIS as any)?.[moodKey] || '😊' : '😊';
 
     return (
       <Pressable
@@ -166,7 +189,7 @@ export function MoodCalendarScreen() {
     );
   };
 
-  const selectedDayData = selectedDay ? moodData[selectedDay] : null;
+  const selectedDayData = selectedDay != null ? ((moodData ?? {})?.[selectedDay] ?? null) : null;
 
   if (loading) {
     return (
@@ -192,37 +215,39 @@ export function MoodCalendarScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.weekdays}>
-          {weekDays.map((day) => (
-            <Text key={day} style={styles.weekday}>{day}</Text>
+          {(weekDays ?? []).map((day) => (
+            <Text key={day ?? Math.random().toString()} style={styles.weekday}>{day ?? ''}</Text>
           ))}
         </View>
 
         <View style={styles.calendarGrid}>
-          {[...Array(firstDay)].map((_, i) => (
+          {[...Array(Math.max(0, firstDay ?? 0))].map((_, i) => (
             <View key={`empty-${i}`} style={styles.dayCell} />
           ))}
-          {[...Array(daysInMonth)].map((_, i) => renderDay(i + 1))}
+          {[...Array(Math.max(0, daysInMonth ?? 0))].map((_, i) => renderDay(i + 1))}
         </View>
 
         {selectedDayData && (
           <Card variant="elevated" style={styles.detailCard}>
             <CardContent>
               <Text style={styles.detailDate}>
-                {selectedDay} {monthName} {year}
+                {selectedDay ?? ''} {monthName ?? ''} {year ?? ''}
               </Text>
               <View style={styles.detailMoodRow}>
                 <View style={[
                   styles.moodCircle,
-                  { backgroundColor: MOOD_COLORS[selectedDayData.mood as keyof typeof MOOD_COLORS] + '20' },
+                  { backgroundColor: ((MOOD_COLORS as any)?.[(selectedDayData as any)?.mood] ?? '#5A955A') + '20' },
                 ]}>
-                  <Text style={{ fontSize: 32 }}>{MOOD_EMOJIS[selectedDayData.mood] || '😊'}</Text>
+                  <Text style={{ fontSize: 32 }}>{(MOOD_EMOJIS as any)?.[(selectedDayData as any)?.mood] || '😊'}</Text>
                 </View>
                 <View style={styles.detailMoodInfo}>
                   <Text style={styles.detailMoodLabel}>
-                    {selectedDayData.mood.charAt(0).toUpperCase() + selectedDayData.mood.slice(1)}
+                    {typeof (selectedDayData as any)?.mood === 'string' && (selectedDayData as any).mood.length > 0
+                      ? (selectedDayData as any).mood.charAt(0).toUpperCase() + (selectedDayData as any).mood.slice(1)
+                      : 'Unknown'}
                   </Text>
                   <Text style={styles.detailMoodMeta}>
-                    Intensity: {selectedDayData.intensity}/10 · Stress: {selectedDayData.stress}/10 · Energy: {selectedDayData.energy}
+                    Intensity: {(selectedDayData as any)?.intensity ?? 0}/10 · Stress: {(selectedDayData as any)?.stress ?? 0}/10 · Energy: {(selectedDayData as any)?.energy ?? '—'}
                   </Text>
                 </View>
               </View>
@@ -231,13 +256,13 @@ export function MoodCalendarScreen() {
                 <View style={styles.detailStat}>
                   <Text style={styles.detailStatLabel}>Journal</Text>
                   <Text style={styles.detailStatValue}>
-                    {selectedDayData.hasJournal ? '✓ Written' : '—'}
+                    {(selectedDayData as any)?.hasJournal ? '✓ Written' : '—'}
                   </Text>
                 </View>
                 <View style={styles.detailStat}>
                   <Text style={styles.detailStatLabel}>Habits</Text>
                   <Text style={styles.detailStatValue}>
-                    {selectedDayData.habitsCompleted}/{selectedDayData.habitsTotal}
+                    {(selectedDayData as any)?.habitsCompleted ?? 0}/{(selectedDayData as any)?.habitsTotal ?? 0}
                   </Text>
                 </View>
               </View>

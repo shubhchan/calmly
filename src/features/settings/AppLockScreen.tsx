@@ -18,14 +18,21 @@ export function AppLockScreen() {
   const [settings, setSettings] = useState<any>(null);
 
   const checkBiometric = useCallback(async () => {
-    const LocalAuthentication = require('expo-local-authentication');
-    const available = await LocalAuthentication.hasHardwareAsync();
-    const enrolled = await LocalAuthentication.isEnrolledAsync();
-    setBiometricAvailable(available && enrolled);
-    
-    const { settingsRepository } = require('../../database/repositories/settingsRepository');
-    const s = await settingsRepository.getSettings();
-    setSettings(s);
+    try {
+      const LocalAuthentication = require('expo-local-authentication');
+      const available = (await LocalAuthentication?.hasHardwareAsync?.()) ?? false;
+      const enrolled = (await LocalAuthentication?.isEnrolledAsync?.()) ?? false;
+      setBiometricAvailable(available && enrolled);
+    } catch {
+      setBiometricAvailable(false);
+    }
+    try {
+      const { settingsRepository } = require('../../database/repositories/settingsRepository');
+      const s = await settingsRepository?.getSettings?.();
+      setSettings(s ?? null);
+    } catch {
+      setSettings(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -41,37 +48,44 @@ export function AppLockScreen() {
   }, [checkBiometric]);
 
   const handlePinPress = (digit: string) => {
-    if (pin.length < 6) {
-      setPin(prev => prev + digit);
+    if ((pin ?? '').length < 6) {
+      setPin(prev => (prev ?? '') + (digit ?? ''));
       setError(false);
     }
   };
 
   const handleDelete = () => {
-    setPin(prev => prev.slice(0, -1));
+    setPin(prev => (prev ?? '').slice(0, -1));
   };
 
   const handleSubmit = async () => {
-    if (pin.length !== 6) return;
-    
-    const valid = await appLockService.verifyPin(pin);
-    if (valid) {
-      appLockService.unlock('pin');
-      navigation.goBack();
-    } else {
+    if ((pin ?? '').length !== 6) return;
+    try {
+      const valid = await appLockService?.verifyPin?.(pin);
+      if (valid) {
+        appLockService?.unlock?.('pin');
+        (navigation as any)?.goBack?.();
+      } else {
+        setError(true);
+        setPin('');
+        try {
+          const { Haptics } = require('expo-haptics');
+          Haptics?.notificationAsync?.(Haptics?.NotificationFeedbackType?.Error);
+        } catch {}
+      }
+    } catch {
       setError(true);
       setPin('');
-      // Haptic feedback for error
-      const { Haptics } = require('expo-haptics');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
   const handleBiometric = async () => {
-    const unlocked = await appLockService.unlock('biometric');
-    if (unlocked) {
-      navigation.goBack();
-    }
+    try {
+      const unlocked = await appLockService?.unlock?.('biometric');
+      if (unlocked) {
+        (navigation as any)?.goBack?.();
+      }
+    } catch {}
   };
 
   return (
@@ -89,7 +103,7 @@ export function AppLockScreen() {
               key={i}
               style={[
                 styles.pinDot,
-                i < pin.length && styles.pinDotFilled,
+                i < (pin ?? '').length && styles.pinDotFilled,
                 error && styles.pinDotError,
               ]}
             />
@@ -115,7 +129,7 @@ export function AppLockScreen() {
             ['', '0', '⌫'],
           ].map((row, rowIndex) => (
             <View key={rowIndex} style={styles.keypadRow}>
-              {row.map((key, keyIndex) => (
+              {(row ?? []).map((key, keyIndex) => (
                 <TouchableOpacity
                   key={keyIndex}
                   onPress={() => key === '⌫' ? handleDelete() : key && handlePinPress(key)}

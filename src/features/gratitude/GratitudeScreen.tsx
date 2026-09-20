@@ -31,15 +31,16 @@ export function GratitudeScreen() {
         const data = showFavoritesOnly
           ? await gratitudeRepository.getFavorites()
           : await gratitudeRepository.getAll();
-        setEntries(data);
+        setEntries(data ?? []);
       } else {
         const data = showFavoritesOnly
           ? await positiveMomentRepository.getFavorites()
           : await positiveMomentRepository.getAll();
-        setEntries(data);
+        setEntries(data ?? []);
       }
     } catch (error) {
       console.error('Failed to load entries:', error);
+      setEntries((prev) => prev ?? []);
     } finally {
       setLoading(false);
     }
@@ -54,10 +55,12 @@ export function GratitudeScreen() {
   };
 
   const handleEdit = (entry: GratitudeEntry | PositiveMoment) => {
+    if (!entry?.id) return;
     navigation.navigate('GratitudeForm', { type, id: entry.id });
   };
 
   const handleDelete = async (entry: GratitudeEntry | PositiveMoment) => {
+    if (!entry?.id) return;
     Alert.alert(
       'Delete entry?',
       'This cannot be undone.',
@@ -67,6 +70,7 @@ export function GratitudeScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            if (!entry?.id) return;
             if (type === 'gratitude') {
               await gratitudeRepository.delete(entry.id);
             } else {
@@ -80,11 +84,12 @@ export function GratitudeScreen() {
   };
 
   const handleToggleFavorite = async (entry: GratitudeEntry | PositiveMoment) => {
+    if (!entry?.id) return;
     try {
       if (type === 'gratitude') {
-        await gratitudeRepository.update(entry.id, { favorite: !entry.favorite });
+        await gratitudeRepository.update(entry.id, { favorite: !entry?.favorite });
       } else {
-        await positiveMomentRepository.update(entry.id, { favorite: !entry.favorite });
+        await positiveMomentRepository.update(entry.id, { favorite: !entry?.favorite });
       }
       loadEntries();
     } catch (error) {
@@ -116,7 +121,7 @@ export function GratitudeScreen() {
         </TouchableOpacity>
       </View>
 
-      {entries.length === 0 ? (
+      {(entries ?? []).length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>{emptyIcon}</Text>
           <Text style={styles.emptyTitle}>{emptyTitle}</Text>
@@ -125,34 +130,42 @@ export function GratitudeScreen() {
         </View>
       ) : (
         <View style={styles.list}>
-          {entries.map((entry) => (
+          {(entries ?? []).map((entry, idx) => (
             <TouchableOpacity
-              key={entry.id}
-              onPress={() => handleEdit(entry)}
+              key={entry?.id ?? String(idx)}
+              onPress={() => entry?.id && handleEdit(entry)}
               style={styles.entryCard}
               activeOpacity={0.8}
             >
               <View style={styles.entryContent}>
-                <Text style={styles.entryText} numberOfLines={3}>{entry.text}</Text>
-                {entry.mood && (
+                <Text style={styles.entryText} numberOfLines={3}>{entry?.text ?? ''}</Text>
+                {entry?.mood && (
                   <Text style={styles.entryMood}>
                     <Ionicons name="heart" size={14} color="#425474" />
-                    {' '}{entry.mood}
+                    {' '}{entry?.mood ?? ''}
                   </Text>
                 )}
                 <Text style={styles.entryDate}>
-                  {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {(() => {
+                    try {
+                      const d = entry?.createdAt ? new Date(entry.createdAt) : null;
+                      if (!d || isNaN(d.getTime())) return '';
+                      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    } catch {
+                      return '';
+                    }
+                  })()}
                 </Text>
               </View>
               <View style={styles.entryActions}>
                 <TouchableOpacity
-                  onPress={(e) => { e.stopPropagation(); handleToggleFavorite(entry); }}
+                  onPress={(e) => { e.stopPropagation(); entry?.id && handleToggleFavorite(entry); }}
                   style={styles.favoriteButton}
                 >
                   <Ionicons
-                    name={entry.favorite ? 'heart' : 'heart-outline'}
+                    name={entry?.favorite ? 'heart' : 'heart-outline'}
                     size={22}
-                    color={entry.favorite ? '#F5A9A9' : '#425474'}
+                    color={entry?.favorite ? '#F5A9A9' : '#425474'}
                   />
                 </TouchableOpacity>
               </View>

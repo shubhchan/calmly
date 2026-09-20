@@ -26,14 +26,26 @@ export function RoutineDetailScreen() {
   const isEditing = !!routine;
 
   const config = TIME_OF_DAY_CONFIG[timeOfDay] ?? TIME_OF_DAY_CONFIG.morning;
-  const [name, setName] = useState(routine?.name || '');
+  const [name, setName] = useState(routine?.name ?? '');
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>(routine?.items.map((i: any) => i.habitId) || []);
+  const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>(() => {
+    try {
+      const items = Array.isArray(routine?.items) ? routine.items : [];
+      return items.map((i: any) => i?.habitId).filter(Boolean);
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(false);
 
   const loadHabits = useCallback(async () => {
-    const allHabits = await habitRepository.getAll(false);
-    setHabits(allHabits);
+    try {
+      const allHabits = await habitRepository.getAll(false);
+      setHabits(allHabits ?? []);
+    } catch (error) {
+      console.error('Failed to load habits:', error);
+      setHabits((prev) => prev ?? []);
+    }
   }, []);
 
   useEffect(() => {
@@ -41,24 +53,27 @@ export function RoutineDetailScreen() {
   }, [loadHabits]);
 
   const toggleHabit = (habitId: string) => {
+    if (!habitId) return;
     setSelectedHabitIds((prev) =>
-      prev.includes(habitId) ? prev.filter((id) => id !== habitId) : [...prev, habitId]
+      (prev ?? []).includes(habitId) ? (prev ?? []).filter((id) => id !== habitId) : [...(prev ?? []), habitId]
     );
   };
 
   const moveHabit = (fromIndex: number, toIndex: number) => {
-    const newOrder = [...selectedHabitIds];
+    const safeIds = selectedHabitIds ?? [];
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= safeIds.length || toIndex >= safeIds.length) return;
+    const newOrder = [...safeIds];
     const [removed] = newOrder.splice(fromIndex, 1);
     newOrder.splice(toIndex, 0, removed);
     setSelectedHabitIds(newOrder);
   };
 
   const validate = (): boolean => {
-    if (!name.trim()) {
+    if (!(name ?? '').trim()) {
       Alert.alert('Missing name', 'Please enter a routine name');
       return false;
     }
-    if (selectedHabitIds.length === 0) {
+    if ((selectedHabitIds ?? []).length === 0) {
       Alert.alert('No habits', 'Please select at least one habit for this routine');
       return false;
     }
@@ -67,12 +82,16 @@ export function RoutineDetailScreen() {
 
   const handleSave = async () => {
     if (!validate()) return;
+    if (isEditing && !routine?.id) {
+      Alert.alert('Error', 'Missing routine id. Please try again.');
+      return;
+    }
     setLoading(true);
     try {
       if (isEditing) {
-        await routineRepository.update(routine.id, { name: name.trim(), habitIds: selectedHabitIds });
+        await routineRepository.update(routine.id, { name: (name ?? '').trim(), habitIds: selectedHabitIds ?? [] });
       } else {
-        await routineRepository.create({ name: name.trim(), timeOfDay, habitIds: selectedHabitIds });
+        await routineRepository.create({ name: (name ?? '').trim(), timeOfDay: timeOfDay ?? 'morning', habitIds: selectedHabitIds ?? [] });
       }
       navigation.goBack();
     } catch (error) {
@@ -84,6 +103,7 @@ export function RoutineDetailScreen() {
   };
 
   const handleDelete = () => {
+    if (!routine?.id) return;
     Alert.alert(
       'Delete routine?',
       'This will remove the routine but your habits will remain.',
@@ -93,7 +113,8 @@ export function RoutineDetailScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await routineRepository.delete(routine!.id);
+            if (!routine?.id) return;
+            await routineRepository.delete(routine.id);
             navigation.goBack();
           },
         },
@@ -101,42 +122,58 @@ export function RoutineDetailScreen() {
     );
   };
 
-  const selectedHabits = selectedHabitIds.map((id) => habits.find((h) => h.id === id)).filter(Boolean) as Habit[];
+  const selectedHabits = (() => {
+    try {
+      return ((selectedHabitIds ?? []).map((id) => {
+        try {
+          return (habits ?? []).find((h) => h?.id === id);
+        } catch {
+          return undefined;
+        }
+      }).filter(Boolean) ?? []) as Habit[];
+    } catch {
+      return [] as Habit[];
+    }
+  })();
 
-  const renderHabitItem = ({ item, index }: { item: Habit; index: number }) => (
+  const renderHabitItem = ({ item, index }: { item: Habit; index: number }) => {
+    if (!item) return null;
+    const isSelected = (selectedHabitIds ?? []).includes(item?.id);
+    return (
     <TouchableOpacity
       style={[
         styles.habitSelectItem,
-        selectedHabitIds.includes(item.id) && styles.habitSelectItemSelected,
+        isSelected && styles.habitSelectItemSelected,
       ]}
-      onPress={() => toggleHabit(item.id)}
+      onPress={() => item?.id && toggleHabit(item.id)}
     >
       <View style={styles.habitSelectLeft}>
         <View style={styles.dragHandle}>
           <Ionicons name="reorder-three-outline" size={20} color="#425474" />
         </View>
-        <View style={[styles.habitSelectIcon, { backgroundColor: item.color }]}>
-          <Ionicons name={getIconName(item.icon)} size={20} color="white" />
+        <View style={[styles.habitSelectIcon, { backgroundColor: item?.color ?? '#8FBC8F' }]}>
+          <Ionicons name={getIconName(item?.icon ?? '')} size={20} color="white" />
         </View>
         <View style={styles.habitSelectInfo}>
-          <Text style={styles.habitSelectName}>{item.name}</Text>
-          <Text style={styles.habitSelectFrequency}>{FREQUENCY_LABELS[item.frequency]}</Text>
+          <Text style={styles.habitSelectName}>{item?.name ?? ''}</Text>
+          <Text style={styles.habitSelectFrequency}>{FREQUENCY_LABELS[item?.frequency ?? ''] ?? item?.frequency ?? ''}</Text>
         </View>
       </View>
       <View style={styles.habitSelectRight}>
         <Ionicons
-          name={selectedHabitIds.includes(item.id) ? 'checkmark-circle' : 'circle-outline'}
+          name={isSelected ? 'checkmark-circle' : 'circle-outline'}
           size={24}
-          color={selectedHabitIds.includes(item.id) ? '#5A955A' : '#425474'}
+          color={isSelected ? '#5A955A' : '#425474'}
         />
-        {selectedHabitIds.includes(item.id) && (
-          <Text style={styles.habitSelectOrder}>#{selectedHabitIds.indexOf(item.id) + 1}</Text>
+        {isSelected && (
+          <Text style={styles.habitSelectOrder}>#{(selectedHabitIds ?? []).indexOf(item?.id) + 1}</Text>
         )}
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
-  function getIconName(icon: string): string {
+  function getIconName(icon?: string | null): string {
     const iconMap: Record<string, string> = {
       water: 'water', fitness: 'fitness', book: 'book', meditation: 'meditation',
       sunny: 'sunny', moon: 'moon', leaf: 'leaf', heart: 'heart',
@@ -145,7 +182,7 @@ export function RoutineDetailScreen() {
       brush: 'brush', pill: 'pill', flash: 'flash', diamond: 'diamond',
       star: 'star', flower: 'flower', tree: 'tree', cloud: 'cloud', flame: 'flame',
     };
-    return iconMap[icon] || 'checkbox-outline';
+    return iconMap[icon ?? ''] || 'checkbox-outline';
   }
 
   const FREQUENCY_LABELS: Record<string, string> = {
@@ -167,10 +204,10 @@ export function RoutineDetailScreen() {
             <Ionicons name="chevron-back" size={28} color="#1E232E" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <View style={[styles.headerIcon, { backgroundColor: config.color }]}>
-              <Ionicons name={config.icon} size={28} color="white" />
+            <View style={[styles.headerIcon, { backgroundColor: config?.color ?? '#8FBC8F' }]}>
+              <Ionicons name={config?.icon ?? 'list-outline'} size={28} color="white" />
             </View>
-            <Text style={styles.headerTitle}>{config.emoji} {config.label} Routine</Text>
+            <Text style={styles.headerTitle}>{config?.emoji ?? ''} {config?.label ?? ''} Routine</Text>
           </View>
           <View style={styles.headerSpacer} />
         </View>
@@ -179,7 +216,7 @@ export function RoutineDetailScreen() {
           <Text style={styles.sectionTitle}>Routine Name</Text>
           <TextInput
             style={styles.input}
-            placeholder={`${config.label} routine name`}
+            placeholder={`${config?.label ?? 'Routine'} routine name`}
             value={name}
             onChangeText={setName}
             placeholderTextColor="#425474"
@@ -190,13 +227,13 @@ export function RoutineDetailScreen() {
 
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Habits ({selectedHabitIds.length})</Text>
-            {selectedHabitIds.length > 0 && (
+            <Text style={styles.sectionTitle}>Habits ({(selectedHabitIds ?? []).length})</Text>
+            {(selectedHabitIds ?? []).length > 0 && (
               <Text style={styles.sectionSubtitle}>Drag to reorder</Text>
             )}
           </View>
 
-          {habits.length === 0 ? (
+          {(habits ?? []).length === 0 ? (
             <View style={styles.noHabits}>
               <Ionicons name="add-circle-outline" size={32} color="#425474" />
               <Text style={styles.noHabitsText}>No habits created yet</Text>
@@ -204,8 +241,8 @@ export function RoutineDetailScreen() {
             </View>
           ) : (
             <FlatList
-              data={habits}
-              keyExtractor={(item) => item.id}
+              data={habits ?? []}
+              keyExtractor={(item, idx) => item?.id ?? String(idx)}
               renderItem={renderHabitItem}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
               ListEmptyComponent={

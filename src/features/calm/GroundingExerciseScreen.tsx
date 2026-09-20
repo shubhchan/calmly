@@ -52,17 +52,22 @@ const groundingIcons: Record<GroundingType, string> = {
 export function GroundingExerciseScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'GroundingExercise'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { type = '5-4-3-2-1' } = route.params ?? {};
+  const { type = '5-4-3-2-1' } = (route?.params ?? {}) as { type?: GroundingType };
 
-  const steps = groundingSteps[type] ?? groundingSteps['5-4-3-2-1'];
+  const safeType: GroundingType = (type && groundingSteps[type] ? type : '5-4-3-2-1');
+  const steps = groundingSteps[safeType] ?? groundingSteps['5-4-3-2-1'] ?? [];
+  const safeSteps = Array.isArray(steps) ? steps : [];
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 
-  const current = steps[currentStep];
-  const progress = (currentStep + 1) / steps.length;
+  const safeCurrentStep = Math.max(0, Math.min(currentStep, Math.max(0, safeSteps.length - 1)));
+  const current = safeSteps[safeCurrentStep] ?? safeSteps[0] ?? { label: 'Grounding', instruction: 'Take a slow breath and notice the present moment.', icon: '🌿' };
+  const progress = safeSteps.length > 0 ? (safeCurrentStep + 1) / safeSteps.length : 0;
+  const safeTitle = groundingTitles[safeType] ?? groundingTitles['5-4-3-2-1'] ?? safeType ?? 'Grounding';
+  const safeIcon = groundingIcons[safeType] ?? groundingIcons['5-4-3-2-1'] ?? '🌿';
 
   const handleNext = () => {
-    if (currentStep < steps.length - 1) {
+    if (currentStep < safeSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       setIsComplete(true);
@@ -91,21 +96,21 @@ export function GroundingExerciseScreen() {
           <Text style={{ fontSize: 24 }}>←</Text>
         </Pressable>
         <Text className="text-headline-sm font-semibold" style={{ color: '#1E232E' }}>
-          {groundingTitles[type]}
+          {safeTitle}
         </Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 100 }}>
         <View className="flex items-center mb-8">
-          <Text style={{ fontSize: 64 }}>{groundingIcons[type]}</Text>
+          <Text style={{ fontSize: 64 }}>{safeIcon}</Text>
           <Text className="text-headline-md font-semibold mt-4 text-center" style={{ color: '#1E232E' }}>
-            Step {currentStep + 1} of {steps.length}
+            Step {safeSteps.length > 0 ? safeCurrentStep + 1 : 0} of {safeSteps.length}
           </Text>
         </View>
 
         <ProgressRing
-          progress={progress}
+          progress={Number.isFinite(progress) ? progress : 0}
           size={80}
           strokeWidth={6}
           showPercentage={false}
@@ -124,14 +129,14 @@ export function GroundingExerciseScreen() {
                     backgroundColor: '#F0F4F0',
                   }}
                 >
-                  <Text style={{ fontSize: 28 }}>{current.icon}</Text>
+                  <Text style={{ fontSize: 28 }}>{current?.icon ?? '🌿'}</Text>
                 </View>
                 <View className="flex-1">
                   <Text className="text-headline-md font-semibold mb-2" style={{ color: '#1E232E' }}>
-                    {current.label}
+                    {current?.label ?? 'Grounding'}
                   </Text>
                   <Text className="text-body-lg leading-relaxed" style={{ color: '#34415A' }}>
-                    {current.instruction}
+                    {current?.instruction ?? ''}
                   </Text>
                 </View>
               </View>
@@ -140,7 +145,7 @@ export function GroundingExerciseScreen() {
         </View>
 
         <View className="flex-row items-center justify-center gap-4 mb-6">
-          {steps.map((_, index) => (
+          {(safeSteps ?? []).map((_, index) => (
             <View
               key={index}
               className={`w-2 h-2 rounded-full transition-colors ${index === currentStep ? 'w-6' : ''}`}
@@ -165,7 +170,7 @@ export function GroundingExerciseScreen() {
               fullWidth
             />
             <PrimaryButton
-              title={currentStep === steps.length - 1 ? 'Complete' : 'Next'}
+              title={currentStep === safeSteps.length - 1 ? 'Complete' : 'Next'}
               variant="primary"
               size="md"
               onPress={handleNext}

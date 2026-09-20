@@ -25,15 +25,15 @@ export function AppLockSettingsScreen() {
   const loadSettings = useCallback(async () => {
     setLoading(true);
     try {
-      const available = await LocalAuthentication.hasHardwareAsync();
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      const available = (await LocalAuthentication?.hasHardwareAsync?.()) ?? false;
+      const enrolled = (await LocalAuthentication?.isEnrolledAsync?.()) ?? false;
       setBiometricAvailable(available && enrolled);
 
-      const settings = await settingsRepository.getSettings();
-      setPinEnabled(settings.pinEnabled);
-      setBiometricEnabled(settings.biometricEnabled);
-      setAutoLockMinutes(settings.autoLockMinutes);
-      setHideInSwitcher(settings.hideContentInSwitcher);
+      const settings = (await settingsRepository?.getSettings?.()) ?? {};
+      setPinEnabled(settings?.pinEnabled ?? false);
+      setBiometricEnabled(settings?.biometricEnabled ?? false);
+      setAutoLockMinutes(settings?.autoLockMinutes ?? 5);
+      setHideInSwitcher(settings?.hideContentInSwitcher ?? true);
     } catch (error) {
       console.error('Failed to load app lock settings:', error);
     } finally {
@@ -46,19 +46,24 @@ export function AppLockSettingsScreen() {
   }, [loadSettings]);
 
   const handlePinToggle = async (enabled: boolean) => {
+    try {
     if (enabled && !pinEnabled) {
-      navigation.navigate('SetPin', { onComplete: () => setPinEnabled(true) });
+      (navigation as any)?.navigate?.('SetPin', { onComplete: () => setPinEnabled(true) });
     } else if (!enabled && pinEnabled) {
-      await settingsRepository.removePin();
+      await settingsRepository?.removePin?.();
       setPinEnabled(false);
       if (biometricEnabled) {
-        await settingsRepository.updateSettings({ biometricEnabled: false });
+        await settingsRepository?.updateSettings?.({ biometricEnabled: false });
         setBiometricEnabled(false);
       }
+    }
+    } catch (error) {
+      console.error('Failed to toggle PIN:', error);
     }
   };
 
   const handleBiometricToggle = async (enabled: boolean) => {
+    try {
     if (!biometricAvailable) {
       Alert.alert('Not Available', 'Biometric authentication is not set up on this device.');
       return;
@@ -67,23 +72,34 @@ export function AppLockSettingsScreen() {
       Alert.alert('PIN Required', 'Please set up a PIN first before enabling biometric unlock.');
       return;
     }
-    setBiometricEnabled(enabled);
-    await settingsRepository.updateSettings({ biometricEnabled: enabled });
+    setBiometricEnabled(enabled ?? false);
+    await settingsRepository?.updateSettings?.({ biometricEnabled: enabled ?? false });
+    } catch (error) {
+      console.error('Failed to toggle biometric:', error);
+    }
   };
 
   const handleAutoLockChange = async (minutes: number) => {
-    setAutoLockMinutes(minutes);
-    await settingsRepository.updateSettings({ autoLockMinutes: minutes });
-    appLockService.recordActivity();
+    try {
+      setAutoLockMinutes(minutes ?? 5);
+      await settingsRepository?.updateSettings?.({ autoLockMinutes: minutes ?? 5 });
+      appLockService?.recordActivity?.();
+    } catch (error) {
+      console.error('Failed to change auto-lock:', error);
+    }
   };
 
   const handleSwitcherToggle = async (enabled: boolean) => {
-    setHideInSwitcher(enabled);
-    await settingsRepository.updateSettings({ hideContentInSwitcher: enabled });
+    try {
+      setHideInSwitcher(enabled ?? true);
+      await settingsRepository?.updateSettings?.({ hideContentInSwitcher: enabled ?? true });
+    } catch (error) {
+      console.error('Failed to toggle switcher:', error);
+    }
   };
 
   const handleChangePin = () => {
-    navigation.navigate('SetPin', { onComplete: () => {} });
+    (navigation as any)?.navigate?.('SetPin', { onComplete: () => {} });
   };
 
   const handleRemovePin = async () => {
@@ -96,7 +112,7 @@ export function AppLockSettingsScreen() {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            await settingsRepository.removePin();
+            await settingsRepository?.removePin?.();
             setPinEnabled(false);
             if (biometricEnabled) {
               await settingsRepository.updateSettings({ biometricEnabled: false });
@@ -119,7 +135,7 @@ export function AppLockSettingsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => (navigation as any)?.goBack?.()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color="#1E232E" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>App Lock</Text>

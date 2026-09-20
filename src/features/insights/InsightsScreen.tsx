@@ -24,6 +24,7 @@ export function InsightsScreen() {
   const [moodTrend, setMoodTrend] = useState<MoodTrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'week' | 'month'>('week');
+  const [totalMoods, setTotalMoods] = useState(0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -34,83 +35,121 @@ export function InsightsScreen() {
         insightsRepository.generateInsights(),
         loadMoodTrend(),
       ]);
-      setStats(s);
-      setHabitStats(h);
-      setInsights(i);
-      setMoodTrend(m);
+      setStats(s ?? null);
+      setHabitStats(Array.isArray(h) ? h : []);
+      setInsights(Array.isArray(i) ? i : []);
+      setMoodTrend(Array.isArray(m) ? m : []);
     } catch (error) {
       console.error('Failed to load insights:', error);
+      setStats(null);
+      setHabitStats([]);
+      setInsights([]);
+      setMoodTrend([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   const loadMoodTrend = async (): Promise<MoodTrendPoint[]> => {
-    const { database } = require('../../database');
-    const { Q } = require('@nozbe/watermelondb');
-    const { MoodEntry } = require('../../database/models/MoodEntry');
-    
-    const moodCollection = database.get<MoodEntry>('mood_entries');
-    const now = Date.now();
-    const daysBack = timeRange === 'week' ? 7 : 30;
-    const start = now - daysBack * 86400000;
+    try {
+      const { database } = require('../../database');
+      const { Q } = require('@nozbe/watermelondb');
 
-    const entries = await moodCollection
-      .query(Q.where('created_at', Q.between(start, now)), Q.sortBy('created_at', Q.asc))
-      .fetch();
+      const moodCollection = database?.get('mood_entries');
+      if (!moodCollection) return [];
+      const now = Date.now();
+      const daysBack = timeRange === 'week' ? 7 : 30;
+      const safeDaysBack = Number.isFinite(daysBack) && daysBack > 0 ? daysBack : 7;
+      const start = now - safeDaysBack * 86400000;
+      const safeStart = Number.isFinite(start) ? start : 0;
+      const safeNow = Number.isFinite(now) ? now : Date.now();
+      if (safeStart > safeNow) return [];
 
-    const byDate: Record<string, MoodTrendPoint> = {};
-    entries.forEach((e: any) => {
-      const date = format(new Date(e.createdAt), 'MM/dd');
-      if (!byDate[date]) {
-        byDate[date] = { date, intensity: 0, stress: 0 };
-      }
-      byDate[date].intensity = Math.max(byDate[date].intensity, e.intensity);
-      byDate[date].stress = Math.max(byDate[date].stress, e.stress);
-    });
+      const entries = (await moodCollection
+        .query(Q.where('created_at', Q.between(safeStart, safeNow)), Q.sortBy('created_at', Q.asc))
+        .fetch()) ?? [];
 
-    return Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+      const byDate: Record<string, MoodTrendPoint> = {};
+      (entries ?? []).forEach((e: any) => {
+        const rawDate = e?.createdAt ? new Date(e.createdAt) : null;
+        if (!rawDate || Number.isNaN(rawDate.getTime())) return;
+        const date = format(rawDate, 'MM/dd');
+        if (!date) return;
+        if (!byDate[date]) {
+          byDate[date] = { date, intensity: 0, stress: 0 };
+        }
+        const intensity = typeof e?.intensity === 'number' && Number.isFinite(e.intensity) ? e.intensity : 0;
+        const stress = typeof e?.stress === 'number' && Number.isFinite(e.stress) ? e.stress : 0;
+        byDate[date].intensity = Math.max(byDate[date]?.intensity ?? 0, intensity);
+        byDate[date].stress = Math.max(byDate[date]?.stress ?? 0, stress);
+      });
+
+      return Object.values(byDate ?? {}).sort((a, b) => (a?.date ?? '').localeCompare(b?.date ?? ''));
+    } catch (error) {
+      console.error('Failed to load mood trend:', error);
+      return [];
+    }
   };
 
   useEffect(() => {
     loadData();
   }, [loadData, timeRange]);
 
+  useEffect(() => {
+    const loadMoodCount = async () => {
+      try {
+        const { database } = require('../../database');
+        const { Q } = require('@nozbe/watermelondb');
+        const moodCollection = database?.get('mood_entries');
+        if (!moodCollection) {
+          setTotalMoods(0);
+          return;
+        }
+        const now = Date.now();
+        const weekAgo = now - 7 * 86400000;
+        const safeNow = Number.isFinite(now) ? now : Date.now();
+        const safeWeekAgo = Number.isFinite(weekAgo) ? weekAgo : 0;
+        if (safeWeekAgo > safeNow) {
+          setTotalMoods(0);
+          return;
+        }
+        const entries = (await moodCollection.query(Q.where('created_at', Q.between(safeWeekAgo, safeNow))).fetch()) ?? [];
+        setTotalMoods((entries ?? []).length ?? 0);
+      } catch (error) {
+        console.error('Failed to load mood count:', error);
+        setTotalMoods(0);
+      }
+    };
+    loadMoodCount();
+  }, [timeRange]);
+
   const handleExport = async () => {
     try {
       const { database } = require('../../database');
-      const { MoodEntry } = require('../../database/models/MoodEntry');
-      const { JournalEntry } = require('../../database/models/JournalEntry');
-      const { Habit } = require('../../database/models/Habit');
-      const { HabitCompletion } = require('../../database/models/HabitCompletion');
-      const { GratitudeEntry } = require('../../database/models/GratitudeEntry');
-      const { PositiveMoment } = require('../../database/models/PositiveMoment');
-      const { CalmSession } = require('../../database/models/CalmSession');
-      const { BreathingSession } = require('../../database/models/BreathingSession');
 
       const collections = {
-        moods: await database.get<MoodEntry>('mood_entries').query().fetch(),
-        journals: await database.get<JournalEntry>('journal_entries').query().fetch(),
-        habits: await database.get<Habit>('habits').query().fetch(),
-        completions: await database.get<HabitCompletion>('habit_completions').query().fetch(),
-        gratitude: await database.get<GratitudeEntry>('gratitude_entries').query().fetch(),
-        positiveMoments: await database.get<PositiveMoment>('positive_moments').query().fetch(),
-        calm: await database.get<CalmSession>('calm_sessions').query().fetch(),
-        breathing: await database.get<BreathingSession>('breathing_sessions').query().fetch(),
+        moods: (await database.get('mood_entries').query().fetch()) ?? [],
+        journals: (await database.get('journal_entries').query().fetch()) ?? [],
+        habits: (await database.get('habits').query().fetch()) ?? [],
+        completions: (await database.get('habit_completions').query().fetch()) ?? [],
+        gratitude: (await database.get('gratitude_entries').query().fetch()) ?? [],
+        positiveMoments: (await database.get('positive_moments').query().fetch()) ?? [],
+        calm: (await database.get('calm_sessions').query().fetch()) ?? [],
+        breathing: (await database.get('breathing_sessions').query().fetch()) ?? [],
       };
 
       const exportData = {
         exportDate: new Date().toISOString(),
         version: '1.0',
         data: {
-          moods: collections.moods.map((e: any) => e._raw),
-          journals: collections.journals.map((e: any) => e._raw),
-          habits: collections.habits.map((e: any) => e._raw),
-          completions: collections.completions.map((e: any) => e._raw),
-          gratitude: collections.gratitude.map((e: any) => e._raw),
-          positiveMoments: collections.positiveMoments.map((e: any) => e._raw),
-          calm: collections.calm.map((e: any) => e._raw),
-          breathing: collections.breathing.map((e: any) => e._raw),
+          moods: (collections.moods ?? []).map((e: any) => e?._raw),
+          journals: (collections.journals ?? []).map((e: any) => e?._raw),
+          habits: (collections.habits ?? []).map((e: any) => e?._raw),
+          completions: (collections.completions ?? []).map((e: any) => e?._raw),
+          gratitude: (collections.gratitude ?? []).map((e: any) => e?._raw),
+          positiveMoments: (collections.positiveMoments ?? []).map((e: any) => e?._raw),
+          calm: (collections.calm ?? []).map((e: any) => e?._raw),
+          breathing: (collections.breathing ?? []).map((e: any) => e?._raw),
         },
       };
 
@@ -145,8 +184,8 @@ export function InsightsScreen() {
                   'favorites', 'tags', 'routines', 'routine_items', 'goals', 'user_settings',
                 ];
                 await Promise.all(
-                  collections.map(name => database.get(name).query().fetch().then((items: any[]) => 
-                    Promise.all(items.map((item: any) => item.destroyPermanently()))
+                  (collections ?? []).map(name => database.get(name).query().fetch().then((items: any[]) =>
+                    Promise.all((items ?? []).map((item: any) => item?.destroyPermanently?.()))
                   ))
                 );
               });
@@ -186,26 +225,6 @@ export function InsightsScreen() {
     { mood: 'Anxious', percentage: 0, color: '#EF8799' },
   ];
 
-  const [totalMoods, setTotalMoods] = useState(0);
-
-  useEffect(() => {
-    const loadMoodCount = async () => {
-      try {
-        const { database } = require('../../database');
-        const { Q } = require('@nozbe/watermelondb');
-        const { MoodEntry } = require('../../database/models/MoodEntry');
-        const moodCollection = database.get<MoodEntry>('mood_entries');
-        const now = Date.now();
-        const weekAgo = now - 7 * 86400000;
-        const entries = await moodCollection.query(Q.where('created_at', Q.between(weekAgo, now))).fetch();
-        setTotalMoods(entries.length);
-      } catch (error) {
-        console.error('Failed to load mood count:', error);
-      }
-    };
-    loadMoodCount();
-  }, [timeRange]);
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -238,21 +257,21 @@ export function InsightsScreen() {
             </Pressable>
           </View>
 
-          {moodTrend.length > 0 && (
+          {(moodTrend ?? []).length > 0 && (
             <View style={styles.chartContainer}>
               <Text style={styles.chartLabel}>Mood & Stress Trend ({timeRange === 'week' ? '7' : '30'} days)</Text>
               <View style={styles.chart}>
-                {moodTrend.map((point, i) => (
-                  <View key={point.date} style={styles.chartBarWrapper}>
+                {(moodTrend ?? []).map((point, i) => (
+                  <View key={point?.date ?? `point-${i}`} style={styles.chartBarWrapper}>
                     <View style={[
                       styles.chartBar,
-                      { height: Math.max((point.intensity / 10) * 100, 4) },
+                      { height: Math.max(((point?.intensity ?? 0) / 10) * 100, 4) },
                     ]} />
                     <View style={[
                       styles.chartBarStress,
-                      { height: Math.max((point.stress / 10) * 100, 4) },
+                      { height: Math.max(((point?.stress ?? 0) / 10) * 100, 4) },
                     ]} />
-                    <Text style={styles.chartBarLabel}>{point.date}</Text>
+                    <Text style={styles.chartBarLabel}>{point?.date ?? ''}</Text>
                   </View>
                 ))}
                 <View style={styles.chartLegend}>
@@ -272,22 +291,22 @@ export function InsightsScreen() {
           <View style={styles.statsRow}>
             <StatPill
               label="Avg Mood"
-              value={`${stats.avgMood}/10`}
-              trend={stats.avgMood >= 6 ? 'up' : 'neutral'}
+              value={`${stats?.avgMood ?? 0}/10`}
+              trend={(stats?.avgMood ?? 0) >= 6 ? 'up' : 'neutral'}
               accentColor="#5A955A"
               icon={<Ionicons name="happy" size={16} color="#5A955A" />}
             />
             <StatPill
               label="Journaling"
-              value={`${stats.journalCount}/7 days`}
-              trend={stats.journalCount >= 3 ? 'up' : 'neutral'}
+              value={`${stats?.journalCount ?? 0}/7 days`}
+              trend={(stats?.journalCount ?? 0) >= 3 ? 'up' : 'neutral'}
               accentColor="#877FC5"
               icon={<Ionicons name="book" size={16} color="#877FC5" />}
             />
             <StatPill
               label="Breathing"
-              value={`${stats.breathingMinutes} min`}
-              trend={stats.breathingMinutes > 10 ? 'up' : 'neutral'}
+              value={`${stats?.breathingMinutes ?? 0} min`}
+              trend={(stats?.breathingMinutes ?? 0) > 10 ? 'up' : 'neutral'}
               accentColor="#6B9BCD"
               icon={<Ionicons name="flower" size={16} color="#6B9BCD" />}
             />
@@ -298,20 +317,25 @@ export function InsightsScreen() {
       <Card variant="elevated" style={styles.card}>
         <CardContent>
           <Text style={styles.sectionTitle}>Habit Consistency</Text>
-          {habitStats.length === 0 ? (
+          {(habitStats ?? []).length === 0 ? (
             <Text style={styles.emptyHabits}>No habits yet. Create one to track consistency.</Text>
           ) : (
             <View style={styles.habitList}>
-              {habitStats.slice(0, 5).map((h) => (
+              {(habitStats ?? []).slice(0, 5).map((h) => {
+                const completed = h?.completedThisWeek ?? 0;
+                const total = h?.totalThisWeek ?? 0;
+                const rate = total > 0 ? completed / total : 0;
+                return (
                 <StatPill
-                  key={h.id}
-                  label={h.name}
-                  value={`${h.completedThisWeek}/${h.totalThisWeek}`}
-                  trend={h.completedThisWeek / h.totalThisWeek >= 0.7 ? 'up' : h.completedThisWeek / h.totalThisWeek >= 0.4 ? 'neutral' : 'down'}
-                  accentColor={h.color}
-                  icon={<Ionicons name="checkmark-circle" size={16} color={h.color} />}
+                  key={h?.id ?? Math.random().toString()}
+                  label={h?.name ?? 'Habit'}
+                  value={`${completed}/${total}`}
+                  trend={rate >= 0.7 ? 'up' : rate >= 0.4 ? 'neutral' : 'down'}
+                  accentColor={h?.color ?? '#5A955A'}
+                  icon={<Ionicons name="checkmark-circle" size={16} color={h?.color ?? '#5A955A'} />}
                 />
-              ))}
+                );
+              })}
             </View>
           )}
         </CardContent>
@@ -320,30 +344,30 @@ export function InsightsScreen() {
       <Card variant="outlined" style={styles.card}>
         <CardContent>
           <Text style={styles.sectionTitle}>Your Insights</Text>
-          {insights.length === 0 ? (
+          {(insights ?? []).length === 0 ? (
             <Text style={styles.emptyInsights}>Keep tracking to unlock personalized insights.</Text>
           ) : (
             <View style={styles.insightsList}>
-              {insights.map((insight) => (
-                <View key={insight.id} style={[
+              {(insights ?? []).map((insight) => (
+                <View key={insight?.id ?? Math.random().toString()} style={[
                   styles.insightCard,
-                  insight.type === 'positive' && styles.insightPositive,
-                  insight.type === 'action' && styles.insightAction,
+                  insight?.type === 'positive' && styles.insightPositive,
+                  insight?.type === 'action' && styles.insightAction,
                 ]}>
                   <View style={styles.insightIcon}>
                     <Ionicons
                       name={
-                        insight.type === 'positive' ? 'checkmark-circle' :
-                        insight.type === 'action' ? 'alert-circle' : 'information-circle'
+                        insight?.type === 'positive' ? 'checkmark-circle' :
+                        insight?.type === 'action' ? 'alert-circle' : 'information-circle'
                       }
                       size={20}
                       color={
-                        insight.type === 'positive' ? '#5A955A' :
-                        insight.type === 'action' ? '#EB876D' : '#6B9BCD'
+                        insight?.type === 'positive' ? '#5A955A' :
+                        insight?.type === 'action' ? '#EB876D' : '#6B9BCD'
                       }
                     />
                   </View>
-                  <Text style={styles.insightText}>{insight.text}</Text>
+                  <Text style={styles.insightText}>{insight?.text ?? ''}</Text>
                 </View>
               ))}
             </View>

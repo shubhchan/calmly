@@ -26,15 +26,15 @@ export function JournalScreen() {
 
   const renderJournalType = (item: typeof journalTypes[0], index: number) => (
     <Pressable
-      onPress={() => navigation.navigate('JournalEntry', { type: item.id as any })}
+      onPress={() => navigation?.navigate?.('JournalEntry', { type: (item?.id as any) ?? 'free' })}
       className="flex-1"
       style={{ minWidth: 140 }}
     >
       <Card variant="elevated" className="h-full">
         <CardContent className="flex-1 flex flex-col items-center justify-center text-center p-4">
-          <Text style={{ fontSize: 32 }}>{item.icon}</Text>
+          <Text style={{ fontSize: 32 }}>{item?.icon ?? '📝'}</Text>
           <Text className="text-label-md font-semibold mt-3 text-center" style={{ color: '#1E232E' }}>
-            {item.label}
+            {item?.label ?? 'Entry'}
           </Text>
         </CardContent>
       </Card>
@@ -46,17 +46,17 @@ export function JournalScreen() {
       <CardContent>
         <View className="flex-row items-start justify-between">
           <View className="flex-row items-center flex-1">
-            <Text style={{ fontSize: 24, marginRight: 12 }}>{item.mood}</Text>
+            <Text style={{ fontSize: 24, marginRight: 12 }}>{item?.mood ?? '📝'}</Text>
             <View>
               <Text className="text-headline-sm font-semibold" style={{ color: '#1E232E' }}>
-                {item.title}
+                {item?.title ?? 'Untitled'}
               </Text>
               <Text className="text-body-sm" style={{ color: '#425474' }}>
-                {item.date} · {journalTypes.find(t => t.id === item.type)?.label}
+                {item?.date ?? ''} · {(journalTypes ?? []).find(t => t?.id === item?.type)?.label ?? (item?.type ?? '')}
               </Text>
             </View>
           </View>
-          {item.favorite && (
+          {item?.favorite && (
             <Text style={{ fontSize: 20 }}>❤️</Text>
           )}
         </View>
@@ -74,7 +74,7 @@ export function JournalScreen() {
           My Journal
         </Text>
         <Text className="text-body-lg mt-1" style={{ color: '#34415A' }}>
-          {mockEntries.length} entries · Tap to continue or start new
+          {(mockEntries ?? []).length} entries · Tap to continue or start new
         </Text>
       </View>
 
@@ -87,7 +87,7 @@ export function JournalScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingRight: 20, gap: 12 }}
         >
-          {journalTypes.map(renderJournalType)}
+          {(journalTypes ?? []).map(renderJournalType)}
         </ScrollView>
       </View>
 
@@ -103,18 +103,18 @@ export function JournalScreen() {
             <Text style={{ color: '#5A955A' }}>View all</Text>
           </Pressable>
         </View>
-        {mockEntries.length > 0 ? (
+        {(mockEntries ?? []).length > 0 ? (
           <FlatList
-            data={mockEntries}
+            data={mockEntries ?? []}
             renderItem={renderEntry}
-            keyExtractor={item => item.id}
+            keyExtractor={(item, index) => item?.id ?? String(index)}
             ListEmptyComponent={
               <EmptyState
                 icon="📖"
                 title="No entries yet"
                 subtitle="Your first thought can start here 🌱"
                 actionLabel="Create entry"
-                onAction={() => navigation.navigate('JournalEntry', { type: 'free' })}
+                onAction={() => navigation?.navigate?.('JournalEntry', { type: 'free' })}
               />
             }
           />
@@ -124,7 +124,7 @@ export function JournalScreen() {
             title="No entries yet"
             subtitle="Your first thought can start here 🌱"
             actionLabel="Create entry"
-            onAction={() => navigation.navigate('JournalEntry', { type: 'free' })}
+            onAction={() => navigation?.navigate?.('JournalEntry', { type: 'free' })}
           />
         )}
       </View>
@@ -143,12 +143,12 @@ interface EmptyStateProps {
 function EmptyState({ icon, title, subtitle, actionLabel, onAction }: EmptyStateProps) {
   return (
     <View className="flex items-center py-12 px-4">
-      <Text style={{ fontSize: 48 }}>{icon}</Text>
+      <Text style={{ fontSize: 48 }}>{icon ?? '📝'}</Text>
       <Text className="text-headline-sm font-semibold mt-4 text-center" style={{ color: '#1E232E' }}>
-        {title}
+        {title ?? 'Nothing here yet'}
       </Text>
       <Text className="text-body-md mt-2 text-center" style={{ color: '#425474' }}>
-        {subtitle}
+        {subtitle ?? ''}
       </Text>
       {actionLabel && onAction && (
         <PrimaryButton

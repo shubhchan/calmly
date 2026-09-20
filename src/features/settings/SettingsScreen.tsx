@@ -20,7 +20,11 @@ const themeOptions: { value: 'light' | 'dark' | 'system'; label: string; emoji: 
 ];
 
 export function SettingsScreen() {
-  const { theme, accent, resolvedTheme, setTheme, setAccent, toggleTheme } = useTheme();
+  const themeContext = (useTheme() ?? {}) as Partial<ReturnType<typeof useTheme>>;
+  const theme = themeContext.theme ?? 'system';
+  const accent = themeContext.accent ?? 'sage';
+  const setTheme = themeContext.setTheme ?? (() => {});
+  const setAccent = themeContext.setAccent ?? (() => {});
 
   return (
     <ScrollView
@@ -48,7 +52,7 @@ export function SettingsScreen() {
                 Theme
               </Text>
               <View className="flex-row gap-3">
-                {themeOptions.map((option) => (
+                {(themeOptions ?? []).map((option) => (
                   <Pressable
                     key={option.value}
                     onPress={() => setTheme(option.value)}
@@ -72,7 +76,7 @@ export function SettingsScreen() {
                 Accent Color
               </Text>
               <View className="flex-row flex-wrap gap-3">
-                {accentOptions.map((option) => (
+                {(accentOptions ?? []).map((option) => (
                   <Pressable
                     key={option.value}
                     onPress={() => setAccent(option.value)}
@@ -169,14 +173,14 @@ export function SettingsScreen() {
               <View key={i} className="flex-row items-center justify-between">
                 <View className="flex-1">
                   <Text className="text-body-md font-medium" style={{ color: '#1E232E' }}>
-                    {item.title}
+                    {item?.title ?? ''}
                   </Text>
                   <Text className="text-body-sm" style={{ color: '#425474' }}>
-                    {item.time}
+                    {item?.time ?? ''}
                   </Text>
                 </View>
                 <Switch
-                  value={item.enabled}
+                  value={item?.enabled ?? false}
                   onValueChange={() => {}}
                   trackColor={{ false: '#E4DEBC', true: '#5A955A' }}
                   thumbColor="white"

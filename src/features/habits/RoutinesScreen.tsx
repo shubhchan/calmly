@@ -34,9 +34,14 @@ export function RoutinesScreen() {
         routineRepository.getByTimeOfDay('afternoon'),
         routineRepository.getByTimeOfDay('evening'),
       ]);
-      setRoutines({ morning, afternoon, evening });
+      setRoutines({ morning: morning ?? [], afternoon: afternoon ?? [], evening: evening ?? [] });
     } catch (error) {
       console.error('Failed to load routines:', error);
+      setRoutines((prev) => ({
+        morning: prev?.morning ?? [],
+        afternoon: prev?.afternoon ?? [],
+        evening: prev?.evening ?? [],
+      }));
     } finally {
       setLoading(false);
     }
@@ -51,19 +56,22 @@ export function RoutinesScreen() {
   };
 
   const handleEditRoutine = (routine: any) => {
+    if (!routine?.timeOfDay) return;
     navigation.navigate('RoutineDetail', { timeOfDay: routine.timeOfDay, routine });
   };
 
   const handleDeleteRoutine = async (routine: any) => {
+    if (!routine?.id) return;
     Alert.alert(
       'Delete routine?',
-      `This will remove "${routine.name}" routine.`,
+      `This will remove "${routine?.name ?? ''}" routine.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            if (!routine?.id) return;
             await routineRepository.delete(routine.id);
             loadData();
           },
@@ -80,7 +88,8 @@ export function RoutinesScreen() {
     );
   }
 
-  const hasRoutines = routines.morning.length > 0 || routines.afternoon.length > 0 || routines.evening.length > 0;
+  const safeRoutines = routines ?? { morning: [], afternoon: [], evening: [] };
+  const hasRoutines = (safeRoutines?.morning ?? []).length > 0 || (safeRoutines?.afternoon ?? []).length > 0 || (safeRoutines?.evening ?? []).length > 0;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -90,18 +99,18 @@ export function RoutinesScreen() {
 
       {hasRoutines ? (
         <>
-          {(Object.keys(TIME_OF_DAY_CONFIG) as TimeOfDay[]).map((timeOfDay) => {
-            const config = TIME_OF_DAY_CONFIG[timeOfDay];
-            const dayRoutines = routines[timeOfDay];
+          {(Object.keys(TIME_OF_DAY_CONFIG ?? {}) as TimeOfDay[] ?? []).map((timeOfDay) => {
+            const config = (TIME_OF_DAY_CONFIG ?? {})[timeOfDay] ?? { label: '', icon: 'list-outline', color: '#8FBC8F', emoji: '' };
+            const dayRoutines = (safeRoutines?.[timeOfDay] ?? []) as any[];
 
             return (
               <View key={timeOfDay} style={styles.timeOfDaySection}>
                 <View style={styles.timeOfDayHeader}>
-                  <View style={[styles.timeOfDayIcon, { backgroundColor: config.color }]}>
-                    <Ionicons name={config.icon} size={24} color="white" />
+                  <View style={[styles.timeOfDayIcon, { backgroundColor: config?.color ?? '#8FBC8F' }]}>
+                    <Ionicons name={config?.icon ?? 'list-outline'} size={24} color="white" />
                   </View>
                   <Text style={styles.timeOfDayLabel}>
-                    {config.emoji} {config.label}
+                    {config?.emoji ?? ''} {config?.label ?? ''}
                   </Text>
                   <TouchableOpacity
                     onPress={() => handleCreateRoutine(timeOfDay)}
@@ -111,10 +120,10 @@ export function RoutinesScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {dayRoutines.length === 0 ? (
+                {(dayRoutines ?? []).length === 0 ? (
                   <View style={styles.emptyRoutine}>
                     <Text style={styles.emptyRoutineText}>
-                      No {config.label.toLowerCase()} routine yet
+                      No {(config?.label ?? '').toLowerCase()} routine yet
                     </Text>
                     <TouchableOpacity
                       onPress={() => handleCreateRoutine(timeOfDay)}
@@ -125,39 +134,39 @@ export function RoutinesScreen() {
                   </View>
                 ) : (
                   <View style={styles.routineList}>
-                    {dayRoutines.map((routine) => (
+                    {(dayRoutines ?? []).map((routine) => (
                       <TouchableOpacity
-                        key={routine.id}
-                        onPress={() => handleEditRoutine(routine)}
+                        key={routine?.id ?? Math.random().toString()}
+                        onPress={() => routine?.id && handleEditRoutine(routine)}
                         style={styles.routineCard}
                         activeOpacity={0.8}
                       >
                         <View style={styles.routineCardLeft}>
-                          <Text style={styles.routineName}>{routine.name}</Text>
+                          <Text style={styles.routineName}>{routine?.name ?? ''}</Text>
                           <Text style={styles.routineHabitCount}>
-                            {routine.items.length} habit{routine.items.length !== 1 ? 's' : ''}
+                            {(routine?.items ?? []).length} habit{(routine?.items ?? []).length !== 1 ? 's' : ''}
                           </Text>
                         </View>
                         <View style={styles.routineCardRight}>
-                          {routine.items.slice(0, 3).map((item: any, i: number) => (
+                          {(routine?.items ?? []).slice(0, 3).map((item: any, i: number) => (
                             <View
-                              key={item.habitId}
+                              key={item?.habitId ?? `${routine?.id ?? 'r'}-${i}`}
                               style={[
                                 styles.habitMiniIcon,
-                                { backgroundColor: item.habit?.color || '#8FBC8F' },
+                                { backgroundColor: item?.habit?.color || '#8FBC8F' },
                               ]}
                             >
                               <Ionicons
-                                name={item.habit ? getIconName(item.habit.icon) : 'checkbox-outline'}
+                                name={item?.habit ? getIconName(item?.habit?.icon ?? '') : 'checkbox-outline'}
                                 size={16}
                                 color="white"
                               />
                             </View>
                           ))}
-                          {routine.items.length > 3 && (
+                          {(routine?.items ?? []).length > 3 && (
                             <View style={styles.habitMiniIconMore}>
                               <Text style={styles.habitMiniIconMoreText}>
-                                +{routine.items.length - 3}
+                                +{(routine?.items ?? []).length - 3}
                               </Text>
                             </View>
                           )}
@@ -205,7 +214,7 @@ export function RoutinesScreen() {
   );
 }
 
-function getIconName(icon: string): string {
+function getIconName(icon?: string | null): string {
   const iconMap: Record<string, string> = {
     water: 'water', fitness: 'fitness', book: 'book', meditation: 'meditation',
     sunny: 'sunny', moon: 'moon', leaf: 'leaf', heart: 'heart',
@@ -214,7 +223,7 @@ function getIconName(icon: string): string {
     brush: 'brush', pill: 'pill', flash: 'flash', diamond: 'diamond',
     star: 'star', flower: 'flower', tree: 'tree', cloud: 'cloud', flame: 'flame',
   };
-  return iconMap[icon] || 'checkbox-outline';
+  return iconMap[icon ?? ''] || 'checkbox-outline';
 }
 
 const styles = StyleSheet.create({

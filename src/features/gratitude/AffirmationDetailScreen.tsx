@@ -26,17 +26,31 @@ export function AffirmationDetailScreen() {
   const [loading, setLoading] = useState(true);
 
   const loadAffirmation = async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const a = await database.get<Affirmation>('affirmations').find(id);
+      let a = null;
+      try {
+        a = await database.get<Affirmation>('affirmations').find(id);
+      } catch {
+        a = null;
+      }
+      if (!a) {
+        setAffirmation(null);
+        return;
+      }
       setAffirmation({
-        id: a.id,
-        text: a.text,
-        category: a.category,
-        favorite: a.favorite,
+        id: a?.id ?? id ?? '',
+        text: a?.text ?? '',
+        category: a?.category ?? '',
+        favorite: a?.favorite ?? false,
       });
     } catch (error) {
       console.error('Failed to load affirmation:', error);
+      setAffirmation((prev) => prev ?? null);
     } finally {
       setLoading(false);
     }
@@ -47,10 +61,16 @@ export function AffirmationDetailScreen() {
   }, [id]);
 
   const handleToggleFavorite = async () => {
-    if (!affirmation) return;
+    if (!affirmation || !id) return;
     try {
+      let a = null;
+      try {
+        a = await database.get<Affirmation>('affirmations').find(id);
+      } catch {
+        return;
+      }
+      if (!a) return;
       await database.write(async () => {
-        const a = await database.get<Affirmation>('affirmations').find(id);
         await a.update(aff => { aff.favorite = !affirmation.favorite; });
       });
       setAffirmation({ ...affirmation, favorite: !affirmation.favorite });
@@ -64,7 +84,7 @@ export function AffirmationDetailScreen() {
     try {
       await Share.share({
         title: 'Affirmation',
-        message: `${affirmation.text}\n\n— via Calmly`,
+        message: `${affirmation?.text ?? ''}\n\n— via Calmly`,
       });
     } catch (error) {
       console.error('Failed to share:', error);
@@ -77,6 +97,7 @@ export function AffirmationDetailScreen() {
   };
 
   const handleDelete = () => {
+    if (!id) return;
     Alert.alert(
       'Delete affirmation?',
       'This cannot be undone.',
@@ -86,10 +107,18 @@ export function AffirmationDetailScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await database.write(async () => {
-              const a = await database.get<Affirmation>('affirmations').find(id);
-              await a.destroyPermanently();
-            });
+            if (!id) return;
+            try {
+              await database.write(async () => {
+                let a = null;
+                try {
+                  a = await database.get<Affirmation>('affirmations').find(id);
+                } catch {
+                  a = null;
+                }
+                if (a) await a.destroyPermanently();
+              });
+            } catch {}
             navigation.goBack();
           },
         },
@@ -97,10 +126,26 @@ export function AffirmationDetailScreen() {
     );
   };
 
-  if (loading || !affirmation) {
+  if (!id) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Not found</Text>
+      </View>
+    );
+  }
+
+  if (loading) {
     return (
       <View style={styles.container}>
         <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!affirmation) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Not found</Text>
       </View>
     );
   }
@@ -112,22 +157,22 @@ export function AffirmationDetailScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={28} color="#1E232E" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{affirmation.category}</Text>
+          <Text style={styles.headerTitle}>{affirmation?.category ?? ''}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
         <Card style={styles.affirmationCard}>
-          <Text style={styles.affirmationText}>{affirmation.text}</Text>
+          <Text style={styles.affirmationText}>{affirmation?.text ?? ''}</Text>
         </Card>
 
         <View style={styles.actions}>
           <TouchableOpacity onPress={handleToggleFavorite} style={styles.actionButton}>
             <Ionicons
-              name={affirmation.favorite ? 'heart' : 'heart-outline'}
+              name={affirmation?.favorite ? 'heart' : 'heart-outline'}
               size={24}
-              color={affirmation.favorite ? '#F5A9A9' : '#5A955A'}
+              color={affirmation?.favorite ? '#F5A9A9' : '#5A955A'}
             />
-            <Text style={styles.actionLabel}>{affirmation.favorite ? 'Favorited' : 'Favorite'}</Text>
+            <Text style={styles.actionLabel}>{affirmation?.favorite ? 'Favorited' : 'Favorite'}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleShare} style={styles.actionButton}>
             <Ionicons name="share" size={24} color="#5A955A" />

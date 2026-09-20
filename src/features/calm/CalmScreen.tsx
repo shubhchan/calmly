@@ -66,7 +66,7 @@ export function CalmScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 10, paddingBottom: 4 }}
           >
-            {emotionalStates.map((state) => (
+            {(emotionalStates ?? []).map((state) => (
               <Pressable
                 key={state.id}
                 onPress={() => {
@@ -101,7 +101,7 @@ export function CalmScreen() {
             </Text>
           </View>
           <View className="space-y-3">
-            {breathingPresets.map((preset) => (
+            {(breathingPresets ?? []).map((preset) => (
               <Pressable
                 key={preset.id}
                 onPress={() => handleBreathing(preset.id)}
@@ -145,7 +145,7 @@ export function CalmScreen() {
             </Text>
           </View>
           <View className="space-y-3">
-            {groundingExercises.map((exercise) => (
+            {(groundingExercises ?? []).map((exercise) => (
               <Pressable
                 key={exercise.id}
                 onPress={() => handleGrounding(exercise.id)}

@@ -24,7 +24,7 @@ type Step = 'mood' | 'intensity' | 'stress' | 'energy' | 'context' | 'complete';
 export function MoodCheckInScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'MoodCheckIn'>>();
-  const { fromHome } = route.params ?? {};
+  const { fromHome } = ((route as any)?.params ?? {}) as { fromHome?: boolean };
 
   const [step, setStep] = useState<Step>('mood');
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
@@ -34,18 +34,18 @@ export function MoodCheckInScreen() {
   const [context, setContext] = useState('');
   const [needs, setNeeds] = useState('');
 
-  const progress = {
+  const progress = ({
     mood: 0.17,
     intensity: 0.33,
     stress: 0.5,
     energy: 0.67,
     context: 0.83,
     complete: 1,
-  }[step];
+  } as Record<string, number>)[step] ?? 0;
 
   const goBack = () => {
     if (step === 'mood') {
-      navigation.goBack();
+      navigation?.goBack?.();
     } else if (step === 'intensity') {
       setStep('mood');
     } else if (step === 'stress') {
@@ -69,7 +69,7 @@ export function MoodCheckInScreen() {
     } else if (step === 'context') {
       setStep('complete');
       setTimeout(() => {
-        navigation.goBack();
+        navigation?.goBack?.();
       }, 1000);
     }
   };
@@ -84,27 +84,28 @@ export function MoodCheckInScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 10, paddingBottom: 10 }}
       >
-        {moods.map((mood) => (
+        {(moods ?? []).map((mood) => (
           <Pressable
-            key={mood.id}
+            key={mood?.id ?? Math.random().toString()}
             onPress={() => {
+              if (!mood?.id) return;
               setSelectedMood(mood.id);
               setTimeout(() => goNext(), 150);
             }}
             className={`flex items-center gap-2 px-4 py-3 rounded-2xl min-w-[100px] transition-all ${
-              selectedMood === mood.id
+              selectedMood === mood?.id
                 ? 'ring-2 ring-[var(--color-accent-primary)] scale-105'
                 : ''
             }`}
             style={{
-              backgroundColor: selectedMood === mood.id ? mood.color + '20' : '#FFFFFF',
+              backgroundColor: selectedMood === mood?.id ? (mood?.color ?? '#5A955A') + '20' : '#FFFFFF',
               borderWidth: 1,
-              borderColor: selectedMood === mood.id ? mood.color : '#E4DEBC',
+              borderColor: selectedMood === mood?.id ? (mood?.color ?? '#5A955A') : '#E4DEBC',
             }}
           >
-            <Text style={{ fontSize: 28 }}>{mood.emoji}</Text>
-            <Text className="text-label-md font-semibold" style={{ color: selectedMood === mood.id ? mood.color : '#1E232E' }}>
-              {mood.label}
+            <Text style={{ fontSize: 28 }}>{mood?.emoji ?? '😊'}</Text>
+            <Text className="text-label-md font-semibold" style={{ color: selectedMood === mood?.id ? (mood?.color ?? '#5A955A') : '#1E232E' }}>
+              {mood?.label ?? 'Mood'}
             </Text>
           </Pressable>
         ))}
@@ -120,43 +121,49 @@ export function MoodCheckInScreen() {
     max: number,
     step: number,
     emoji: string
-  ) => (
+  ) => {
+    const safeValue = value ?? 5;
+    const safeMin = min ?? 1;
+    const safeMax = max ?? 10;
+    const range = (safeMax - safeMin) || 1;
+    const fillPct = Math.min(100, Math.max(0, ((safeValue - safeMin) / range) * 100));
+    return (
     <View>
       <Text className="text-headline-md font-semibold mb-2 text-center" style={{ color: '#1E232E' }}>
-        {label}
+        {label ?? ''}
       </Text>
       <Text className="text-body-lg font-bold text-center mb-6" style={{ color: '#1E232E' }}>
-        {value} / {max}
+        {safeValue} / {safeMax}
       </Text>
       <View className="flex-1 flex items-center justify-center">
-        <Text style={{ fontSize: 64 }}>{emoji}</Text>
+        <Text style={{ fontSize: 64 }}>{emoji ?? '😊'}</Text>
       </View>
       <View className="w-full mt-8">
         <View className="flex-row justify-between mb-2">
-          <Text className="text-body-sm" style={{ color: '#425474' }}>{min}</Text>
-          <Text className="text-body-sm" style={{ color: '#425474' }}>{max}</Text>
+          <Text className="text-body-sm" style={{ color: '#425474' }}>{safeMin}</Text>
+          <Text className="text-body-sm" style={{ color: '#425474' }}>{safeMax}</Text>
         </View>
         <View className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#E4DEBC' }}>
           <View
             className="h-full rounded-full transition-all duration-100"
             style={{
-              width: `${((value - min) / (max - min)) * 100}%`,
+              width: `${fillPct}%`,
               backgroundColor: '#5A955A',
             }}
           />
         </View>
         <View className="flex-row justify-between mt-4">
-          {[min, Math.round((min + max) / 2), max].map((v) => (
+          {[safeMin, Math.round((safeMin + safeMax) / 2), safeMax].map((v) => (
             <Pressable
               key={v}
-              onPress={() => onChange(v)}
-              className={`w-12 h-12 rounded-full flex items-center justify-center ${value === v ? 'ring-2' : ''}`}
+              onPress={() => onChange?.(v)}
+              className={`w-12 h-12 rounded-full flex items-center justify-center ${safeValue === v ? 'ring-2' : ''}`}
               style={{
-                backgroundColor: value === v ? '#5A955A' : '#F5F0DE',
-                borderColor: value === v ? '#5A955A' : 'transparent',
+                backgroundColor: safeValue === v ? '#5A955A' : '#F5F0DE',
+                borderColor: safeValue === v ? '#5A955A' : 'transparent',
               }}
             >
-              <Text className="text-label-md font-semibold" style={{ color: value === v ? 'white' : '#1E232E' }}>
+              <Text className="text-label-md font-semibold" style={{ color: safeValue === v ? 'white' : '#1E232E' }}>
                 {v}
               </Text>
             </Pressable>
@@ -164,7 +171,8 @@ export function MoodCheckInScreen() {
         </View>
       </View>
     </View>
-  );
+    );
+  };
 
   const renderEnergyStep = () => (
     <View>
@@ -178,20 +186,20 @@ export function MoodCheckInScreen() {
           { value: 'high' as const, label: 'High', emoji: '🚀', desc: 'Energized, ready' },
         ].map((e) => (
           <Pressable
-            key={e.value}
-            onPress={() => setEnergy(e.value)}
+            key={e?.value ?? Math.random().toString()}
+            onPress={() => e?.value && setEnergy(e.value)}
             className={`flex-1 flex items-center p-4 rounded-2xl border-2 transition-all ${
-              energy === e.value
+              energy === e?.value
                 ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-bg)]'
                 : 'border-[var(--color-border-light)]'
             }`}
           >
-            <Text style={{ fontSize: 32 }}>{e.emoji}</Text>
-            <Text className={`text-label-md font-semibold mt-2 ${energy === e.value ? '' : ''}`} style={{ color: energy === e.value ? '#5A955A' : '#1E232E' }}>
-              {e.label}
+            <Text style={{ fontSize: 32 }}>{e?.emoji ?? '⚡'}</Text>
+            <Text className={`text-label-md font-semibold mt-2 ${energy === e?.value ? '' : ''}`} style={{ color: energy === e?.value ? '#5A955A' : '#1E232E' }}>
+              {e?.label ?? ''}
             </Text>
             <Text className="text-body-sm mt-1 text-center" style={{ color: '#425474' }}>
-              {e.desc}
+              {e?.desc ?? ''}
             </Text>
           </Pressable>
         ))}
@@ -265,14 +273,14 @@ export function MoodCheckInScreen() {
         <Pressable onPress={goBack} className="p-2" disabled={step === 'complete'}>
           <Text style={{ fontSize: 24 }}>←</Text>
         </Pressable>
-        <ProgressRing progress={progress} size={40} strokeWidth={4} showPercentage={false} />
+        <ProgressRing progress={progress ?? 0} size={40} strokeWidth={4} showPercentage={false} />
         {step === 'complete' && <View style={{ width: 40 }} />}
       </View>
 
       <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 100 }}>
         {step === 'mood' && renderMoodSelector()}
-        {step === 'intensity' && renderSliderStep('How intense is this feeling?', intensity, setIntensity, 1, 10, 1, selectedMood ? moods.find(m => m.id === selectedMood)!.emoji : '😊')}
-        {step === 'stress' && renderSliderStep('How stressed are you?', stress, setStress, 1, 10, 1, '😰')}
+        {step === 'intensity' && renderSliderStep('How intense is this feeling?', intensity ?? 5, setIntensity, 1, 10, 1, selectedMood ? ((moods ?? []).find(m => m?.id === selectedMood)?.emoji ?? '😊') : '😊')}
+        {step === 'stress' && renderSliderStep('How stressed are you?', stress ?? 5, setStress, 1, 10, 1, '😰')}
         {step === 'energy' && renderEnergyStep()}
         {step === 'context' && renderContextStep()}
         {step === 'complete' && renderCompleteStep()}
@@ -293,7 +301,7 @@ export function MoodCheckInScreen() {
             variant="primary"
             size="md"
             onPress={goNext}
-            disabled={step === 'intensity' && !intensity || step === 'stress' && !stress}
+            disabled={step === 'intensity' && !(intensity ?? 0) || step === 'stress' && !(stress ?? 0)}
             className="flex-1"
             fullWidth
           />

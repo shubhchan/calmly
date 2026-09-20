@@ -8,11 +8,15 @@ type InsightsStackParamList = Pick<RootStackParamList, 'Insights' | 'MoodCalenda
 
 const Stack = createNativeStackNavigator<InsightsStackParamList>();
 
+const FallbackScreen = () => null;
+const SafeInsightsScreen = (InsightsScreen ?? FallbackScreen) as React.ComponentType<any>;
+const SafeMoodCalendarScreen = (MoodCalendarScreen ?? FallbackScreen) as React.ComponentType<any>;
+
 export function InsightsStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Insights" component={InsightsScreen} />
-      <Stack.Screen name="MoodCalendar" component={MoodCalendarScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Insights">
+      <Stack.Screen name="Insights" component={SafeInsightsScreen} />
+      <Stack.Screen name="MoodCalendar" component={SafeMoodCalendarScreen} />
     </Stack.Navigator>
   );
 }

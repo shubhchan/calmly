@@ -70,17 +70,18 @@ export const notificationService = {
 
       await this.cancelAll();
 
-      const config = await settingsRepository.getNotificationConfig();
-      if (!config.enabled) return;
+      const config = (await settingsRepository?.getNotificationConfig?.()) ?? {};
+      if (!config?.enabled) return;
 
-      const notifications = this.generateNotifications(config);
+      const notifications = this.generateNotifications(config ?? {});
 
-      for (const notif of notifications) {
+      for (const notif of (notifications ?? [])) {
+        if (!notif?.title || !notif?.trigger) continue;
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: notif.title,
-            body: notif.body,
-            data: { category: notif.category },
+            title: notif.title ?? '',
+            body: notif.body ?? '',
+            data: { category: notif.category ?? 'general' },
           },
           trigger: notif.trigger,
         });
@@ -91,41 +92,50 @@ export const notificationService = {
   },
 
   generateNotifications(config: any): ScheduledNotification[] {
-    const notifications: ScheduledNotification[] = [];
+    try {
+      if (!config) return [];
+      const notifications: ScheduledNotification[] = [];
 
-    const categories: { key: NotificationCategory; label: string; cat: string }[] = [
-      { key: 'morningCheckIn', label: 'Morning Check-In', cat: 'morning' },
-      { key: 'journalReminder', label: 'Journal Reminder', cat: 'journal' },
-      { key: 'habitReminder', label: 'Habit Reminder', cat: 'habit' },
-      { key: 'eveningReflection', label: 'Evening Reflection', cat: 'journal' },
-      { key: 'sleepRoutine', label: 'Sleep Routine', cat: 'calm' },
-      { key: 'weeklyReflection', label: 'Weekly Reflection', cat: 'general' },
-    ];
+      const categories: { key: NotificationCategory; label: string; cat: string }[] = [
+        { key: 'morningCheckIn', label: 'Morning Check-In', cat: 'morning' },
+        { key: 'journalReminder', label: 'Journal Reminder', cat: 'journal' },
+        { key: 'habitReminder', label: 'Habit Reminder', cat: 'habit' },
+        { key: 'eveningReflection', label: 'Evening Reflection', cat: 'journal' },
+        { key: 'sleepRoutine', label: 'Sleep Routine', cat: 'calm' },
+        { key: 'weeklyReflection', label: 'Weekly Reflection', cat: 'general' },
+      ];
 
-    categories.forEach(({ key, label, cat }) => {
-      try {
-        if (!config.categories[key]) return;
-        if (!config.times[key]) return;
+      (categories ?? []).forEach(({ key, label, cat }) => {
+        try {
+          if (!config?.categories?.[key]) return;
+          const timeStr = config?.times?.[key];
+          if (!timeStr) return;
 
-        const [hours, minutes] = config.times[key].split(':').map(Number);
+          const [hoursRaw, minutesRaw] = (timeStr?.split?.(':') ?? []).map(Number);
+          const hours = Number.isFinite(hoursRaw) ? hoursRaw : 8;
+          const minutes = Number.isFinite(minutesRaw) ? minutesRaw : 0;
 
-        notifications.push({
-          id: `${key}-daily`,
-          category: key,
-          title: `Time for ${label} 🌿`,
-          body: getEncouragement(cat as any),
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DAILY,
-            hour: hours,
-            minute: minutes,
-          } as Notifications.DailyTriggerInput,
-        });
-      } catch (error) {
-        console.warn(`Failed to generate notification for ${key}:`, error);
-      }
-    });
+          notifications.push({
+            id: `${key ?? 'general'}-daily`,
+            category: key,
+            title: `Time for ${label ?? key} 🌿`,
+            body: getEncouragement((cat ?? 'general') as any) ?? '',
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DAILY,
+              hour: hours,
+              minute: minutes,
+            } as Notifications.DailyTriggerInput,
+          });
+        } catch (error) {
+          console.warn(`Failed to generate notification for ${key}:`, error);
+        }
+      });
 
-    return notifications;
+      return notifications ?? [];
+    } catch (error) {
+      console.warn('Failed to generate notifications:', error);
+      return [];
+    }
   },
 
   async cancelAll(): Promise<void> {
@@ -138,11 +148,12 @@ export const notificationService = {
 
   async cancelCategory(category: NotificationCategory): Promise<void> {
     try {
-      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      const toCancel = scheduled
-        .filter(n => n.content.data?.category === category)
-        .map(n => n.identifier);
-      await Promise.all(toCancel.map(id => Notifications.cancelScheduledNotificationAsync(id)));
+      const scheduled = (await Notifications.getAllScheduledNotificationsAsync()) ?? [];
+      const toCancel = (scheduled ?? [])
+        .filter(n => n?.content?.data?.category === category)
+        .map(n => n?.identifier)
+        .filter(Boolean);
+      await Promise.all((toCancel ?? []).map(id => Notifications.cancelScheduledNotificationAsync(id)));
     } catch (error) {
       console.warn(`Failed to cancel ${category} notifications:`, error);
     }
@@ -150,18 +161,18 @@ export const notificationService = {
 
   async scheduleTestNotification(category: NotificationCategory): Promise<void> {
     try {
-      const config = await settingsRepository.getNotificationConfig();
-      if (!config.enabled) return;
+      const config = (await settingsRepository?.getNotificationConfig?.()) ?? {};
+      if (!config?.enabled) return;
 
-      const notifications = this.generateNotifications(config);
-      const target = notifications.find(n => n.category === category);
+      const notifications = this.generateNotifications(config ?? {}) ?? [];
+      const target = (notifications ?? []).find(n => n?.category === category);
 
       if (target) {
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: target.title,
-            body: target.body,
-            data: { category: target.category, test: true },
+            title: target?.title ?? '',
+            body: target?.body ?? '',
+            data: { category: target?.category ?? category, test: true },
           },
           trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5 } as any,
         });
@@ -173,8 +184,8 @@ export const notificationService = {
 
   async getScheduledCount(): Promise<number> {
     try {
-      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      return scheduled.length;
+      const scheduled = (await Notifications.getAllScheduledNotificationsAsync()) ?? [];
+      return (scheduled ?? []).length ?? 0;
     } catch {
       return 0;
     }
@@ -200,40 +211,56 @@ export function useNotifications() {
   };
 
   const loadScheduledCount = async () => {
-    const count = await notificationService.getScheduledCount();
-    setScheduledCount(count);
+    try {
+      const count = (await notificationService?.getScheduledCount?.()) ?? 0;
+      setScheduledCount(count ?? 0);
+    } catch {
+      setScheduledCount(0);
+    }
   };
 
   const requestPermission = async () => {
-    const granted = await notificationService.requestPermissions();
-    await checkPermission();
-    if (granted) {
-      await notificationService.scheduleAll();
-      await loadScheduledCount();
+    try {
+      const granted = (await notificationService?.requestPermissions?.()) ?? false;
+      await checkPermission();
+      if (granted) {
+        await notificationService?.scheduleAll?.();
+        await loadScheduledCount();
+      }
+      return granted ?? false;
+    } catch {
+      return false;
     }
-    return granted;
   };
 
   const rescheduleAll = async () => {
-    await notificationService.scheduleAll();
-    await loadScheduledCount();
+    try {
+      await notificationService?.scheduleAll?.();
+      await loadScheduledCount();
+    } catch (error) {
+      console.warn('Failed to reschedule notifications:', error);
+    }
   };
 
   const toggleCategory = async (category: NotificationCategory, enabled: boolean) => {
-    await settingsRepository.updateNotificationConfig({
-      [(category === 'morningCheckIn' ? 'morningCheckInCat' :
-        category === 'journalReminder' ? 'journalReminderCat' :
-        category === 'habitReminder' ? 'habitReminderCat' :
-        category === 'eveningReflection' ? 'eveningReflectionCat' :
-        category === 'sleepRoutine' ? 'sleepRoutineCat' :
-        'weeklyReflectionCat')]: enabled,
-    } as any);
-    if (enabled) {
-      await notificationService.scheduleAll();
-    } else {
-      await notificationService.cancelCategory(category);
+    try {
+      await settingsRepository?.updateNotificationConfig?.({
+        [(category === 'morningCheckIn' ? 'morningCheckInCat' :
+          category === 'journalReminder' ? 'journalReminderCat' :
+          category === 'habitReminder' ? 'habitReminderCat' :
+          category === 'eveningReflection' ? 'eveningReflectionCat' :
+          category === 'sleepRoutine' ? 'sleepRoutineCat' :
+          'weeklyReflectionCat')]: enabled ?? false,
+      } as any);
+      if (enabled) {
+        await notificationService?.scheduleAll?.();
+      } else {
+        await notificationService?.cancelCategory?.(category);
+      }
+      await loadScheduledCount();
+    } catch (error) {
+      console.warn('Failed to toggle notification category:', error);
     }
-    await loadScheduledCount();
   };
 
   return {

@@ -36,6 +36,10 @@ export function HabitDetailScreen() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const loadData = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [h, c, s] = await Promise.all([
@@ -43,11 +47,13 @@ export function HabitDetailScreen() {
         habitRepository.getCompletions(id, '2020-01-01', new Date().toISOString().split('T')[0]),
         habitRepository.getStreak(id),
       ]);
-      setHabit(h);
-      setCompletions(c || []);
-      setStreak(s);
+      setHabit(h ?? null);
+      setCompletions(c ?? []);
+      setStreak(s ?? { current: 0, longest: 0 });
     } catch (error) {
       console.error('Failed to load habit detail:', error);
+      setCompletions((prev) => prev ?? []);
+      setStreak((prev) => prev ?? { current: 0, longest: 0 });
     } finally {
       setLoading(false);
     }
@@ -57,21 +63,38 @@ export function HabitDetailScreen() {
     loadData();
   }, [loadData]);
 
-  const completionDates = new Set(completions.filter(c => c.completed).map(c => c.date));
+  const completionDates = new Set((completions ?? []).filter(c => c?.completed).map(c => c?.date ?? ''));
 
   const getMonthDays = (date: Date) => {
-    const start = startOfMonth(date);
-    const end = endOfMonth(date);
-    return eachDayOfInterval({ start, end });
+    try {
+      if (!(date instanceof Date) || isNaN(date.getTime())) return [];
+      const start = startOfMonth(date);
+      const end = endOfMonth(date);
+      return eachDayOfInterval({ start, end }) ?? [];
+    } catch {
+      return [];
+    }
   };
 
-  const monthDays = getMonthDays(currentMonth);
-  const firstDayOfMonth = monthDays[0].getDay();
+  const monthDays = getMonthDays(currentMonth) ?? [];
+  const firstDayOfMonth = monthDays?.[0]?.getDay?.() ?? 0;
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  let todayStr = '';
+  try {
+    todayStr = today.toISOString().split('T')[0] ?? '';
+  } catch {
+    todayStr = '';
+  }
 
   const toggleCompletion = async (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    if (!id || !(date instanceof Date) || isNaN(date.getTime())) return;
+    let dateStr = '';
+    try {
+      dateStr = date.toISOString().split('T')[0] ?? '';
+    } catch {
+      return;
+    }
+    if (!dateStr) return;
     const isCompleted = completionDates.has(dateStr);
     try {
       if (isCompleted) {
@@ -82,7 +105,7 @@ export function HabitDetailScreen() {
         completionDates.add(dateStr);
       }
       const newStreak = await habitRepository.getStreak(id);
-      setStreak(newStreak);
+      setStreak(newStreak ?? { current: 0, longest: 0 });
       loadData();
     } catch (error) {
       console.error('Failed to toggle completion:', error);
@@ -90,10 +113,12 @@ export function HabitDetailScreen() {
   };
 
   const handleEdit = () => {
+    if (!id) return;
     navigation.navigate('HabitForm', { id });
   };
 
   const handleDelete = () => {
+    if (!id) return;
     Alert.alert(
       'Delete habit?',
       'This will remove the habit and all its completion history.',
@@ -111,7 +136,15 @@ export function HabitDetailScreen() {
     );
   };
 
-  if (loading || !habit) {
+  if (!id) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Not found</Text>
+      </View>
+    );
+  }
+
+  if (loading) {
     return (
       <View style={styles.container}>
         <Text style={styles.loadingText}>Loading...</Text>
@@ -119,35 +152,61 @@ export function HabitDetailScreen() {
     );
   }
 
-  const completionRate = completions.length > 0
-    ? Math.round((completions.filter(c => c.completed).length / completions.length) * 100)
+  if (!habit) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Not found</Text>
+      </View>
+    );
+  }
+
+  const safeCompletions = completions ?? [];
+  const completionRate = (safeCompletions ?? []).length > 0
+    ? Math.round(((safeCompletions ?? []).filter(c => c?.completed).length / (safeCompletions ?? []).length) * 100)
     : 0;
+
+  let customDayLabels = '';
+  try {
+    const parsed = JSON.parse(habit?.customDays || '[]');
+    const arr = Array.isArray(parsed) ? parsed : [];
+    customDayLabels = arr
+      .map((d: string) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d ?? '', 10)] ?? '')
+      .filter(Boolean)
+      .join(', ');
+  } catch {
+    customDayLabels = '';
+  }
+
+  let calendarTitle = '';
+  try {
+    calendarTitle = format(currentMonth instanceof Date && !isNaN(currentMonth.getTime()) ? currentMonth : new Date(), 'MMMM yyyy');
+  } catch {
+    calendarTitle = '';
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.habitHeader}>
-          <View style={[styles.habitIconLarge, { backgroundColor: habit.color }]}>
-            <Ionicons name={getIconName(habit.icon)} size={36} color="white" />
+          <View style={[styles.habitIconLarge, { backgroundColor: habit?.color ?? '#8FBC8F' }]}>
+            <Ionicons name={getIconName(habit?.icon ?? '')} size={36} color="white" />
           </View>
           <View style={styles.habitHeaderInfo}>
-            <Text style={styles.habitName}>{habit.name}</Text>
+            <Text style={styles.habitName}>{habit?.name ?? ''}</Text>
             <View style={styles.habitMeta}>
               <Text style={styles.habitFrequency}>
-                {FREQUENCY_LABELS[habit.frequency] || habit.frequency}
-                {habit.frequency === 'custom' && (
+                {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
+                {habit?.frequency === 'custom' && (
                   <>
                     {' • '}
-                    {JSON.parse(habit.customDays || '[]')
-                      .map((d: string) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d)])
-                      .join(', ')}
+                    {customDayLabels}
                   </>
                 )}
               </Text>
-              {habit.reminderTime && (
+              {habit?.reminderTime && (
                 <Text style={styles.habitReminder}>
                   <Ionicons name="alarm-outline" size={14} color="#425474" />
-                  {' '}{habit.reminderTime}
+                  {' '}{habit?.reminderTime ?? ''}
                 </Text>
               )}
             </View>
@@ -166,19 +225,19 @@ export function HabitDetailScreen() {
       <View style={styles.statsRow}>
 <StatPill
             label="Current Streak"
-            value={streak.current.toString()}
+            value={(streak?.current ?? 0).toString()}
             accentColor="#5A955A"
             icon={<Ionicons name="flame" size={16} color="#5A955A" />}
           />
           <StatPill
             label="Longest Streak"
-            value={streak.longest.toString()}
+            value={(streak?.longest ?? 0).toString()}
             accentColor="#B19CD9"
             icon={<Ionicons name="trophy" size={16} color="#B19CD9" />}
           />
           <StatPill
             label="Completion Rate"
-            value={`${completionRate}%`}
+            value={`${completionRate ?? 0}%`}
             accentColor="#A8D0E6"
             icon={<Ionicons name="analytics" size={16} color="#A8D0E6" />}
           />
@@ -186,30 +245,43 @@ export function HabitDetailScreen() {
 
       <Card style={styles.calendarCard}>
         <View style={styles.calendarHeader}>
-          <TouchableOpacity onPress={() => setCurrentMonth(subMonths(currentMonth, 1))} style={styles.navButton}>
+          <TouchableOpacity onPress={() => { try { setCurrentMonth(subMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1)); } catch {} }} style={styles.navButton}>
             <Ionicons name="chevron-back" size={24} color="#1E232E" />
           </TouchableOpacity>
           <Text style={styles.calendarTitle}>
-            {format(currentMonth, 'MMMM yyyy')}
+            {calendarTitle}
           </Text>
-          <TouchableOpacity onPress={() => setCurrentMonth(addMonths(currentMonth, 1))} style={styles.navButton}>
+          <TouchableOpacity onPress={() => { try { setCurrentMonth(addMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1)); } catch {} }} style={styles.navButton}>
             <Ionicons name="chevron-forward" size={24} color="#1E232E" />
           </TouchableOpacity>
         </View>
         <View style={styles.calendarWeekdays}>
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
-            <Text key={day} style={styles.calendarWeekday}>{day}</Text>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
+            <Text key={`${day}-${idx}`} style={styles.calendarWeekday}>{day ?? ''}</Text>
           ))}
         </View>
         <View style={styles.calendarGrid}>
-          {[...Array(firstDayOfMonth)].map((_, i) => (
+          {[...Array(firstDayOfMonth ?? 0)].map((_, i) => (
             <View key={`empty-${i}`} style={styles.calendarDay} />
           ))}
-          {monthDays.map((day) => {
-            const dateStr = day.toISOString().split('T')[0];
+          {(monthDays ?? []).map((day) => {
+            let dateStr = '';
+            try {
+              dateStr = day instanceof Date && !isNaN(day.getTime()) ? day.toISOString().split('T')[0] ?? '' : '';
+            } catch {
+              dateStr = '';
+            }
+            if (!dateStr) return null;
             const completed = completionDates.has(dateStr);
-            const isFuture = day > today;
-            const isTodayDay = isToday(day);
+            let isFuture = false;
+            let isTodayDay = false;
+            try {
+              isFuture = day > today;
+              isTodayDay = isToday(day);
+            } catch {
+              isFuture = false;
+              isTodayDay = false;
+            }
 
             return (
               <TouchableOpacity
@@ -230,7 +302,7 @@ export function HabitDetailScreen() {
                   isTodayDay && styles.calendarDayTextToday,
                   isFuture && styles.calendarDayTextFuture,
                 ]}>
-                  {format(day, 'd')}
+                  {(() => { try { return format(day, 'd'); } catch { return ''; } })()}
                 </Text>
               </TouchableOpacity>
             );
@@ -252,17 +324,17 @@ export function HabitDetailScreen() {
         </View>
       </Card>
 
-      {habit.notes && (
+      {habit?.notes && (
         <Card style={styles.notesCard}>
           <Text style={styles.notesLabel}>Notes</Text>
-          <Text style={styles.notesText}>{habit.notes}</Text>
+          <Text style={styles.notesText}>{habit?.notes ?? ''}</Text>
         </Card>
       )}
 
       <View style={styles.encouragementCard}>
         <Text style={styles.encouragementText}>
-          {streak.current > 0
-            ? getHabitEncouragement('streak', streak.current)
+          {(streak?.current ?? 0) > 0
+            ? getHabitEncouragement('streak', streak?.current ?? 0)
             : getHabitEncouragement('empty')}
         </Text>
       </View>

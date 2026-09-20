@@ -37,25 +37,46 @@ export function GratitudeFormScreen() {
     if (!id) return;
     setLoading(true);
     try {
+      const parseTags = (raw?: string | null): string[] => {
+        try {
+          const parsed = JSON.parse(raw || '[]');
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      };
       if (type === 'gratitude') {
-        const entry = await gratitudeRepository.getAll().then(list => list.find(e => e.id === id));
+        const list = (await gratitudeRepository.getAll()) ?? [];
+        let entry = undefined;
+        try {
+          entry = list.find(e => e?.id === id);
+        } catch {
+          entry = undefined;
+        }
         if (entry) {
-          setText(entry.text);
-          setMood(entry.mood);
-          setTags(JSON.parse(entry.tags || '[]'));
-          setFavorite(entry.favorite);
+          setText(entry?.text ?? '');
+          setMood(entry?.mood ?? '');
+          setTags(parseTags(entry?.tags));
+          setFavorite(entry?.favorite ?? false);
         }
       } else {
-        const entry = await positiveMomentRepository.getAll().then(list => list.find(e => e.id === id));
+        const list = (await positiveMomentRepository.getAll()) ?? [];
+        let entry = undefined;
+        try {
+          entry = list.find(e => e?.id === id);
+        } catch {
+          entry = undefined;
+        }
         if (entry) {
-          setText(entry.text);
-          setMood(entry.mood);
-          setTags(JSON.parse(entry.tags || '[]'));
-          setFavorite(entry.favorite);
+          setText(entry?.text ?? '');
+          setMood(entry?.mood ?? '');
+          setTags(parseTags(entry?.tags));
+          setFavorite(entry?.favorite ?? false);
         }
       }
     } catch (error) {
       console.error('Failed to load entry:', error);
+      setTags((prev) => prev ?? []);
     } finally {
       setLoading(false);
     }
@@ -66,7 +87,7 @@ export function GratitudeFormScreen() {
   }, [loadEntry]);
 
   const validate = (): boolean => {
-    if (!text.trim()) {
+    if (!(text ?? '').trim()) {
       Alert.alert('Missing text', 'Please write something');
       return false;
     }
@@ -75,13 +96,17 @@ export function GratitudeFormScreen() {
 
   const handleSave = async () => {
     if (!validate()) return;
+    if (isEditing && !id) {
+      Alert.alert('Error', 'Missing entry id. Please try again.');
+      return;
+    }
     setLoading(true);
     try {
       const data = {
-        text: text.trim(),
-        mood,
-        tags,
-        favorite,
+        text: (text ?? '').trim(),
+        mood: mood ?? '',
+        tags: tags ?? [],
+        favorite: favorite ?? false,
       };
       if (type === 'gratitude') {
         if (isEditing) {
@@ -106,6 +131,7 @@ export function GratitudeFormScreen() {
   };
 
   const handleDelete = () => {
+    if (isEditing && !id) return;
     Alert.alert(
       'Delete entry?',
       'This cannot be undone.',
@@ -115,10 +141,11 @@ export function GratitudeFormScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            if (!id) return;
             if (type === 'gratitude') {
-              await gratitudeRepository.delete(id!);
+              await gratitudeRepository.delete(id);
             } else {
-              await positiveMomentRepository.delete(id!);
+              await positiveMomentRepository.delete(id);
             }
             navigation.goBack();
           },
@@ -170,7 +197,7 @@ export function GratitudeFormScreen() {
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Mood (optional)</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll}>
-            {MOODS.map((m) => (
+            {(MOODS ?? []).map((m) => (
               <TouchableOpacity
                 key={m}
                 onPress={() => setMood(mood === m ? '' : m)}
@@ -190,8 +217,8 @@ export function GratitudeFormScreen() {
           <TextInput
             style={styles.input}
             placeholder="Add tags separated by commas"
-            value={tags.join(', ')}
-            onChangeText={(t) => setTags(t.split(',').map(s => s.trim()).filter(Boolean))}
+            value={(tags ?? []).join(', ')}
+            onChangeText={(t) => setTags((t ?? '').split(',').map(s => s.trim()).filter(Boolean))}
             placeholderTextColor="#425474"
           />
         </Card>

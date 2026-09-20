@@ -57,7 +57,7 @@ export function ThoughtReframingScreen() {
   const [completed, setCompleted] = useState(false);
 
   const handleNext = () => {
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < (STEPS ?? []).length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       setCompleted(true);
@@ -77,19 +77,34 @@ export function ThoughtReframingScreen() {
   };
 
   const handleUpdateResponse = (text: string) => {
-    const newResponses = [...responses];
-    newResponses[currentStep] = text;
-    setResponses(newResponses);
+    const safeResponses = [...(responses ?? ['', '', '', '', '', '', ''])];
+    if (currentStep < 0 || currentStep >= (STEPS ?? []).length) return;
+    safeResponses[currentStep] = text ?? '';
+    setResponses(safeResponses);
   };
 
-  const step = STEPS[currentStep];
-  const progress = (currentStep + 1) / STEPS.length;
+  const step = (STEPS ?? [])[currentStep] ?? STEPS[0] ?? { title: '', prompt: '', placeholder: '' };
+  const progress = (STEPS ?? []).length > 0 ? (currentStep + 1) / (STEPS ?? []).length : 0;
 
   if (completed) {
-    const beforeMatch = responses[2].match(/(\d+)%/);
-    const afterMatch = responses[6].match(/(\d+)%/);
-    const before = beforeMatch ? parseInt(beforeMatch[1]) : 0;
-    const after = afterMatch ? parseInt(afterMatch[1]) : 0;
+    const beforeText = (responses ?? [])[2] ?? '';
+    const afterText = (responses ?? [])[6] ?? '';
+    let beforeMatch: RegExpMatchArray | null = null;
+    let afterMatch: RegExpMatchArray | null = null;
+    try {
+      beforeMatch = (beforeText ?? '').match(/(\d+)%/);
+    } catch {
+      beforeMatch = null;
+    }
+    try {
+      afterMatch = (afterText ?? '').match(/(\d+)%/);
+    } catch {
+      afterMatch = null;
+    }
+    const parsedBefore = beforeMatch ? parseInt(beforeMatch[1] ?? '0', 10) : 0;
+    const parsedAfter = afterMatch ? parseInt(afterMatch[1] ?? '0', 10) : 0;
+    const before = Number.isNaN(parsedBefore) ? 0 : Math.min(100, Math.max(0, parsedBefore));
+    const after = Number.isNaN(parsedAfter) ? 0 : Math.min(100, Math.max(0, parsedAfter));
     const reduction = Math.max(0, before - after);
 
     return (
@@ -106,16 +121,16 @@ export function ThoughtReframingScreen() {
               <View style={styles.changeBarWrapper}>
                 <Text style={styles.changeBarLabel}>Before</Text>
                 <View style={styles.changeBarTrack}>
-                  <View style={[styles.changeBarFill, { width: before + '%' }]} />
+                  <View style={[styles.changeBarFill, { width: `${before ?? 0}%` }]} />
                 </View>
-                <Text style={styles.changeBarValue}>{before}%</Text>
+                <Text style={styles.changeBarValue}>{before ?? 0}%</Text>
               </View>
               <View style={styles.changeBarWrapper}>
                 <Text style={styles.changeBarLabel}>After</Text>
                 <View style={styles.changeBarTrack}>
-                  <View style={[styles.changeBarFillAfter, { width: after + '%' }]} />
+                  <View style={[styles.changeBarFillAfter, { width: `${after ?? 0}%` }]} />
                 </View>
-                <Text style={styles.changeBarValue}>{after}%</Text>
+                <Text style={styles.changeBarValue}>{after ?? 0}%</Text>
               </View>
             </View>
             {reduction > 0 && (
@@ -142,15 +157,15 @@ export function ThoughtReframingScreen() {
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: progress * 100 + '%' }]} />
         </View>
-        <Text style={styles.stepCounter}>Step {currentStep + 1} of {STEPS.length}</Text>
+        <Text style={styles.stepCounter}>Step {currentStep + 1} of {(STEPS ?? []).length}</Text>
 
         <Card style={styles.stepCard}>
-          <Text style={styles.stepTitle}>{step.title}</Text>
-          <Text style={styles.stepPrompt}>{step.prompt}</Text>
+          <Text style={styles.stepTitle}>{step?.title ?? ''}</Text>
+          <Text style={styles.stepPrompt}>{step?.prompt ?? ''}</Text>
           <TextInput
             style={styles.textArea}
-            placeholder={step.placeholder}
-            value={responses[currentStep]}
+            placeholder={step?.placeholder ?? ''}
+            value={(responses ?? [])[currentStep] ?? ''}
             onChangeText={handleUpdateResponse}
             placeholderTextColor="#425474"
             multiline
@@ -169,7 +184,7 @@ export function ThoughtReframingScreen() {
           )}
           <PrimaryButton
             onPress={handleNext}
-            title={currentStep === STEPS.length - 1 ? 'Complete' : 'Next'}
+            title={currentStep === (STEPS ?? []).length - 1 ? 'Complete' : 'Next'}
             style={styles.nextButton}
             fullWidth={currentStep === 0}
           />

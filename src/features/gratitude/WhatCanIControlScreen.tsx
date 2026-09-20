@@ -39,7 +39,7 @@ export function WhatCanIControlScreen() {
   const [completed, setCompleted] = useState(false);
 
   const handleNext = () => {
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < (STEPS ?? []).length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       setCompleted(true);
@@ -59,13 +59,14 @@ export function WhatCanIControlScreen() {
   };
 
   const handleUpdateResponse = (text: string) => {
-    const newResponses = [...responses];
-    newResponses[currentStep] = text;
-    setResponses(newResponses);
+    const safeResponses = [...(responses ?? ['', '', '', ''])];
+    if (currentStep < 0 || currentStep >= (STEPS ?? []).length) return;
+    safeResponses[currentStep] = text ?? '';
+    setResponses(safeResponses);
   };
 
-  const step = STEPS[currentStep];
-  const progress = (currentStep + 1) / STEPS.length;
+  const step = (STEPS ?? [])[currentStep] ?? STEPS[0] ?? { title: '', prompt: '', placeholder: '' };
+  const progress = (STEPS ?? []).length > 0 ? (currentStep + 1) / (STEPS ?? []).length : 0;
 
   if (completed) {
     return (
@@ -79,7 +80,7 @@ export function WhatCanIControlScreen() {
           </Text>
           <View style={styles.summary}>
             <Text style={styles.summaryLabel}>Your Action:</Text>
-            <Text style={styles.summaryText}>{responses[3] || '—'}</Text>
+            <Text style={styles.summaryText}>{(responses ?? [])[3] || '—'}</Text>
           </View>
           <PrimaryButton onPress={handleRestart} title="Do Again" style={styles.restartButton} variant="outline" />
         </View>
@@ -101,15 +102,15 @@ export function WhatCanIControlScreen() {
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: progress * 100 + '%' }]} />
         </View>
-        <Text style={styles.stepCounter}>Step {currentStep + 1} of {STEPS.length}</Text>
+        <Text style={styles.stepCounter}>Step {currentStep + 1} of {(STEPS ?? []).length}</Text>
 
         <Card style={styles.stepCard}>
-          <Text style={styles.stepTitle}>{step.title}</Text>
-          <Text style={styles.stepPrompt}>{step.prompt}</Text>
+          <Text style={styles.stepTitle}>{step?.title ?? ''}</Text>
+          <Text style={styles.stepPrompt}>{step?.prompt ?? ''}</Text>
           <TextInput
             style={styles.textArea}
-            placeholder={step.placeholder}
-            value={responses[currentStep]}
+            placeholder={step?.placeholder ?? ''}
+            value={(responses ?? [])[currentStep] ?? ''}
             onChangeText={handleUpdateResponse}
             placeholderTextColor="#425474"
             multiline
@@ -128,7 +129,7 @@ export function WhatCanIControlScreen() {
           )}
           <PrimaryButton
             onPress={handleNext}
-            title={currentStep === STEPS.length - 1 ? 'Complete' : 'Next'}
+            title={currentStep === (STEPS ?? []).length - 1 ? 'Complete' : 'Next'}
             style={styles.nextButton}
             fullWidth={currentStep === 0}
           />

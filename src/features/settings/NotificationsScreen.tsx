@@ -31,15 +31,15 @@ export function NotificationsScreen() {
   const loadSettings = useCallback(async () => {
     setLoading(true);
     try {
-      const { status } = await require('expo-notifications').getPermissionsAsync();
-      setPermission(status);
+      const { status } = (await require('expo-notifications')?.getPermissionsAsync?.()) ?? {};
+      setPermission(status ?? 'undetermined');
       
-      const config = await settingsRepository.getNotificationConfig();
-      setMasterEnabled(config.enabled);
+      const config = (await settingsRepository?.getNotificationConfig?.()) ?? {};
+      setMasterEnabled(config?.enabled ?? false);
       
       NOTIFICATION_CATEGORIES.forEach(cat => {
-        setCategories(prev => ({ ...prev, [cat.key]: config.categories[cat.key] }));
-        setTimes(prev => ({ ...prev, [cat.key]: config.times[cat.key] }));
+        setCategories(prev => ({ ...(prev ?? {}), [cat?.key]: config?.categories?.[cat?.key] ?? false }));
+        setTimes(prev => ({ ...(prev ?? {}), [cat?.key]: config?.times?.[cat?.key] ?? '08:00' }));
       });
     } catch (error) {
       console.error('Failed to load notification settings:', error);
@@ -53,12 +53,16 @@ export function NotificationsScreen() {
   }, [loadSettings]);
 
   const handleMasterToggle = async (enabled: boolean) => {
-    setMasterEnabled(enabled);
-    await settingsRepository.updateNotificationConfig({ enabled });
+    try {
+    setMasterEnabled(enabled ?? false);
+    await settingsRepository?.updateNotificationConfig?.({ enabled: enabled ?? false });
     if (enabled) {
-      await notificationService.scheduleAll();
+      await notificationService?.scheduleAll?.();
     } else {
-      await notificationService.cancelAll();
+      await notificationService?.cancelAll?.();
+    }
+    } catch (error) {
+      console.error('Failed to toggle master:', error);
     }
   };
 
@@ -101,7 +105,7 @@ export function NotificationsScreen() {
         'Please enable notifications in your device settings to receive reminders.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => require('expo-linking').openSettings() },
+          { text: 'Open Settings', onPress: () => require('expo-linking')?.openSettings?.() },
         ]
       );
     } else {
@@ -115,7 +119,7 @@ export function NotificationsScreen() {
       onPress={() => {
         // `prompt()` is web-only and undefined on iOS/Android (ReferenceError in
         // release builds). Offer preset times via a native dialog instead.
-        const current = times[category] || '08:00';
+        const current = (times ?? {})[category] ?? '08:00';
         const presets = ['07:00', '08:00', '09:00', '12:00', '18:00', '20:00', '21:00', '22:00'];
         Alert.alert(
           'Reminder time',
@@ -134,7 +138,7 @@ export function NotificationsScreen() {
       }}
       style={styles.timeButton}
     >
-      <Text style={styles.timeButtonText}>{times[category] || '--:--'}</Text>
+      <Text style={styles.timeButtonText}>{(times ?? {})[category] ?? '--:--'}</Text>
       <Ionicons name="time" size={20} color="#425474" />
     </TouchableOpacity>
   );
@@ -150,7 +154,7 @@ export function NotificationsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => (navigation as any)?.goBack?.()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color="#1E232E" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
@@ -197,24 +201,24 @@ export function NotificationsScreen() {
         <Text style={styles.sectionDesc}>
           Customize which reminders you receive and when. All copy is invitational, never guilt-based.
         </Text>
-        {NOTIFICATION_CATEGORIES.map((cat) => (
-          <View key={cat.key} style={styles.categoryItem}>
-            <View style={[styles.categoryIcon, { backgroundColor: cat.color + '20' }]}>
-              <Ionicons name={cat.icon} size={22} color={cat.color} />
+        {(NOTIFICATION_CATEGORIES ?? []).map((cat) => (
+          <View key={cat?.key ?? Math.random().toString()} style={styles.categoryItem}>
+            <View style={[styles.categoryIcon, { backgroundColor: (cat?.color ?? '#5A955A') + '20' }]}>
+              <Ionicons name={(cat?.icon ?? 'notifications') as any} size={22} color={cat?.color ?? '#5A955A'} />
             </View>
             <View style={styles.categoryInfo}>
-              <Text style={styles.categoryLabel}>{cat.label}</Text>
-              <Text style={styles.categoryDesc}>{cat.description}</Text>
+              <Text style={styles.categoryLabel}>{cat?.label ?? ''}</Text>
+              <Text style={styles.categoryDesc}>{cat?.description ?? ''}</Text>
             </View>
             <View style={styles.categoryControls}>
-              <TouchableOpacity onPress={() => handleTestNotification(cat.key)} style={styles.testButton}>
+              <TouchableOpacity onPress={() => cat?.key && handleTestNotification(cat.key)} style={styles.testButton}>
                 <Text style={styles.testButtonText}>Test</Text>
               </TouchableOpacity>
-              {renderTimePicker(cat.key)}
+              {cat?.key ? renderTimePicker(cat.key) : null}
               <Switch
-                value={categories[cat.key] && masterEnabled}
-                onValueChange={enabled => handleCategoryToggle(cat.key, enabled)}
-                thumbColor={categories[cat.key] ? '#5A955A' : '#425474'}
+                value={(categories ?? {})[cat?.key] && masterEnabled}
+                onValueChange={enabled => cat?.key && handleCategoryToggle(cat.key, enabled)}
+                thumbColor={(categories ?? {})[cat?.key] ? '#5A955A' : '#425474'}
                 trackColor={{ false: '#E4DEBC', true: '#5A955A' }}
                 disabled={!masterEnabled || permission !== 'granted'}
               />

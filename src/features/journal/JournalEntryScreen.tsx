@@ -29,8 +29,13 @@ const journalTypeIcons: Record<JournalType, string> = {
 export function JournalEntryScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'JournalEntry'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { type = 'free', id } = route.params ?? {};
+  const params = (route as any)?.params ?? {};
+  const rawType = (params as any)?.type;
+  const type: JournalType = (rawType && (journalTypeLabels as any)[rawType] ? rawType : 'free') as JournalType;
+  const id = (params as any)?.id ?? undefined;
   const isEditing = !!id;
+  const typeIcon = (journalTypeIcons as any)?.[type] ?? '✍️';
+  const typeLabel = (journalTypeLabels as any)?.[type] ?? (typeof type === 'string' ? type : 'Entry');
 
   return (
     <ScrollView
@@ -39,7 +44,7 @@ export function JournalEntryScreen() {
     >
       <View className="mb-6">
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation?.goBack?.()}
           className="flex-row items-center"
         >
           <Text style={{ fontSize: 24, marginRight: 8 }}>←</Text>
@@ -60,11 +65,11 @@ export function JournalEntryScreen() {
                 backgroundColor: '#F0F4F0',
               }}
             >
-              <Text style={{ fontSize: 20 }}>{journalTypeIcons[type]}</Text>
+              <Text style={{ fontSize: 20 }}>{typeIcon}</Text>
             </View>
             <View className="ml-3">
               <Text className="text-headline-sm font-semibold" style={{ color: '#1E232E' }}>
-                {journalTypeLabels[type]}
+                {typeLabel}
               </Text>
               <Text className="text-body-sm" style={{ color: '#425474' }}>
                 {isEditing ? 'Editing existing entry' : 'Start writing...'}
@@ -123,7 +128,7 @@ export function JournalEntryScreen() {
           title="Save"
           variant="primary"
           size="lg"
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation?.goBack?.()}
           className="flex-1"
           fullWidth
         />
@@ -131,7 +136,7 @@ export function JournalEntryScreen() {
           title="Cancel"
           variant="outline"
           size="lg"
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation?.goBack?.()}
           className="flex-1"
           fullWidth
         />

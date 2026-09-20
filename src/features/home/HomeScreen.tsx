@@ -10,7 +10,19 @@ import { useThemeColors } from '../../theme/ThemeContext';
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
-  const colors = useThemeColors();
+  let themeColors: ReturnType<typeof useThemeColors> | undefined;
+  try {
+    themeColors = useThemeColors();
+  } catch {
+    themeColors = undefined;
+  }
+  const colors = themeColors ?? {
+    borderLight: '#E4DEBC',
+    textTertiary: '#425474',
+    accentPrimary: '#5A955A',
+    success: '#5A955A',
+    info: '#6B9BCD',
+  } as any;
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -22,10 +34,12 @@ export function HomeScreen() {
         habitRepository.getAll(false),
         habitRepository.getTodayCompletions(),
       ]);
-      setHabits(allHabits);
-      setTodayCompletions(completions);
+      setHabits(allHabits ?? []);
+      setTodayCompletions(completions ?? {});
     } catch (error) {
       console.error('Failed to load habits:', error);
+      setHabits([]);
+      setTodayCompletions({});
     } finally {
       setLoading(false);
     }
@@ -35,12 +49,14 @@ export function HomeScreen() {
     loadHabits();
   }, [loadHabits]);
 
-  const handleMoodCheckIn = () => navigation.navigate('MoodCheckIn', { fromHome: true });
-  const handleCalmDown = () => navigation.navigate('Calm');
-  const handleHabitPress = (habit: Habit) => navigation.navigate('HabitDetail', { id: habit.id });
+  const handleMoodCheckIn = () => navigation?.navigate?.('MoodCheckIn', { fromHome: true });
+  const handleCalmDown = () => navigation?.navigate?.('Calm');
+  const handleHabitPress = (habit: Habit) => navigation?.navigate?.('HabitDetail', { id: habit?.id });
 
   const toggleHabit = async (habit: Habit, completed: boolean) => {
-    const today = new Date().toISOString().split('T')[0];
+    if (!habit?.id) return;
+    const today = (new Date().toISOString() ?? '').split('T')?.[0] ?? '';
+    if (!today) return;
     try {
       if (completed) {
         await habitRepository.uncomplete(habit.id, today);
@@ -54,23 +70,32 @@ export function HomeScreen() {
   };
 
   const isDueToday = (habit: Habit): boolean => {
+    if (!habit) return false;
     const today = new Date();
-    const dayOfWeek = today.getDay();
-    const frequency = habit.frequency;
+    const dayOfWeek = today?.getDay?.() ?? new Date().getDay();
+    const frequency = (habit as any)?.frequency ?? 'daily';
     let customDays: string[] = [];
     try {
-      customDays = JSON.parse(habit.customDays || '[]');
+      const raw = (habit as any)?.customDays;
+      customDays = JSON.parse(typeof raw === 'string' && raw ? raw : '[]') ?? [];
+      if (!Array.isArray(customDays)) customDays = [];
     } catch {
       customDays = [];
     }
 
     if (frequency === 'daily') return true;
     if (frequency === 'weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5;
-    if (frequency === 'custom') return customDays.includes(dayOfWeek.toString());
+    if (frequency === 'custom') return (customDays ?? []).includes(dayOfWeek.toString());
     return true;
   };
 
-  const dueHabits = habits.filter(isDueToday);
+  const dueHabits = (habits ?? []).filter((h) => {
+    try {
+      return !!h && isDueToday(h);
+    } catch {
+      return false;
+    }
+  });
 
   return (
     <ScrollView
@@ -137,7 +162,7 @@ export function HomeScreen() {
               title="Journal"
               variant="outline"
               size="md"
-              onPress={() => navigation.navigate('Journal')}
+              onPress={() => navigation?.navigate?.('Journal')}
               className="flex-1"
               fullWidth
               leftIcon={<Text style={{ fontSize: 18 }}>📝</Text>}
@@ -151,19 +176,19 @@ export function HomeScreen() {
           <Text className="text-headline-md font-semibold text-[var(--color-text-primary)]">
             Today's Habits
           </Text>
-          <Pressable onPress={() => navigation.navigate('Habits')}>
+          <Pressable onPress={() => navigation?.navigate?.('Habits')}>
             <Text className="text-label-md text-[var(--color-accent-primary)]">View all</Text>
           </Pressable>
         </View>
         {loading ? (
           <View className="gap-3">
             {[1, 2, 3].map((i) => (
-              <View key={i} className="h-16 rounded-2xl" style={{ backgroundColor: colors.borderLight }} />
+              <View key={i} className="h-16 rounded-2xl" style={{ backgroundColor: colors?.borderLight ?? '#E4DEBC' }} />
             ))}
           </View>
-        ) : dueHabits.length === 0 ? (
+        ) : (dueHabits ?? []).length === 0 ? (
           <View className="items-center py-5 gap-2">
-            <Ionicons name="leaf" size={32} color={colors.textTertiary} />
+            <Ionicons name="leaf" size={32} color={colors?.textTertiary ?? '#425474'} />
             <Text className="text-base font-medium text-[var(--color-text-secondary)]">
               No habits for today
             </Text>
@@ -174,63 +199,63 @@ export function HomeScreen() {
               title="Create Habit"
               variant="primary"
               size="sm"
-              onPress={() => navigation.navigate('HabitForm')}
+              onPress={() => navigation?.navigate?.('HabitForm')}
               className="mt-3 w-auto"
               fullWidth={false}
             />
           </View>
         ) : (
           <View className="gap-3">
-            {dueHabits.slice(0, 3).map((habit) => (
+            {(dueHabits ?? []).slice(0, 3).map((habit) => (
               <TouchableOpacity
-                key={habit.id}
-                onPress={() => handleHabitPress(habit)}
+                key={habit?.id ?? Math.random().toString()}
+                onPress={() => habit && handleHabitPress(habit)}
                 className="flex-row items-center justify-between p-3.5 bg-[var(--color-bg-card)] rounded-2xl border border-[var(--color-border-light)]"
                 activeOpacity={0.8}
               >
                 <View className="flex-row items-center gap-3 flex-1">
                   <View
                     className="w-10 h-10 rounded-xl items-center justify-center"
-                    style={{ backgroundColor: habit.color || '#8FBC8F' }}
+                    style={{ backgroundColor: (habit as any)?.color || '#8FBC8F' }}
                   >
-                    <Ionicons name={getIconName(habit.icon)} size={20} color="white" />
+                    <Ionicons name={getIconName((habit as any)?.icon)} size={20} color="white" />
                   </View>
                   <View className="gap-0.5">
                     <Text className="text-[15px] font-semibold text-[var(--color-text-primary)]">
-                      {habit.name}
+                      {(habit as any)?.name ?? 'Untitled'}
                     </Text>
                     <Text className="text-xs text-[var(--color-text-tertiary)]">
-                      {todayCompletions[habit.id] ? 'Completed ✓' : 'Tap to complete'}
+                      {(todayCompletions ?? {})?.[(habit as any)?.id] ? 'Completed ✓' : 'Tap to complete'}
                     </Text>
                   </View>
                 </View>
                 <TouchableOpacity
                   onPress={(e) => {
-                    e.stopPropagation();
-                    toggleHabit(habit, todayCompletions[habit.id] || false);
+                    e?.stopPropagation?.();
+                    toggleHabit(habit, (todayCompletions ?? {})?.[(habit as any)?.id] || false);
                   }}
                   className="w-9 h-9 rounded-full border-2 items-center justify-center"
                   style={{
-                    borderColor: colors.accentPrimary,
-                    backgroundColor: todayCompletions[habit.id] ? colors.accentPrimary : 'transparent',
+                    borderColor: colors?.accentPrimary ?? '#5A955A',
+                    backgroundColor: (todayCompletions ?? {})?.[(habit as any)?.id] ? (colors?.accentPrimary ?? '#5A955A') : 'transparent',
                   }}
                   activeOpacity={0.7}
                 >
                   <Ionicons
-                    name={todayCompletions[habit.id] ? 'checkmark' : 'checkmark-outline'}
+                    name={(todayCompletions ?? {})?.[(habit as any)?.id] ? 'checkmark' : 'checkmark-outline'}
                     size={20}
-                    color={todayCompletions[habit.id] ? 'white' : colors.accentPrimary}
+                    color={(todayCompletions ?? {})?.[(habit as any)?.id] ? 'white' : (colors?.accentPrimary ?? '#5A955A')}
                   />
                 </TouchableOpacity>
               </TouchableOpacity>
             ))}
-            {dueHabits.length > 3 && (
+            {(dueHabits ?? []).length > 3 && (
               <Pressable
-                onPress={() => navigation.navigate('Habits')}
+                onPress={() => navigation?.navigate?.('Habits')}
                 className="p-3.5 items-center bg-[var(--color-bg-card)] rounded-2xl border border-[var(--color-border-light)]"
               >
                 <Text className="text-sm font-medium text-[var(--color-accent-primary)]">
-                  +{dueHabits.length - 3} more habit{dueHabits.length - 3 > 1 ? 's' : ''}
+                  +{(dueHabits ?? []).length - 3} more habit{(dueHabits ?? []).length - 3 > 1 ? 's' : ''}
                 </Text>
               </Pressable>
             )}
@@ -244,7 +269,7 @@ export function HomeScreen() {
             <Text className="text-headline-md font-semibold text-[var(--color-text-primary)]">
               Recent Journal Entries
             </Text>
-            <Pressable onPress={() => navigation.navigate('Journal')}>
+            <Pressable onPress={() => navigation?.navigate?.('Journal')}>
               <Text className="text-label-md text-[var(--color-accent-primary)]">View all</Text>
             </Pressable>
           </View>
@@ -253,7 +278,7 @@ export function HomeScreen() {
             title="No entries yet"
             subtitle="Your first thought can start here 🌱"
             actionLabel="Create entry"
-            onAction={() => navigation.navigate('JournalEntry', { type: 'free' })}
+            onAction={() => navigation?.navigate?.('JournalEntry', { type: 'free' })}
           />
         </CardContent>
       </Card>
@@ -264,8 +289,8 @@ export function HomeScreen() {
             Weekly Insights
           </Text>
           <View className="flex-row gap-3">
-            <StatPill label="Avg Mood" value="7.2/10" trend="up" trendValue="+0.3" accentColor={colors.success} />
-            <StatPill label="Journaling" value="4/7 days" trend="neutral" accentColor={colors.info} />
+            <StatPill label="Avg Mood" value="7.2/10" trend="up" trendValue="+0.3" accentColor={colors?.success ?? '#5A955A'} />
+            <StatPill label="Journaling" value="4/7 days" trend="neutral" accentColor={colors?.info ?? '#6B9BCD'} />
           </View>
         </CardContent>
       </Card>
@@ -284,12 +309,12 @@ interface EmptyStateProps {
 function EmptyState({ icon, title, subtitle, actionLabel, onAction }: EmptyStateProps) {
   return (
     <View className="items-center py-8 px-4">
-      <Text style={{ fontSize: 48 }}>{icon}</Text>
+      <Text style={{ fontSize: 48 }}>{icon ?? '📝'}</Text>
       <Text className="text-headline-sm font-semibold mt-4 text-center text-[var(--color-text-primary)]">
-        {title}
+        {title ?? 'Nothing here yet'}
       </Text>
       <Text className="text-body-md mt-2 text-center text-[var(--color-text-tertiary)]">
-        {subtitle}
+        {subtitle ?? ''}
       </Text>
       {actionLabel && onAction && (
         <PrimaryButton

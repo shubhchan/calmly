@@ -47,24 +47,31 @@ export function DataManagementScreen() {
       const { RoutineItem } = require('../../database/models/RoutineItem');
       const { Goal } = require('../../database/models/Goal');
 
+      const safeFetch = async (name: string) => {
+        try {
+          return (await database?.get?.(name)?.query?.()?.fetch?.()) ?? [];
+        } catch {
+          return [];
+        }
+      };
       const collections = {
-        moods: await database.get<MoodEntry>('mood_entries').query().fetch(),
-        journals: await database.get<JournalEntry>('journal_entries').query().fetch(),
-        habits: await database.get<Habit>('habits').query().fetch(),
-        completions: await database.get<HabitCompletion>('habit_completions').query().fetch(),
-        gratitude: await database.get<GratitudeEntry>('gratitude_entries').query().fetch(),
-        positiveMoments: await database.get<PositiveMoment>('positive_moments').query().fetch(),
-        calm: await database.get<CalmSession>('calm_sessions').query().fetch(),
-        breathing: await database.get<BreathingSession>('breathing_sessions').query().fetch(),
-        meditations: await database.get<MeditationSession>('meditation_sessions').query().fetch(),
-        sleep: await database.get<SleepEntry>('sleep_entries').query().fetch(),
-        reflections: await database.get<Reflection>('reflections').query().fetch(),
-        affirmations: await database.get<Affirmation>('affirmations').query().fetch(),
-        favorites: await database.get<Favorite>('favorites').query().fetch(),
-        tags: await database.get<Tag>('tags').query().fetch(),
-        routines: await database.get<Routine>('routines').query().fetch(),
-        routineItems: await database.get<RoutineItem>('routine_items').query().fetch(),
-        goals: await database.get<Goal>('goals').query().fetch(),
+        moods: await safeFetch('mood_entries'),
+        journals: await safeFetch('journal_entries'),
+        habits: await safeFetch('habits'),
+        completions: await safeFetch('habit_completions'),
+        gratitude: await safeFetch('gratitude_entries'),
+        positiveMoments: await safeFetch('positive_moments'),
+        calm: await safeFetch('calm_sessions'),
+        breathing: await safeFetch('breathing_sessions'),
+        meditations: await safeFetch('meditation_sessions'),
+        sleep: await safeFetch('sleep_entries'),
+        reflections: await safeFetch('reflections'),
+        affirmations: await safeFetch('affirmations'),
+        favorites: await safeFetch('favorites'),
+        tags: await safeFetch('tags'),
+        routines: await safeFetch('routines'),
+        routineItems: await safeFetch('routine_items'),
+        goals: await safeFetch('goals'),
       };
 
       const exportData = {
@@ -72,23 +79,23 @@ export function DataManagementScreen() {
         version: '1.0',
         app: 'Calmly',
         data: {
-          moods: collections.moods.map((e: any) => e._raw),
-          journals: collections.journals.map((e: any) => e._raw),
-          habits: collections.habits.map((e: any) => e._raw),
-          completions: collections.completions.map((e: any) => e._raw),
-          gratitude: collections.gratitude.map((e: any) => e._raw),
-          positiveMoments: collections.positiveMoments.map((e: any) => e._raw),
-          calm: collections.calm.map((e: any) => e._raw),
-          breathing: collections.breathing.map((e: any) => e._raw),
-          meditations: collections.meditations.map((e: any) => e._raw),
-          sleep: collections.sleep.map((e: any) => e._raw),
-          reflections: collections.reflections.map((e: any) => e._raw),
-          affirmations: collections.affirmations.map((e: any) => e._raw),
-          favorites: collections.favorites.map((e: any) => e._raw),
-          tags: collections.tags.map((e: any) => e._raw),
-          routines: collections.routines.map((e: any) => e._raw),
-          routineItems: collections.routineItems.map((e: any) => e._raw),
-          goals: collections.goals.map((e: any) => e._raw),
+          moods: (collections?.moods ?? []).map((e: any) => e?._raw),
+          journals: (collections?.journals ?? []).map((e: any) => e?._raw),
+          habits: (collections?.habits ?? []).map((e: any) => e?._raw),
+          completions: (collections?.completions ?? []).map((e: any) => e?._raw),
+          gratitude: (collections?.gratitude ?? []).map((e: any) => e?._raw),
+          positiveMoments: (collections?.positiveMoments ?? []).map((e: any) => e?._raw),
+          calm: (collections?.calm ?? []).map((e: any) => e?._raw),
+          breathing: (collections?.breathing ?? []).map((e: any) => e?._raw),
+          meditations: (collections?.meditations ?? []).map((e: any) => e?._raw),
+          sleep: (collections?.sleep ?? []).map((e: any) => e?._raw),
+          reflections: (collections?.reflections ?? []).map((e: any) => e?._raw),
+          affirmations: (collections?.affirmations ?? []).map((e: any) => e?._raw),
+          favorites: (collections?.favorites ?? []).map((e: any) => e?._raw),
+          tags: (collections?.tags ?? []).map((e: any) => e?._raw),
+          routines: (collections?.routines ?? []).map((e: any) => e?._raw),
+          routineItems: (collections?.routineItems ?? []).map((e: any) => e?._raw),
+          goals: (collections?.goals ?? []).map((e: any) => e?._raw),
         },
       };
 
@@ -119,7 +126,7 @@ export function DataManagementScreen() {
             setDeleting('all');
             try {
               const { database } = require('../../database');
-              await database.write(async () => {
+              await database?.write?.(async () => {
                 const collections = [
                   'mood_entries', 'journal_entries', 'habits', 'habit_completions',
                   'gratitude_entries', 'positive_moments', 'calm_sessions', 'breathing_sessions',
@@ -127,8 +134,8 @@ export function DataManagementScreen() {
                   'favorites', 'tags', 'routines', 'routine_items', 'goals', 'user_settings',
                 ];
                 await Promise.all(
-                  collections.map(name => database.get(name).query().fetch().then((items: any[]) => 
-                    Promise.all(items.map((item: any) => item.destroyPermanently()))
+                  collections.map(name => database?.get?.(name)?.query?.()?.fetch?.().then((items: any[]) => 
+                    Promise.all((items ?? []).map((item: any) => item?.destroyPermanently?.()))
                   ))
                 );
               });
@@ -147,10 +154,10 @@ export function DataManagementScreen() {
   }, [navigation]);
 
   const handleDeleteType = useCallback((type: string) => {
-    const typeInfo = DATA_TYPES.find(t => t.key === type);
+    const typeInfo = (DATA_TYPES ?? []).find(t => t?.key === type);
     Alert.alert(
-      `Delete ${typeInfo?.label}?`,
-      `This will permanently delete all ${typeInfo?.label.toLowerCase()}. This cannot be undone.`,
+      `Delete ${typeInfo?.label ?? 'data'}?`,
+      `This will permanently delete all ${(typeInfo?.label ?? 'data').toLowerCase()}. This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -170,13 +177,13 @@ export function DataManagementScreen() {
                 calm: 'calm_sessions',
                 breathing: 'breathing_sessions',
               };
-              const collectionName = collectionMap[type];
+              const collectionName = (collectionMap ?? {})[type];
               if (collectionName) {
-                await database.write(async () => {
-                  const items = await database.get(collectionName).query().fetch();
-                  await Promise.all(items.map((item: any) => item.destroyPermanently()));
+                await database?.write?.(async () => {
+                  const items = (await database?.get?.(collectionName)?.query?.()?.fetch?.()) ?? [];
+                  await Promise.all((items ?? []).map((item: any) => item?.destroyPermanently?.()));
                 });
-                Alert.alert('Done', `${typeInfo?.label} deleted.`);
+                Alert.alert('Done', `${typeInfo?.label ?? 'Data'} deleted.`);
               }
             } catch (error) {
               console.error('Delete failed:', error);
@@ -220,30 +227,30 @@ export function DataManagementScreen() {
           Selectively remove specific types of data while keeping the rest.
         </Text>
         <View style={styles.typeList}>
-          {DATA_TYPES.map((type) => (
+          {(DATA_TYPES ?? []).map((type) => (
             <TouchableOpacity
-              key={type.key}
-              onPress={() => handleDeleteType(type.key)}
+              key={type?.key ?? Math.random().toString()}
+              onPress={() => type?.key && handleDeleteType(type.key)}
               disabled={!!deleting}
               style={[
                 styles.typeItem,
-                deleting === type.key && styles.typeItemDeleting,
+                deleting === type?.key && styles.typeItemDeleting,
               ]}
               activeOpacity={0.8}
             >
               <View style={[
                 styles.typeIcon,
-                deleting === type.key && styles.typeIconDeleting,
+                deleting === type?.key && styles.typeIconDeleting,
               ]}>
-                <Ionicons name={type.icon} size={22} color={deleting === type.key ? 'white' : '#5A955A'} />
+                <Ionicons name={(type?.icon ?? 'help') as any} size={22} color={deleting === type?.key ? 'white' : '#5A955A'} />
               </View>
               <Text style={[
                 styles.typeLabel,
-                deleting === type.key && styles.typeLabelDeleting,
+                deleting === type?.key && styles.typeLabelDeleting,
               ]}>
-                {type.label}
+                {type?.label ?? ''}
               </Text>
-              {deleting === type.key && (
+              {deleting === type?.key && (
                 <ActivityIndicator size="small" color="white" />
               )}
             </TouchableOpacity>

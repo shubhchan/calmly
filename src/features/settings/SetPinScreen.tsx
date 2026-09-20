@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, BackHandler } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -13,7 +13,7 @@ type RouteProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['route'];
 export function SetPinScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { onComplete } = route.params ?? {};
+  const { onComplete } = ((route as any)?.params ?? {}) as { onComplete?: () => void };
 
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -23,13 +23,13 @@ export function SetPinScreen() {
 
   const handlePinPress = useCallback((digit: string) => {
     if (stage === 'enter') {
-      if (pin.length < 6) {
-        setPin(prev => prev + digit);
+      if ((pin ?? '').length < 6) {
+        setPin(prev => (prev ?? '') + (digit ?? ''));
         setError(false);
       }
     } else {
-      if (confirmPin.length < 6) {
-        setConfirmPin(prev => prev + digit);
+      if ((confirmPin ?? '').length < 6) {
+        setConfirmPin(prev => (prev ?? '') + (digit ?? ''));
         setError(false);
       }
     }
@@ -37,34 +37,39 @@ export function SetPinScreen() {
 
   const handleDelete = useCallback(() => {
     if (stage === 'enter') {
-      setPin(prev => prev.slice(0, -1));
+      setPin(prev => (prev ?? '').slice(0, -1));
     } else {
-      setConfirmPin(prev => prev.slice(0, -1));
+      setConfirmPin(prev => (prev ?? '').slice(0, -1));
     }
   }, [stage]);
 
   const handleSubmit = useCallback(async () => {
-    if (stage === 'enter') {
-      if (pin.length !== 6) return;
-      setOriginalPin(pin);
-      setStage('confirm');
-      setConfirmPin('');
-    } else {
-      if (confirmPin.length !== 6) return;
-      if (confirmPin !== originalPin) {
-        setError(true);
+    try {
+      if (stage === 'enter') {
+        if ((pin ?? '').length !== 6) return;
+        setOriginalPin(pin ?? '');
+        setStage('confirm');
         setConfirmPin('');
-        return;
+      } else {
+        if ((confirmPin ?? '').length !== 6) return;
+        if ((confirmPin ?? '') !== (originalPin ?? '')) {
+          setError(true);
+          setConfirmPin('');
+          return;
+        }
+        await settingsRepository?.setPin?.(confirmPin ?? '');
+        appLockService?.lock?.();
+        if (onComplete) onComplete();
+        (navigation as any)?.goBack?.();
       }
-      await settingsRepository.setPin(confirmPin);
-      appLockService.lock();
-      if (onComplete) onComplete();
-      navigation.goBack();
+    } catch (error) {
+      console.error('Failed to set PIN:', error);
+      Alert.alert('Error', 'Failed to set PIN. Please try again.');
     }
   }, [stage, pin, confirmPin, originalPin, onComplete, navigation]);
 
   useEffect(() => {
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+    const subscription = BackHandler?.addEventListener?.('hardwareBackPress', () => {
       if (stage === 'confirm') {
         setStage('enter');
         setConfirmPin('');
@@ -73,7 +78,7 @@ export function SetPinScreen() {
       }
       return false;
     });
-    return () => subscription.remove();
+    return () => subscription?.remove?.();
   }, [stage]);
 
   return (
@@ -95,7 +100,7 @@ export function SetPinScreen() {
               key={i}
               style={[
                 styles.pinDot,
-                (stage === 'enter' ? i < pin.length : i < confirmPin.length) && styles.pinDotFilled,
+                (stage === 'enter' ? i < (pin ?? '').length : i < (confirmPin ?? '').length) && styles.pinDotFilled,
                 error && styles.pinDotError,
               ]}
             />
@@ -116,7 +121,7 @@ export function SetPinScreen() {
             ['', '0', '⌫'],
           ].map((row, rowIndex) => (
             <View key={rowIndex} style={styles.keypadRow}>
-              {row.map((key, keyIndex) => (
+              {(row ?? []).map((key, keyIndex) => (
                 <TouchableOpacity
                   key={keyIndex}
                   onPress={() => key === '⌫' ? handleDelete() : key && handlePinPress(key)}

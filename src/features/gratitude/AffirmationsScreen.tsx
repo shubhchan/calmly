@@ -114,15 +114,16 @@ export function AffirmationsScreen() {
           Q.sortBy('created_at', Q.desc)
         );
       }
-      const data = await query.fetch();
-      setAffirmations(data.map(a => ({
-        id: a.id,
-        text: a.text,
-        category: a.category,
-        favorite: a.favorite,
+      const data = (await query.fetch()) ?? [];
+      setAffirmations((data ?? []).map(a => ({
+        id: a?.id ?? '',
+        text: a?.text ?? '',
+        category: a?.category ?? '',
+        favorite: a?.favorite ?? false,
       })));
     } catch (error) {
       console.error('Failed to load affirmations:', error);
+      setAffirmations((prev) => prev ?? []);
     } finally {
       setLoading(false);
     }
@@ -133,14 +134,29 @@ export function AffirmationsScreen() {
   }, [loadAffirmations]);
 
   useEffect(() => {
-    const allAffirmations = Object.values(STATIC_AFFIRMATIONS).flat();
-    setDailyAffirmation(allAffirmations[Math.floor(Math.random() * allAffirmations.length)]);
+    try {
+      const allAffirmations = Object.values(STATIC_AFFIRMATIONS ?? {}).flat() ?? [];
+      if ((allAffirmations ?? []).length === 0) {
+        setDailyAffirmation('');
+      } else {
+        setDailyAffirmation(allAffirmations[Math.floor(Math.random() * allAffirmations.length)] ?? '');
+      }
+    } catch {
+      setDailyAffirmation('');
+    }
   }, []);
 
   const handleToggleFavorite = async (id: string, currentFavorite: boolean) => {
+    if (!id) return;
     try {
+      let affirmation = null;
+      try {
+        affirmation = await database.get<Affirmation>('affirmations').find(id);
+      } catch {
+        return;
+      }
+      if (!affirmation) return;
       await database.write(async () => {
-        const affirmation = await database.get<Affirmation>('affirmations').find(id);
         await affirmation.update(a => { a.favorite = !currentFavorite; });
       });
       loadAffirmations();
@@ -178,28 +194,31 @@ export function AffirmationsScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: AffirmationItem }) => (
+  const renderItem = ({ item }: { item: AffirmationItem }) => {
+    if (!item) return null;
+    return (
     <TouchableOpacity
-      onPress={() => navigation.navigate('AffirmationDetail', { id: item.id })}
+      onPress={() => item?.id && navigation.navigate('AffirmationDetail', { id: item.id })}
       style={styles.affirmationCard}
       activeOpacity={0.8}
     >
-      <Text style={styles.affirmationText} numberOfLines={3}>{item.text}</Text>
+      <Text style={styles.affirmationText} numberOfLines={3}>{item?.text ?? ''}</Text>
       <View style={styles.affirmationFooter}>
-        <Text style={styles.affirmationCategory}>{item.category}</Text>
+        <Text style={styles.affirmationCategory}>{item?.category ?? ''}</Text>
         <TouchableOpacity
-          onPress={(e) => { e.stopPropagation(); handleToggleFavorite(item.id, item.favorite); }}
+          onPress={(e) => { e.stopPropagation(); item?.id && handleToggleFavorite(item.id, item?.favorite ?? false); }}
           style={styles.favoriteButton}
         >
           <Ionicons
-            name={item.favorite ? 'heart' : 'heart-outline'}
+            name={item?.favorite ? 'heart' : 'heart-outline'}
             size={20}
-            color={item.favorite ? '#F5A9A9' : '#425474'}
+            color={item?.favorite ? '#F5A9A9' : '#425474'}
           />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -212,10 +231,12 @@ export function AffirmationsScreen() {
           <Ionicons name="sunny" size={24} color="#5A955A" />
           <Text style={styles.dailyLabel}>Today's Affirmation</Text>
         </View>
-        <Text style={styles.dailyText}>{dailyAffirmation}</Text>
+        <Text style={styles.dailyText}>{dailyAffirmation ?? ''}</Text>
         <TouchableOpacity onPress={() => {
-          const all = Object.values(STATIC_AFFIRMATIONS).flat();
-          setDailyAffirmation(all[Math.floor(Math.random() * all.length)]);
+          try {
+            const all = Object.values(STATIC_AFFIRMATIONS ?? {}).flat() ?? [];
+            if ((all ?? []).length > 0) setDailyAffirmation(all[Math.floor(Math.random() * all.length)] ?? '');
+          } catch {}
         }} style={styles.refreshButton}>
           <Ionicons name="refresh" size={18} color="#5A955A" />
           <Text style={styles.refreshText}>New one</Text>
@@ -223,10 +244,10 @@ export function AffirmationsScreen() {
       </Card>
 
       <View style={styles.categoryScroll}>
-        {['all', ...AFFIRMATION_CATEGORIES].map((cat) => (
+        {['all', ...(AFFIRMATION_CATEGORIES ?? [])].map((cat) => (
           <TouchableOpacity
-            key={cat}
-            onPress={() => setSelectedCategory(cat)}
+            key={cat ?? Math.random().toString()}
+            onPress={() => cat && setSelectedCategory(cat)}
             style={[
               styles.categoryChip,
               selectedCategory === cat && styles.categoryChipSelected,
@@ -235,7 +256,7 @@ export function AffirmationsScreen() {
             <Text style={[
               styles.categoryChipText,
               selectedCategory === cat && styles.categoryChipTextSelected,
-            ]}>{cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}</Text>
+            ]}>{cat === 'all' ? 'All' : ((cat ?? '').charAt(0).toUpperCase() + (cat ?? '').slice(1))}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -244,7 +265,7 @@ export function AffirmationsScreen() {
         <View style={styles.loading}>
           <Text>Loading affirmations...</Text>
         </View>
-      ) : affirmations.length === 0 ? (
+      ) : (affirmations ?? []).length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="sparkles" size={48} color="#425474" />
           <Text style={styles.emptyTitle}>No affirmations yet</Text>
@@ -253,8 +274,8 @@ export function AffirmationsScreen() {
         </View>
       ) : (
         <FlatList
-          data={affirmations}
-          keyExtractor={item => item.id}
+          data={affirmations ?? []}
+          keyExtractor={(item, idx) => item?.id ?? String(idx)}
           renderItem={renderItem}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />

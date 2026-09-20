@@ -67,17 +67,23 @@ export function HabitFormScreen() {
     try {
       const habit = await habitRepository.getById(id);
       if (habit) {
-        setName(habit.name);
-        setIcon(habit.icon);
-        setColor(habit.color);
-        setFrequency(habit.frequency as 'daily' | 'weekdays' | 'custom');
-        setCustomDays(JSON.parse(habit.customDays || '[]'));
-        setReminderTime(habit.reminderTime || '');
-        setGoal(habit.goal);
-        setNotes(habit.notes || '');
+        setName(habit?.name ?? '');
+        setIcon(habit?.icon ?? 'water');
+        setColor(habit?.color ?? COLORS[0]);
+        setFrequency((habit?.frequency as 'daily' | 'weekdays' | 'custom') ?? 'daily');
+        try {
+          const parsed = JSON.parse(habit?.customDays || '[]');
+          setCustomDays(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          setCustomDays([]);
+        }
+        setReminderTime(habit?.reminderTime || '');
+        setGoal(habit?.goal ?? 1);
+        setNotes(habit?.notes || '');
       }
     } catch (error) {
       console.error('Failed to load habit:', error);
+      setCustomDays((prev) => prev ?? []);
     } finally {
       setLoading(false);
     }
@@ -88,11 +94,11 @@ export function HabitFormScreen() {
   }, [loadHabit]);
 
   const validate = (): boolean => {
-    if (!name.trim()) {
+    if (!(name ?? '').trim()) {
       Alert.alert('Missing name', 'Please enter a habit name');
       return false;
     }
-    if (frequency === 'custom' && customDays.length === 0) {
+    if (frequency === 'custom' && (customDays ?? []).length === 0) {
       Alert.alert('Select days', 'Please choose at least one day for custom frequency');
       return false;
     }
@@ -101,17 +107,21 @@ export function HabitFormScreen() {
 
   const handleSave = async () => {
     if (!validate()) return;
+    if (isEditing && !id) {
+      Alert.alert('Error', 'Missing habit id. Please try again.');
+      return;
+    }
     setLoading(true);
     try {
       const data = {
-        name: name.trim(),
-        icon,
-        color,
+        name: (name ?? '').trim(),
+        icon: icon ?? 'water',
+        color: color ?? COLORS[0],
         frequency,
-        customDays: frequency === 'custom' ? customDays : [],
-        reminderTime,
-        goal,
-        notes: notes.trim(),
+        customDays: frequency === 'custom' ? (customDays ?? []) : [],
+        reminderTime: reminderTime ?? '',
+        goal: goal ?? 1,
+        notes: (notes ?? '').trim(),
       };
 
       if (isEditing) {
@@ -129,6 +139,7 @@ export function HabitFormScreen() {
   };
 
   const handleDelete = async () => {
+    if (!id) return;
     Alert.alert(
       'Delete habit?',
       'This will remove the habit and all its completion history.',
@@ -147,8 +158,9 @@ export function HabitFormScreen() {
   };
 
   const toggleDay = (day: string) => {
+    if (!day) return;
     setCustomDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+      (prev ?? []).includes(day) ? (prev ?? []).filter((d) => d !== day) : [...(prev ?? []), day]
     );
   };
 
@@ -156,7 +168,7 @@ export function HabitFormScreen() {
     <View style={styles.pickerContainer}>
       <Text style={styles.pickerTitle}>Choose Icon</Text>
       <ScrollView horizontal style={styles.iconScroll} showsHorizontalScrollIndicator={false}>
-        {ICONS.map((i) => (
+        {(ICONS ?? []).map((i) => (
           <TouchableOpacity
             key={i}
             onPress={() => {
@@ -179,7 +191,7 @@ export function HabitFormScreen() {
     <View style={styles.pickerContainer}>
       <Text style={styles.pickerTitle}>Choose Color</Text>
       <View style={styles.colorGrid}>
-        {COLORS.map((c) => (
+        {(COLORS ?? []).map((c) => (
           <TouchableOpacity
             key={c}
             onPress={() => {
@@ -231,13 +243,13 @@ export function HabitFormScreen() {
           <Text style={styles.sectionTitle}>Icon & Color</Text>
           <View style={styles.iconColorRow}>
             <TouchableOpacity onPress={() => setShowIconPicker(true)} style={styles.iconPreview}>
-              <View style={[styles.iconPreviewCircle, { backgroundColor: color }]}>
-                <Ionicons name={getIconName(icon)} size={28} color="white" />
+              <View style={[styles.iconPreviewCircle, { backgroundColor: color ?? COLORS[0] }]}>
+                <Ionicons name={getIconName(icon ?? 'water')} size={28} color="white" />
               </View>
               <Text style={styles.iconPreviewLabel}>Icon</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowColorPicker(true)} style={styles.colorPreview}>
-              <View style={[styles.colorPreviewCircle, { backgroundColor: color }]} />
+              <View style={[styles.colorPreviewCircle, { backgroundColor: color ?? COLORS[0] }]} />
               <Text style={styles.iconPreviewLabel}>Color</Text>
             </TouchableOpacity>
           </View>
@@ -245,33 +257,33 @@ export function HabitFormScreen() {
 
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Frequency</Text>
-          {FREQUENCY_OPTIONS.map((opt) => (
+          {(FREQUENCY_OPTIONS ?? []).map((opt) => (
             <TouchableOpacity
-              key={opt.value}
-              onPress={() => setFrequency(opt.value)}
+              key={opt?.value ?? Math.random().toString()}
+              onPress={() => opt?.value && setFrequency(opt.value as 'daily' | 'weekdays' | 'custom')}
               style={[
                 styles.frequencyOption,
-                frequency === opt.value && styles.frequencyOptionSelected,
+                frequency === opt?.value && styles.frequencyOptionSelected,
               ]}
             >
               <View style={styles.frequencyOptionContent}>
                 <Text style={[
                   styles.frequencyLabel,
-                  frequency === opt.value && styles.frequencyLabelSelected,
+                  frequency === opt?.value && styles.frequencyLabelSelected,
                 ]}>
-                  {opt.label}
+                  {opt?.label ?? ''}
                 </Text>
                 <Text style={[
                   styles.frequencyDesc,
-                  frequency === opt.value && styles.frequencyDescSelected,
+                  frequency === opt?.value && styles.frequencyDescSelected,
                 ]}>
-                  {opt.description}
+                  {opt?.description ?? ''}
                 </Text>
               </View>
               <Ionicons
-                name={frequency === opt.value ? 'checkmark-circle' : 'circle-outline'}
+                name={frequency === opt?.value ? 'checkmark-circle' : 'circle-outline'}
                 size={24}
-                color={frequency === opt.value ? '#5A955A' : '#425474'}
+                color={frequency === opt?.value ? '#5A955A' : '#425474'}
               />
             </TouchableOpacity>
           ))}
@@ -280,20 +292,20 @@ export function HabitFormScreen() {
             <View style={styles.dayPicker}>
               <Text style={styles.dayPickerLabel}>Select days</Text>
               <View style={styles.dayButtons}>
-                {DAYS.map((day) => (
+                {(DAYS ?? []).map((day) => (
                   <TouchableOpacity
-                    key={day.value}
-                    onPress={() => toggleDay(day.value)}
+                    key={day?.value ?? Math.random().toString()}
+                    onPress={() => day?.value && toggleDay(day.value)}
                     style={[
                       styles.dayButton,
-                      customDays.includes(day.value) && styles.dayButtonSelected,
+                      (customDays ?? []).includes(day?.value) && styles.dayButtonSelected,
                     ]}
                   >
                     <Text style={[
                       styles.dayButtonText,
-                      customDays.includes(day.value) && styles.dayButtonTextSelected,
+                      (customDays ?? []).includes(day?.value) && styles.dayButtonTextSelected,
                     ]}>
-                      {day.short}
+                      {day?.short ?? ''}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -319,14 +331,14 @@ export function HabitFormScreen() {
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Goal</Text>
           <View style={styles.goalRow}>
-            <TouchableOpacity onPress={() => setGoal(Math.max(1, goal - 1))} style={styles.goalButton}>
+            <TouchableOpacity onPress={() => setGoal(Math.max(1, (goal ?? 1) - 1))} style={styles.goalButton}>
               <Ionicons name="remove" size={24} color="#1E232E" />
             </TouchableOpacity>
-            <Text style={styles.goalValue}>{goal}</Text>
-            <TouchableOpacity onPress={() => setGoal(goal + 1)} style={styles.goalButton}>
+            <Text style={styles.goalValue}>{goal ?? 1}</Text>
+            <TouchableOpacity onPress={() => setGoal((goal ?? 1) + 1)} style={styles.goalButton}>
               <Ionicons name="add" size={24} color="#1E232E" />
             </TouchableOpacity>
-            <Text style={styles.goalLabel}>time{goal !== 1 ? 's' : ''} per day</Text>
+            <Text style={styles.goalLabel}>time{(goal ?? 1) !== 1 ? 's' : ''} per day</Text>
           </View>
         </Card>
 

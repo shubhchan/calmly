@@ -54,7 +54,7 @@ export function OnboardingScreen() {
   ];
 
   const handleNext = useCallback(async () => {
-    if (step === 1 && goals.length === 0) {
+    if (step === 1 && (goals ?? []).length === 0) {
       Alert.alert('Select at least one goal', 'Choose what matters most to you');
       return;
     }
@@ -62,7 +62,7 @@ export function OnboardingScreen() {
       Alert.alert('Select your peak time', 'This helps us schedule reminders');
       return;
     }
-    if (step === 3 && selectedHabits.length === 0) {
+    if (step === 3 && (selectedHabits ?? []).length === 0) {
       Alert.alert('Pick at least one habit', 'Start small — even one habit makes a difference');
       return;
     }
@@ -78,27 +78,27 @@ export function OnboardingScreen() {
   };
 
   const toggleGoal = (goalId: string) => {
-    setGoals(prev => prev.includes(goalId) ? prev.filter(g => g !== goalId) : [...prev, goalId]);
+    setGoals(prev => (prev ?? []).includes(goalId) ? (prev ?? []).filter(g => g !== goalId) : [...(prev ?? []), goalId]);
   };
 
   const toggleHabit = (habitId: string) => {
-    setSelectedHabits(prev => prev.includes(habitId) ? prev.filter(h => h !== habitId) : [...prev, habitId]);
+    setSelectedHabits(prev => (prev ?? []).includes(habitId) ? (prev ?? []).filter(h => h !== habitId) : [...(prev ?? []), habitId]);
   };
 
   const completeOnboarding = async () => {
     try {
-      await settingsRepository.updateSettings({ onboardingComplete: true, userName: name });
+      await settingsRepository.updateSettings({ onboardingComplete: true, userName: name ?? '' });
       
-      const starterHabits = STARTER_HABITS.filter(h => selectedHabits.includes(h.id));
-      for (const habit of starterHabits) {
+      const starterHabits = (STARTER_HABITS ?? []).filter(h => (selectedHabits ?? []).includes(h?.id));
+      for (const habit of (starterHabits ?? [])) {
         await habitRepository.create({
-          name: habit.name,
-          icon: habit.icon,
-          color: habit.color,
-          frequency: habit.frequency as any,
+          name: habit?.name ?? '',
+          icon: habit?.icon ?? 'checkbox',
+          color: habit?.color ?? '#5A955A',
+          frequency: (habit?.frequency ?? 'daily') as any,
           customDays: [],
-          reminderTime: habit.reminder,
-          goal: habit.goal,
+          reminderTime: habit?.reminder ?? '08:00',
+          goal: habit?.goal ?? 1,
           notes: '',
         });
       }
@@ -113,7 +113,7 @@ export function OnboardingScreen() {
     }
   };
 
-  const progress = (step + 1) / STEPS.length;
+  const progress = (step + 1) / ((STEPS ?? []).length || 1);
 
   const renderStep = () => {
     switch (step) {
@@ -137,8 +137,8 @@ export function OnboardingScreen() {
                 { icon: 'lock-closed', text: '100% private & offline' },
               ].map((f, i) => (
                 <View key={i} style={styles.featureItem}>
-                  <Ionicons name={getIconName(f.icon)} size={20} color="#5A955A" />
-                  <Text style={styles.featureText}>{f.text}</Text>
+                  <Ionicons name={getIconName(f?.icon ?? '')} size={20} color="#5A955A" />
+                  <Text style={styles.featureText}>{f?.text ?? ''}</Text>
                 </View>
               ))}
             </View>
@@ -150,24 +150,24 @@ export function OnboardingScreen() {
             <Text style={styles.stepQuestion}>What brings you here?</Text>
             <Text style={styles.stepHint}>Select all that apply</Text>
             <View style={styles.goalGrid}>
-              {GOALS.map((goal) => (
+              {(GOALS ?? []).map((goal) => (
                 <TouchableOpacity
-                  key={goal.id}
-                  onPress={() => toggleGoal(goal.id)}
+                  key={goal?.id ?? Math.random().toString()}
+                  onPress={() => toggleGoal(goal?.id ?? '')}
                   style={[
                     styles.goalCard,
-                    goals.includes(goal.id) && styles.goalCardSelected,
+                    (goals ?? []).includes(goal?.id) && styles.goalCardSelected,
                   ]}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.goalIcon, { backgroundColor: goal.color + '20' }]}>
-                    <Ionicons name={getIconName(goal.icon)} size={24} color={goal.color} />
+                  <View style={[styles.goalIcon, { backgroundColor: (goal?.color ?? '#5A955A') + '20' }]}>
+                    <Ionicons name={getIconName(goal?.icon ?? '')} size={24} color={goal?.color ?? '#5A955A'} />
                   </View>
                   <Text style={[
                     styles.goalLabel,
-                    goals.includes(goal.id) && styles.goalLabelSelected,
+                    (goals ?? []).includes(goal?.id) && styles.goalLabelSelected,
                   ]}>
-                    {goal.label}
+                    {goal?.label ?? ''}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -180,29 +180,29 @@ export function OnboardingScreen() {
             <Text style={styles.stepQuestion}>When are you at your best?</Text>
             <Text style={styles.stepHint}>This helps us time your reminders</Text>
             <View style={styles.timeOptions}>
-              {TIME_OPTIONS.map((option) => (
+              {(TIME_OPTIONS ?? []).map((option) => (
                 <TouchableOpacity
-                  key={option.id}
-                  onPress={() => setTimeOfDay(option.id)}
+                  key={option?.id ?? Math.random().toString()}
+                  onPress={() => setTimeOfDay(option?.id ?? '')}
                   style={[
                     styles.timeOption,
-                    timeOfDay === option.id && styles.timeOptionSelected,
+                    timeOfDay === option?.id && styles.timeOptionSelected,
                   ]}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.timeEmoji}>{option.emoji}</Text>
+                  <Text style={styles.timeEmoji}>{option?.emoji ?? ''}</Text>
                   <View style={styles.timeInfo}>
                     <Text style={[
                       styles.timeLabel,
-                      timeOfDay === option.id && styles.timeLabelSelected,
+                      timeOfDay === option?.id && styles.timeLabelSelected,
                     ]}>
-                      {option.label}
+                      {option?.label ?? ''}
                     </Text>
                     <Text style={[
                       styles.timeDesc,
-                      timeOfDay === option.id && styles.timeDescSelected,
+                      timeOfDay === option?.id && styles.timeDescSelected,
                     ]}>
-                      {option.description}
+                      {option?.description ?? ''}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -216,28 +216,28 @@ export function OnboardingScreen() {
             <Text style={styles.stepQuestion}>Start with tiny habits</Text>
             <Text style={styles.stepHint}>Pick 2-3 to begin. You can always add more later</Text>
             <View style={styles.habitGrid}>
-              {STARTER_HABITS.map((habit) => (
+              {(STARTER_HABITS ?? []).map((habit) => (
                 <TouchableOpacity
-                  key={habit.id}
-                  onPress={() => toggleHabit(habit.id)}
+                  key={habit?.id ?? Math.random().toString()}
+                  onPress={() => toggleHabit(habit?.id ?? '')}
                   style={[
                     styles.habitCard,
-                    selectedHabits.includes(habit.id) && styles.habitCardSelected,
+                    (selectedHabits ?? []).includes(habit?.id) && styles.habitCardSelected,
                   ]}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.habitIcon, { backgroundColor: habit.color + '20' }]}>
-                    <Ionicons name={getIconName(habit.icon)} size={22} color={habit.color} />
+                  <View style={[styles.habitIcon, { backgroundColor: (habit?.color ?? '#5A955A') + '20' }]}>
+                    <Ionicons name={getIconName(habit?.icon ?? '')} size={22} color={habit?.color ?? '#5A955A'} />
                   </View>
                   <View style={styles.habitInfo}>
                     <Text style={[
                       styles.habitName,
-                      selectedHabits.includes(habit.id) && styles.habitNameSelected,
+                      (selectedHabits ?? []).includes(habit?.id) && styles.habitNameSelected,
                     ]}>
-                      {habit.name}
+                      {habit?.name ?? ''}
                     </Text>
                     <Text style={styles.habitReminder}>
-                      Reminder: {habit.reminder}
+                      Reminder: {habit?.reminder ?? '--:--'}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -293,7 +293,7 @@ export function OnboardingScreen() {
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
-      <Text style={styles.progressText}>Step {step + 1} of {STEPS.length}</Text>
+      <Text style={styles.progressText}>Step {step + 1} of {(STEPS ?? []).length}</Text>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {renderStep()}
