@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
+import { getIconName } from '../../utils/iconMap';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,40 +40,12 @@ const COLORS = [
   '#D8A8E8', '#A8D8E8', '#F5D8A8', '#E8A8D8', '#A8E8D8', '#E8D8A8',
 ];
 
-function getIconName(icon: string): string {
-  const iconMap: Record<string, string> = {
-    water: 'water',
-    fitness: 'fitness',
-    book: 'book',
-    meditation: 'meditation',
-    sunny: 'sunny',
-    moon: 'moon',
-    leaf: 'leaf',
-    heart: 'heart',
-    'musical-notes': 'musical-notes',
-    camera: 'camera',
-    bicycle: 'bicycle',
-    walk: 'walk',
-    sleep: 'bed',
-    nutrition: 'nutrition',
-    code: 'code',
-    brush: 'brush',
-    pill: 'pill',
-    flash: 'flash',
-    diamond: 'diamond',
-    star: 'star',
-    flower: 'flower',
-    tree: 'tree',
-    cloud: 'cloud',
-    flame: 'flame',
-  };
-  return iconMap[icon] || 'checkbox';
-}
-
 export function HabitFormScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { id } = route.params;
+  // Create-flow navigates with no params at all — `route.params` is undefined
+  // then, and destructuring it threw (release grey screen). Default to {}.
+  const { id } = route.params ?? {};
   const isEditing = !!id;
 
   const [name, setName] = useState('');

@@ -29,9 +29,8 @@ type Phase = 'inhale' | 'hold' | 'exhale' | 'holdExhale' | 'complete';
 export function BreathingSessionScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'BreathingSession'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { preset = 'box', duration = 60 } = route.params;
-
-  const pattern = presetPatterns[preset];
+  const { preset = 'box', duration = 60 } = route.params ?? {};
+  const pattern = presetPatterns[preset] ?? presetPatterns.box;
   const totalCycleTime = pattern.inhale + pattern.hold + pattern.exhale + pattern.holdExhale;
   const totalCycles = Math.floor((duration * 60) / totalCycleTime);
 

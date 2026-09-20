@@ -24,7 +24,7 @@ type Step = 'mood' | 'intensity' | 'stress' | 'energy' | 'context' | 'complete';
 export function MoodCheckInScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'MoodCheckIn'>>();
-  const { fromHome } = route.params;
+  const { fromHome } = route.params ?? {};
 
   const [step, setStep] = useState<Step>('mood');
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);

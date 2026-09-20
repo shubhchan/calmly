@@ -7,6 +7,7 @@ import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
 import { HabitCompletion } from '../../database/models';
 import { getHabitEncouragement } from '../../utils/encouragement';
+import { getIconName } from '../../utils/iconMap';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressRing } from '../../components/ProgressRing';
@@ -23,22 +24,10 @@ const FREQUENCY_LABELS: Record<string, string> = {
   custom: 'Custom',
 };
 
-function getIconName(icon: string): string {
-  const iconMap: Record<string, string> = {
-    water: 'water', fitness: 'fitness', book: 'book', meditation: 'meditation',
-    sunny: 'sunny', moon: 'moon', leaf: 'leaf', heart: 'heart',
-    'musical-notes': 'musical-notes', camera: 'camera', bicycle: 'bicycle',
-    walk: 'walk', sleep: 'bed', nutrition: 'nutrition', code: 'code',
-    brush: 'brush', pill: 'pill', flash: 'flash', diamond: 'diamond',
-    star: 'star', flower: 'flower', tree: 'tree', cloud: 'cloud', flame: 'flame',
-  };
-  return iconMap[icon] || 'checkbox-outline';
-}
-
 export function HabitDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { id } = route.params;
+  const { id } = route.params ?? {};
 
   const [habit, setHabit] = useState<Habit | null>(null);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);

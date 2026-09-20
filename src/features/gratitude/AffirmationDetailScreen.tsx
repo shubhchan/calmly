@@ -15,7 +15,7 @@ type RouteProp = NativeStackScreenProps<RootStackParamList, 'AffirmationDetail'>
 export function AffirmationDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { id } = route.params;
+  const { id } = route.params ?? {};
 
   const [affirmation, setAffirmation] = useState<{
     id: string;

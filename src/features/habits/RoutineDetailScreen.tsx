@@ -22,10 +22,10 @@ const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; icon: string; color
 export function RoutineDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { timeOfDay, routine } = route.params;
+  const { timeOfDay = 'morning', routine } = route.params ?? {};
   const isEditing = !!routine;
 
-  const config = TIME_OF_DAY_CONFIG[timeOfDay];
+  const config = TIME_OF_DAY_CONFIG[timeOfDay] ?? TIME_OF_DAY_CONFIG.morning;
   const [name, setName] = useState(routine?.name || '');
   const [habits, setHabits] = useState<Habit[]>([]);
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>(routine?.items.map((i: any) => i.habitId) || []);

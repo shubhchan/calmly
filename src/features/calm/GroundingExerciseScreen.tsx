@@ -52,9 +52,9 @@ const groundingIcons: Record<GroundingType, string> = {
 export function GroundingExerciseScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'GroundingExercise'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { type = '5-4-3-2-1' } = route.params;
+  const { type = '5-4-3-2-1' } = route.params ?? {};
 
-  const steps = groundingSteps[type];
+  const steps = groundingSteps[type] ?? groundingSteps['5-4-3-2-1'];
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 

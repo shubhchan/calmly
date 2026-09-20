@@ -18,7 +18,7 @@ type RouteProp = NativeStackScreenProps<RootStackParamList, 'Gratitude'>['route'
 export function GratitudeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { type } = route.params; // 'gratitude' | 'positive'
+  const { type = 'gratitude' } = route.params ?? {}; // 'gratitude' | 'positive'
 
   const [entries, setEntries] = useState<(GratitudeEntry | PositiveMoment)[]>([]);
   const [loading, setLoading] = useState(true);

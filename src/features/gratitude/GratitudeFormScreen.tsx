@@ -19,7 +19,7 @@ type EntryType = 'gratitude' | 'positive';
 export function GratitudeFormScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { type, id } = route.params as { type: EntryType; id?: string };
+  const { type = 'gratitude', id } = (route.params ?? {}) as { type: EntryType; id?: string };
   const isEditing = !!id;
 
   const [text, setText] = useState('');

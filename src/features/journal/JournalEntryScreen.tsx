@@ -29,7 +29,7 @@ const journalTypeIcons: Record<JournalType, string> = {
 export function JournalEntryScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'JournalEntry'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { type = 'free', id } = route.params;
+  const { type = 'free', id } = route.params ?? {};
   const isEditing = !!id;
 
   return (

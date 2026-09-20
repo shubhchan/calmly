@@ -13,7 +13,7 @@ type RouteProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['route'];
 export function SetPinScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { onComplete } = route.params;
+  const { onComplete } = route.params ?? {};
 
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
