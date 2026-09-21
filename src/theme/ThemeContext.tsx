@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { useColorScheme, View } from 'react-native';
 import { vars } from 'nativewind';
 import { Storage } from '../services/storage';
+import { bootLog } from '../components/ErrorBoundary';
 import { resolveColors, toCssVars, ThemeMode as ResolvedMode, AccentColor } from './palette';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -27,6 +28,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const [theme, setThemeState] = useState<ThemeMode>('system');
   const [accent, setAccentState] = useState<AccentColor>(DEFAULT_ACCENT);
+
+  useEffect(() => {
+    bootLog('theme-ready');
+  }, []);
 
   useEffect(() => {
     const loadSettings = async () => {

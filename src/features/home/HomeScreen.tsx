@@ -7,6 +7,7 @@ import Habit from '../../database/models/Habit';
 import { getIconName } from '../../utils/iconMap';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { bootLog } from '../../components/ErrorBoundary';
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -46,6 +47,7 @@ export function HomeScreen() {
   }, []);
 
   useEffect(() => {
+    bootLog('home-mounted');
     loadHabits();
   }, [loadHabits]);
 
