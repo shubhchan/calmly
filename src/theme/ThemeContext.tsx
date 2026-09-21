@@ -58,8 +58,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // don't go through className (Ionicons `color`, SVG `stroke`/`fill`, etc).
   // `themeVars` feeds NativeWind's vars() so `className="bg-[var(--color-x)]"`
   // resolves correctly at runtime, including on theme/accent change.
+  // Guarded: if the CSS-interop runtime ever throws in a release bundle, the
+  // app still paints (unstyled vars) instead of grey-screening.
   const colors = useMemo(() => resolveColors(resolvedTheme, accent), [resolvedTheme, accent]);
-  const themeVars = useMemo(() => vars(toCssVars(colors)), [colors]);
+  const themeVars = useMemo(() => {
+    try {
+      return vars(toCssVars(colors));
+    } catch (error) {
+      console.warn('Theme vars failed, continuing without CSS vars:', error);
+      bootLog('theme-vars-failed');
+      return {};
+    }
+  }, [colors]);
 
   // Web still gets the DOM attribute treatment so plain CSS in global.css
   // ([data-theme]/[data-accent] selectors) keeps working for RN-web/browser builds.

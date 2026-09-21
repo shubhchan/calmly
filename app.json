@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchitectureEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -28,6 +27,9 @@
         "projectId": "bf1c25ed-275a-4fcf-86ed-3ad5f10703e7"
       }
     },
-    "owner": "shubbyy"
+    "owner": "shubbyy",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

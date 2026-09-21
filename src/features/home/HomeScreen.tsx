@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Card, CardContent, PrimaryButton, ProgressRing, StatPill } from '../../components';
@@ -27,6 +27,14 @@ export function HomeScreen() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+
+  // Render-attempt marker (body runs even if the commit later stalls), so the
+  // boot trail distinguishes "Home never rendered" from "rendered, effect lost".
+  const renderLoggedRef = useRef(false);
+  if (!renderLoggedRef.current) {
+    renderLoggedRef.current = true;
+    bootLog('home-render');
+  }
 
   const loadHabits = useCallback(async () => {
     setLoading(true);
