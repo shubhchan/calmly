@@ -109,6 +109,16 @@ export const journalRepository = {
       .fetch();
   },
 
+  async toggleFavorite(id: string) {
+    return database.write(async () => {
+      const entry = await journalCollection.find(id);
+      await entry.update((e) => {
+        e.favorite = !e.favorite;
+        e.updatedAt = Date.now();
+      });
+    });
+  },
+
   async getCount(): Promise<number> {
     return journalCollection.query().fetchCount();
   },

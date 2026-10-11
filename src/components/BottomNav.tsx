@@ -138,9 +138,11 @@ export const BottomNav = ({ className = '', style }: BottomNavProps) => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const themeColors = (useThemeColors() ?? {}) as Partial<ReturnType<typeof useThemeColors>>;
+  const isDark = !!themeColors.isDark;
+  const fallbackTertiary = isDark ? '#94A3B8' : '#82756A';
   const colors = {
     accentPrimary: themeColors.accentPrimary ?? '#5A955A',
-    textTertiary: themeColors.textTertiary ?? '#425474',
+    textTertiary: themeColors.textTertiary ?? fallbackTertiary,
   };
 
   const currentRoute = (route as any)?.name ?? '';
@@ -158,7 +160,7 @@ export const BottomNav = ({ className = '', style }: BottomNavProps) => {
       {(tabs ?? []).map((tab) => {
         const isFocused = currentRoute === (tab as any)?.route;
         const Icon = ((isFocused ? (tab as any)?.focusedIcon : (tab as any)?.icon) ?? HomeIcon) as any;
-        const color = isFocused ? (colors?.accentPrimary ?? '#5A955A') : (colors?.textTertiary ?? '#425474');
+        const color = isFocused ? (colors?.accentPrimary ?? '#5A955A') : (colors?.textTertiary ?? fallbackTertiary);
 
         return (
           <Pressable
@@ -169,10 +171,10 @@ export const BottomNav = ({ className = '', style }: BottomNavProps) => {
             accessibilityLabel={(tab as any)?.name ?? 'tab'}
             accessibilityState={{ selected: isFocused }}
           >
-            <Icon color={color ?? '#425474'} size={26} />
+            <Icon color={color ?? fallbackTertiary} size={26} />
             <Text
               className={`text-label-sm mt-1 ${isFocused ? 'font-semibold' : 'font-medium'}`}
-              style={{ color: color ?? '#425474' }}
+              style={{ color: color ?? fallbackTertiary }}
             >
               {(tab as any)?.name ?? ''}
             </Text>

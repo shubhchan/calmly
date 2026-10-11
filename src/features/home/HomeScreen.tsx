@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, ProgressRing, StatPill } from '../../components';
+import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon } from '../../components';
+import type { AppIconName } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
 import { getIconName } from '../../utils/iconMap';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { bootLog } from '../../components/ErrorBoundary';
+import { format } from 'date-fns';
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -18,18 +20,24 @@ export function HomeScreen() {
     themeColors = undefined;
   }
   const colors = themeColors ?? {
-    borderLight: '#E4DEBC',
-    textTertiary: '#425474',
-    accentPrimary: '#5A955A',
-    success: '#5A955A',
-    info: '#6B9BCD',
+    bgPrimary: '#FBF9F5',
+    bgCard: '#FFFFFF',
+    borderLight: '#E6E0D4',
+    textPrimary: '#1A212D',
+    textSecondary: '#384455',
+    textTertiary: '#607085',
+    accentPrimary: '#3E7B52',
+    accentBg: '#EDF5EF',
+    accentBorder: '#C2DCBF',
+    success: '#3E7B52',
+    info: '#2563EB',
+    isDark: false,
   } as any;
+
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
-  // Render-attempt marker (body runs even if the commit later stalls), so the
-  // boot trail distinguishes "Home never rendered" from "rendered, effect lost".
   const renderLoggedRef = useRef(false);
   if (!renderLoggedRef.current) {
     renderLoggedRef.current = true;
@@ -107,164 +115,322 @@ export function HomeScreen() {
     }
   });
 
+  const greeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  })();
+
+  const dateLabel = format(new Date(), 'EEEE, MMMM d');
+
   return (
     <ScrollView
-      className="flex-1 bg-[var(--color-bg-primary)]"
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100 }}
+      style={{ flex: 1, backgroundColor: colors.bgPrimary }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 }}
+      showsVerticalScrollIndicator={false}
     >
-      <View className="mb-8">
-        <Text className="text-display-sm font-bold text-[var(--color-text-primary)]">
-          Good morning ☀️
-        </Text>
-        <Text className="text-body-lg mt-1 text-[var(--color-text-secondary)]">
-          Wednesday, September 17
-        </Text>
+      {/* Header Greeting */}
+      <View style={{ marginBottom: 22, marginTop: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View>
+            <Text style={{ fontSize: 28, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5 }}>
+              {greeting}
+            </Text>
+            <Text style={{ fontSize: 15, fontWeight: '500', color: colors.textTertiary, marginTop: 2 }}>
+              {dateLabel}
+            </Text>
+          </View>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: colors.accentBg,
+              borderWidth: 1,
+              borderColor: colors.accentBorder,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AppIcon name="l-calm" size={26} loop />
+          </View>
+        </View>
       </View>
 
-      <Card variant="elevated" className="mb-6">
-        <CardContent>
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-headline-md font-semibold text-[var(--color-text-primary)]">
-              How are you feeling?
-            </Text>
-            <Pressable onPress={handleMoodCheckIn}>
-              <Text className="text-label-md text-[var(--color-accent-primary)]">Check in</Text>
+      {/* Hero Mood Card */}
+      <Card variant="elevated" style={{ marginBottom: 20, borderRadius: 20 }}>
+        <CardContent style={{ padding: 18 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: colors.accentPrimary,
+                  marginRight: 8,
+                }}
+              />
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>
+                Daily Mindset
+              </Text>
+            </View>
+            <Pressable
+              onPress={handleMoodCheckIn}
+              style={({ pressed }) => [
+                {
+                  paddingVertical: 6,
+                  paddingHorizontal: 14,
+                  borderRadius: 9999,
+                  backgroundColor: colors.accentBg,
+                  borderWidth: 1,
+                  borderColor: colors.accentBorder,
+                  opacity: pressed ? 0.75 : 1,
+                },
+              ]}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accentPrimary }}>Check in</Text>
             </Pressable>
           </View>
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <View
-                className="flex items-center justify-center rounded-full bg-[var(--color-accent-bg)]"
-                style={{ width: 56, height: 56 }}
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 20,
+                  backgroundColor: colors.accentBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                <Text style={{ fontSize: 28 }}>😊</Text>
+                <AppIcon name="m-peaceful" size={28} color={colors.accentPrimary} />
               </View>
-              <View className="ml-4">
-                <Text className="text-headline-sm font-semibold text-[var(--color-text-primary)]">
-                  Peaceful
+              <View style={{ marginLeft: 14, flex: 1 }}>
+                <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary }}>
+                  Peaceful & Grounded
                 </Text>
-                <Text className="text-body-sm text-[var(--color-text-tertiary)]">
-                  7/10 intensity · 2/10 stress
+                <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 2 }}>
+                  7/10 serenity · low stress today
                 </Text>
               </View>
             </View>
-            <ProgressRing progress={0.7} size={48} strokeWidth={4} showPercentage={false} />
+            <ProgressRing progress={0.7} size={46} strokeWidth={4.5} showPercentage={false} />
           </View>
         </CardContent>
       </Card>
 
-      <Card variant="elevated" className="mb-6">
-        <CardContent>
-          <Text className="text-headline-md font-semibold mb-4 text-[var(--color-text-primary)]">
-            Quick Actions
-          </Text>
-          <View className="flex-row gap-3">
-            <PrimaryButton
-              title="I need to calm down"
-              variant="primary"
-              size="md"
-              onPress={handleCalmDown}
-              className="flex-1"
-              fullWidth
-              leftIcon={<Text style={{ fontSize: 18 }}>🌿</Text>}
-            />
-            <PrimaryButton
-              title="Journal"
-              variant="outline"
-              size="md"
-              onPress={() => navigation?.navigate?.('Journal')}
-              className="flex-1"
-              fullWidth
-              leftIcon={<Text style={{ fontSize: 18 }}>📝</Text>}
-            />
-          </View>
-        </CardContent>
-      </Card>
+      {/* Quick Mindful Actions */}
+      <View style={{ marginBottom: 22 }}>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>
+          Quick Practices
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <Pressable
+            onPress={handleCalmDown}
+            style={({ pressed }) => [
+              {
+                flex: 1,
+                padding: 16,
+                borderRadius: 20,
+                backgroundColor: colors.accentBg,
+                borderWidth: 1,
+                borderColor: colors.accentBorder,
+                opacity: pressed ? 0.85 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                backgroundColor: colors.bgCard,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 10,
+              }}
+            >
+              <AppIcon name="l-breathe" size={22} loop />
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>
+              Calm Space
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 2, lineHeight: 16 }}>
+              Breathing & grounding
+            </Text>
+          </Pressable>
 
-      <View className="mb-6">
-        <View className="flex-row items-center justify-between mb-3">
-          <Text className="text-headline-md font-semibold text-[var(--color-text-primary)]">
-            Today's Habits
-          </Text>
-          <Pressable onPress={() => navigation?.navigate?.('Habits')}>
-            <Text className="text-label-md text-[var(--color-accent-primary)]">View all</Text>
+          <Pressable
+            onPress={() => navigation?.navigate?.('Journal')}
+            style={({ pressed }) => [
+              {
+                flex: 1,
+                padding: 16,
+                borderRadius: 20,
+                backgroundColor: colors.bgCard,
+                borderWidth: 1,
+                borderColor: colors.borderLight,
+                opacity: pressed ? 0.85 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                backgroundColor: colors.accentBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 10,
+              }}
+            >
+              <AppIcon name="l-book" size={22} loop />
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>
+              Daily Journal
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 2, lineHeight: 16 }}>
+              Reflect & write
+            </Text>
           </Pressable>
         </View>
+      </View>
+
+      {/* Today's Habits */}
+      <View style={{ marginBottom: 22 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
+            Today&apos;s Habits
+          </Text>
+          <Pressable onPress={() => navigation?.navigate?.('Habits')}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.accentPrimary }}>View all</Text>
+          </Pressable>
+        </View>
+
         {loading ? (
-          <View className="gap-3">
+          <View style={{ gap: 10 }}>
             {[1, 2, 3].map((i) => (
-              <View key={i} className="h-16 rounded-2xl" style={{ backgroundColor: colors?.borderLight ?? '#E4DEBC' }} />
+              <View key={i} style={{ height: 60, borderRadius: 18, backgroundColor: colors.borderLight }} />
             ))}
           </View>
         ) : (dueHabits ?? []).length === 0 ? (
-          <View className="items-center py-5 gap-2">
-            <Ionicons name="leaf" size={32} color={colors?.textTertiary ?? '#425474'} />
-            <Text className="text-base font-medium text-[var(--color-text-secondary)]">
-              No habits for today
-            </Text>
-            <Text className="text-sm text-center text-[var(--color-text-tertiary)]">
-              Create a habit to get started 🌱
-            </Text>
-            <PrimaryButton
-              title="Create Habit"
-              variant="primary"
-              size="sm"
-              onPress={() => navigation?.navigate?.('HabitForm')}
-              className="mt-3 w-auto"
-              fullWidth={false}
-            />
-          </View>
+          <Card variant="outlined" style={{ borderRadius: 20 }}>
+            <CardContent style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 }}>
+              <AppIcon name="l-walk" size={44} loop />
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginTop: 8 }}>
+                No habits scheduled today
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: 'center', marginTop: 4, lineHeight: 18 }}>
+                Build steady mindfulness one day at a time
+              </Text>
+              <PrimaryButton
+                title="Create Habit"
+                variant="secondary"
+                size="sm"
+                onPress={() => navigation?.navigate?.('HabitForm')}
+                style={{ marginTop: 14, minWidth: 140 }}
+                fullWidth={false}
+              />
+            </CardContent>
+          </Card>
         ) : (
-          <View className="gap-3">
-            {(dueHabits ?? []).slice(0, 3).map((habit) => (
-              <TouchableOpacity
-                key={habit?.id ?? Math.random().toString()}
-                onPress={() => habit && handleHabitPress(habit)}
-                className="flex-row items-center justify-between p-3.5 bg-[var(--color-bg-card)] rounded-2xl border border-[var(--color-border-light)]"
-                activeOpacity={0.8}
-              >
-                <View className="flex-row items-center gap-3 flex-1">
-                  <View
-                    className="w-10 h-10 rounded-xl items-center justify-center"
-                    style={{ backgroundColor: (habit as any)?.color || '#8FBC8F' }}
-                  >
-                    <Ionicons name={getIconName((habit as any)?.icon)} size={20} color="white" />
-                  </View>
-                  <View className="gap-0.5">
-                    <Text className="text-[15px] font-semibold text-[var(--color-text-primary)]">
-                      {(habit as any)?.name ?? 'Untitled'}
-                    </Text>
-                    <Text className="text-xs text-[var(--color-text-tertiary)]">
-                      {(todayCompletions ?? {})?.[(habit as any)?.id] ? 'Completed ✓' : 'Tap to complete'}
-                    </Text>
-                  </View>
-                </View>
+          <View style={{ gap: 10 }}>
+            {(dueHabits ?? []).slice(0, 3).map((habit) => {
+              const isCompleted = !!(todayCompletions ?? {})?.[(habit as any)?.id];
+              return (
                 <TouchableOpacity
-                  onPress={(e) => {
-                    e?.stopPropagation?.();
-                    toggleHabit(habit, (todayCompletions ?? {})?.[(habit as any)?.id] || false);
-                  }}
-                  className="w-9 h-9 rounded-full border-2 items-center justify-center"
+                  key={habit?.id ?? Math.random().toString()}
+                  onPress={() => habit && handleHabitPress(habit)}
                   style={{
-                    borderColor: colors?.accentPrimary ?? '#5A955A',
-                    backgroundColor: (todayCompletions ?? {})?.[(habit as any)?.id] ? (colors?.accentPrimary ?? '#5A955A') : 'transparent',
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    padding: 16,
+                    backgroundColor: colors.bgCard,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: isCompleted ? colors.accentBorder : colors.borderLight,
+                    gap: 12,
                   }}
-                  activeOpacity={0.7}
+                  activeOpacity={0.8}
                 >
-                  <Ionicons
-                    name={(todayCompletions ?? {})?.[(habit as any)?.id] ? 'checkmark' : 'checkmark-outline'}
-                    size={20}
-                    color={(todayCompletions ?? {})?.[(habit as any)?.id] ? 'white' : (colors?.accentPrimary ?? '#5A955A')}
-                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 }}>
+                    <View
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: (habit as any)?.color || colors.accentPrimary,
+                        marginTop: 2,
+                      }}
+                    >
+                      <Ionicons name={getIconName((habit as any)?.icon) as any} size={20} color="white" />
+                    </View>
+                    <View style={{ flex: 1, gap: 3 }}>
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: '700',
+                          lineHeight: 22,
+                          color: colors.textPrimary,
+                          textDecorationLine: isCompleted ? 'line-through' : 'none',
+                          opacity: isCompleted ? 0.7 : 1,
+                        }}
+                      >
+                        {(habit as any)?.name ?? 'Untitled'}
+                      </Text>
+                      <Text style={{ fontSize: 12, lineHeight: 16, color: isCompleted ? colors.accentPrimary : colors.textTertiary }}>
+                        {isCompleted ? 'Completed today ✓' : 'Tap circle to mark done'}
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e?.stopPropagation?.();
+                      toggleHabit(habit, isCompleted);
+                    }}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      borderWidth: 2,
+                      borderColor: colors.accentPrimary,
+                      backgroundColor: isCompleted ? colors.accentPrimary : 'transparent',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginTop: 2,
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={isCompleted ? 'checkmark' : 'checkmark-outline'}
+                      size={20}
+                      color={isCompleted ? 'white' : colors.accentPrimary}
+                    />
+                  </TouchableOpacity>
                 </TouchableOpacity>
-              </TouchableOpacity>
-            ))}
+              );
+            })}
             {(dueHabits ?? []).length > 3 && (
               <Pressable
                 onPress={() => navigation?.navigate?.('Habits')}
-                className="p-3.5 items-center bg-[var(--color-bg-card)] rounded-2xl border border-[var(--color-border-light)]"
+                style={{
+                  padding: 12,
+                  alignItems: 'center',
+                  backgroundColor: colors.bgCard,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: colors.borderLight,
+                }}
               >
-                <Text className="text-sm font-medium text-[var(--color-accent-primary)]">
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accentPrimary }}>
                   +{(dueHabits ?? []).length - 3} more habit{(dueHabits ?? []).length - 3 > 1 ? 's' : ''}
                 </Text>
               </Pressable>
@@ -273,34 +439,37 @@ export function HomeScreen() {
         )}
       </View>
 
-      <Card variant="outlined" className="mb-6">
+      {/* Recent Journal Entries */}
+      <Card variant="outlined" style={{ marginBottom: 20 }}>
         <CardContent>
-          <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-headline-md font-semibold text-[var(--color-text-primary)]">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
               Recent Journal Entries
             </Text>
             <Pressable onPress={() => navigation?.navigate?.('Journal')}>
-              <Text className="text-label-md text-[var(--color-accent-primary)]">View all</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.accentPrimary }}>View all</Text>
             </Pressable>
           </View>
           <EmptyState
-            icon="📖"
-            title="No entries yet"
-            subtitle="Your first thought can start here 🌱"
-            actionLabel="Create entry"
+            icon="l-book"
+            title="A fresh blank page"
+            subtitle="Write down your thoughts, a moment of gratitude, or release what weighs on you."
+            actionLabel="Start writing"
             onAction={() => navigation?.navigate?.('JournalEntry', { type: 'free' })}
+            colors={colors}
           />
         </CardContent>
       </Card>
 
+      {/* Weekly Insights */}
       <Card variant="outlined">
         <CardContent>
-          <Text className="text-headline-md font-semibold mb-3 text-[var(--color-text-primary)]">
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>
             Weekly Insights
           </Text>
-          <View className="flex-row gap-3">
-            <StatPill label="Avg Mood" value="7.2/10" trend="up" trendValue="+0.3" accentColor={colors?.success ?? '#5A955A'} />
-            <StatPill label="Journaling" value="4/7 days" trend="neutral" accentColor={colors?.info ?? '#6B9BCD'} />
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <StatPill label="Avg Mood" value="7.2/10" trend="up" trendValue="+0.3" accentColor={colors?.success ?? '#3E7B52'} />
+            <StatPill label="Journaling" value="4/7 days" trend="neutral" accentColor={colors?.info ?? '#2563EB'} />
           </View>
         </CardContent>
       </Card>
@@ -309,33 +478,35 @@ export function HomeScreen() {
 }
 
 interface EmptyStateProps {
-  icon: string;
+  icon: AppIconName;
   title: string;
   subtitle: string;
   actionLabel?: string;
   onAction?: () => void;
+  colors: any;
 }
 
-function EmptyState({ icon, title, subtitle, actionLabel, onAction }: EmptyStateProps) {
+function EmptyState({ icon, title, subtitle, actionLabel, onAction, colors }: EmptyStateProps) {
   return (
-    <View className="items-center py-8 px-4">
-      <Text style={{ fontSize: 48 }}>{icon ?? '📝'}</Text>
-      <Text className="text-headline-sm font-semibold mt-4 text-center text-[var(--color-text-primary)]">
+    <View style={{ alignItems: 'center', paddingVertical: 20, paddingHorizontal: 16 }}>
+      <AppIcon name={icon ?? 'l-book'} size={44} />
+      <Text style={{ fontSize: 16, fontWeight: '700', marginTop: 10, textAlign: 'center', color: colors.textPrimary }}>
         {title ?? 'Nothing here yet'}
       </Text>
-      <Text className="text-body-md mt-2 text-center text-[var(--color-text-tertiary)]">
+      <Text style={{ fontSize: 13, marginTop: 4, textAlign: 'center', color: colors.textTertiary, lineHeight: 18 }}>
         {subtitle ?? ''}
       </Text>
       {actionLabel && onAction && (
         <PrimaryButton
           title={actionLabel}
-          variant="primary"
+          variant="secondary"
           size="sm"
           onPress={onAction}
-          className="mt-4 w-auto"
+          style={{ marginTop: 14, minWidth: 140 }}
           fullWidth={false}
         />
       )}
     </View>
   );
 }
+

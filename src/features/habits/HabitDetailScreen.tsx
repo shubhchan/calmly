@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -9,11 +9,10 @@ import { HabitCompletion } from '../../database/models';
 import { getHabitEncouragement } from '../../utils/encouragement';
 import { getIconName } from '../../utils/iconMap';
 import { Card } from '../../components/Card';
-import { PrimaryButton } from '../../components/PrimaryButton';
-import { ProgressRing } from '../../components/ProgressRing';
 import { StatPill } from '../../components/StatPill';
 import { Ionicons } from '@expo/vector-icons';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, addMonths, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>['route'];
@@ -27,6 +26,7 @@ const FREQUENCY_LABELS: Record<string, string> = {
 export function HabitDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
+  const colors = useThemeColors();
   const { id } = route.params ?? {};
 
   const [habit, setHabit] = useState<Habit | null>(null);
@@ -63,7 +63,7 @@ export function HabitDetailScreen() {
     loadData();
   }, [loadData]);
 
-  const completionDates = new Set((completions ?? []).filter(c => c?.completed).map(c => c?.date ?? ''));
+  const completionDates = new Set((completions ?? []).filter((c) => c?.completed).map((c) => c?.date ?? ''));
 
   const getMonthDays = (date: Date) => {
     try {
@@ -138,32 +138,33 @@ export function HabitDetailScreen() {
 
   if (!id) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Not found</Text>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Not found</Text>
       </View>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading habit details...</Text>
       </View>
     );
   }
 
   if (!habit) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Not found</Text>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Habit not found</Text>
       </View>
     );
   }
 
   const safeCompletions = completions ?? [];
-  const completionRate = (safeCompletions ?? []).length > 0
-    ? Math.round(((safeCompletions ?? []).filter(c => c?.completed).length / (safeCompletions ?? []).length) * 100)
-    : 0;
+  const completionRate =
+    (safeCompletions ?? []).length > 0
+      ? Math.round(((safeCompletions ?? []).filter((c) => c?.completed).length / (safeCompletions ?? []).length) * 100)
+      : 0;
 
   let customDayLabels = '';
   try {
@@ -184,158 +185,178 @@ export function HabitDetailScreen() {
     calendarTitle = '';
   }
 
+  const habitAccentColor = habit?.color || colors.accentPrimary;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View style={styles.habitHeader}>
-          <View style={[styles.habitIconLarge, { backgroundColor: habit?.color ?? '#8FBC8F' }]}>
-            <Ionicons name={getIconName(habit?.icon ?? '')} size={36} color="white" />
-          </View>
-          <View style={styles.habitHeaderInfo}>
-            <Text style={styles.habitName}>{habit?.name ?? ''}</Text>
-            <View style={styles.habitMeta}>
-              <Text style={styles.habitFrequency}>
-                {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
-                {habit?.frequency === 'custom' && (
-                  <>
-                    {' • '}
-                    {customDayLabels}
-                  </>
-                )}
-              </Text>
-              {habit?.reminderTime && (
-                <Text style={styles.habitReminder}>
-                  <Ionicons name="alarm-outline" size={14} color="#425474" />
-                  {' '}{habit?.reminderTime ?? ''}
-                </Text>
-              )}
-            </View>
-          </View>
-        </View>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.topNav}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          hitSlop={10}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>
-            <Ionicons name="create-outline" size={22} color="#5A955A" />
+          <TouchableOpacity
+            onPress={handleEdit}
+            style={[styles.actionButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          >
+            <Ionicons name="create-outline" size={20} color={colors.accentPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDelete} style={styles.actionButton}>
-            <Ionicons name="trash-outline" size={22} color="#F5A9A9" />
+          <TouchableOpacity
+            onPress={handleDelete}
+            style={[styles.actionButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          >
+            <Ionicons name="trash-outline" size={20} color={colors.accentRose || '#EB697F'} />
           </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.habitHero}>
+        <View style={[styles.habitIconLarge, { backgroundColor: habitAccentColor }]}>
+          <Ionicons name={getIconName(habit?.icon ?? '') as any} size={36} color="#FFFFFF" />
+        </View>
+        <Text style={[styles.habitName, { color: colors.textPrimary }]}>{habit?.name ?? ''}</Text>
+        <View style={styles.habitMeta}>
+          <Text style={[styles.habitFrequency, { color: colors.textSecondary }]}>
+            {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
+            {habit?.frequency === 'custom' && customDayLabels ? ` • ${customDayLabels}` : ''}
+          </Text>
+          {habit?.reminderTime ? (
+            <View style={styles.reminderBadge}>
+              <Ionicons name="alarm-outline" size={13} color={colors.accentPrimary} />
+              <Text style={[styles.habitReminder, { color: colors.accentPrimary }]}>{habit.reminderTime}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
       <View style={styles.statsRow}>
-<StatPill
-            label="Current Streak"
-            value={(streak?.current ?? 0).toString()}
-            accentColor="#5A955A"
-            icon={<Ionicons name="flame" size={16} color="#5A955A" />}
-          />
-          <StatPill
-            label="Longest Streak"
-            value={(streak?.longest ?? 0).toString()}
-            accentColor="#B19CD9"
-            icon={<Ionicons name="trophy" size={16} color="#B19CD9" />}
-          />
-          <StatPill
-            label="Completion Rate"
-            value={`${completionRate ?? 0}%`}
-            accentColor="#A8D0E6"
-            icon={<Ionicons name="analytics" size={16} color="#A8D0E6" />}
-          />
+        <StatPill
+          label="Current Streak"
+          value={`${streak?.current ?? 0} days`}
+          accentColor={habitAccentColor}
+          icon={<Ionicons name="flame-outline" size={16} color={habitAccentColor} />}
+        />
+        <StatPill
+          label="Best Streak"
+          value={`${streak?.longest ?? 0} days`}
+          accentColor={colors.accentLavender || '#877FC5'}
+          icon={<Ionicons name="trophy-outline" size={16} color={colors.accentLavender || '#877FC5'} />}
+        />
+        <StatPill
+          label="Rate"
+          value={`${completionRate}%`}
+          accentColor={colors.accentSky || '#6B9BCD'}
+          icon={<Ionicons name="pie-chart-outline" size={16} color={colors.accentSky || '#6B9BCD'} />}
+        />
       </View>
 
       <Card style={styles.calendarCard}>
         <View style={styles.calendarHeader}>
-          <TouchableOpacity onPress={() => { try { setCurrentMonth(subMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1)); } catch {} }} style={styles.navButton}>
-            <Ionicons name="chevron-back" size={24} color="#1E232E" />
+          <TouchableOpacity
+            onPress={() => {
+              try {
+                setCurrentMonth(subMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1));
+              } catch {}
+            }}
+            style={styles.navButton}
+          >
+            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.calendarTitle}>
-            {calendarTitle}
-          </Text>
-          <TouchableOpacity onPress={() => { try { setCurrentMonth(addMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1)); } catch {} }} style={styles.navButton}>
-            <Ionicons name="chevron-forward" size={24} color="#1E232E" />
+          <Text style={[styles.calendarTitle, { color: colors.textPrimary }]}>{calendarTitle}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              try {
+                setCurrentMonth(addMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1));
+              } catch {}
+            }}
+            style={styles.navButton}
+          >
+            <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
+
         <View style={styles.calendarWeekdays}>
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
-            <Text key={`${day}-${idx}`} style={styles.calendarWeekday}>{day ?? ''}</Text>
+            <Text key={`${day}-${idx}`} style={[styles.calendarWeekday, { color: colors.textTertiary }]}>
+              {day}
+            </Text>
           ))}
         </View>
+
         <View style={styles.calendarGrid}>
-          {[...Array(firstDayOfMonth ?? 0)].map((_, i) => (
+          {[...Array(Math.max(0, firstDayOfMonth))].map((_, i) => (
             <View key={`empty-${i}`} style={styles.calendarDay} />
           ))}
-          {(monthDays ?? []).map((day) => {
-            let dateStr = '';
+          {monthDays.map((day) => {
+            let dayStr = '';
             try {
-              dateStr = day instanceof Date && !isNaN(day.getTime()) ? day.toISOString().split('T')[0] ?? '' : '';
+              dayStr = day.toISOString().split('T')[0] ?? '';
             } catch {
-              dateStr = '';
+              dayStr = '';
             }
-            if (!dateStr) return null;
-            const completed = completionDates.has(dateStr);
-            let isFuture = false;
-            let isTodayDay = false;
-            try {
-              isFuture = day > today;
-              isTodayDay = isToday(day);
-            } catch {
-              isFuture = false;
-              isTodayDay = false;
-            }
+            const isCompleted = completionDates.has(dayStr);
+            const isTodayDay = dayStr === todayStr;
+            const isFuture = day > today;
 
             return (
               <TouchableOpacity
-                key={dateStr}
+                key={dayStr}
                 onPress={() => !isFuture && toggleCompletion(day)}
+                disabled={isFuture}
                 style={[
                   styles.calendarDay,
-                  completed && styles.calendarDayCompleted,
-                  isTodayDay && styles.calendarDayToday,
-                  isFuture && styles.calendarDayFuture,
+                  isCompleted && { backgroundColor: habitAccentColor },
+                  isTodayDay && !isCompleted && { borderWidth: 2, borderColor: habitAccentColor },
+                  isFuture && { opacity: 0.3 },
                 ]}
-                disabled={isFuture}
                 activeOpacity={0.7}
               >
-                <Text style={[
-                  styles.calendarDayText,
-                  completed && styles.calendarDayTextCompleted,
-                  isTodayDay && styles.calendarDayTextToday,
-                  isFuture && styles.calendarDayTextFuture,
-                ]}>
-                  {(() => { try { return format(day, 'd'); } catch { return ''; } })()}
+                <Text
+                  style={[
+                    styles.calendarDayText,
+                    { color: colors.textPrimary },
+                    isCompleted && { color: '#FFFFFF', fontWeight: '700' },
+                    isTodayDay && !isCompleted && { color: habitAccentColor, fontWeight: '700' },
+                    isFuture && { color: colors.textTertiary },
+                  ]}
+                >
+                  {day.getDate()}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
+
         <View style={styles.calendarLegend}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, styles.legendDotCompleted]} />
-            <Text style={styles.legendText}>Completed</Text>
+            <View style={[styles.legendDot, { backgroundColor: habitAccentColor }]} />
+            <Text style={[styles.legendText, { color: colors.textSecondary }]}>Completed</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, styles.legendDotToday]} />
-            <Text style={styles.legendText}>Today</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, styles.legendDotEmpty]} />
-            <Text style={styles.legendText}>Missed</Text>
+            <View style={[styles.legendDot, { borderWidth: 2, borderColor: habitAccentColor }]} />
+            <Text style={[styles.legendText, { color: colors.textSecondary }]}>Today</Text>
           </View>
         </View>
       </Card>
 
-      {habit?.notes && (
+      {habit?.notes ? (
         <Card style={styles.notesCard}>
-          <Text style={styles.notesLabel}>Notes</Text>
-          <Text style={styles.notesText}>{habit?.notes ?? ''}</Text>
+          <Text style={[styles.notesLabel, { color: colors.textSecondary }]}>Mindful Intention</Text>
+          <Text style={[styles.notesText, { color: colors.textPrimary }]}>{habit.notes}</Text>
         </Card>
-      )}
+      ) : null}
 
-      <View style={styles.encouragementCard}>
-        <Text style={styles.encouragementText}>
-          {(streak?.current ?? 0) > 0
-            ? getHabitEncouragement('streak', streak?.current ?? 0)
-            : getHabitEncouragement('empty')}
+      <View style={[styles.encouragementCard, { backgroundColor: habitAccentColor + '14', borderColor: habitAccentColor + '30' }]}>
+        <Ionicons name="sparkles" size={20} color={habitAccentColor} style={{ marginBottom: 6 }} />
+        <Text style={[styles.encouragementText, { color: colors.textPrimary }]}>
+          {getHabitEncouragement('streak', streak?.current ?? 0)}
         </Text>
       </View>
     </ScrollView>
@@ -343,26 +364,37 @@ export function HabitDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FDFBF7',
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 100,
-    gap: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  habitHeader: {
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 18 },
+  topNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    flex: 1,
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  habitHero: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 8,
   },
   habitIconLarge: {
     width: 72,
@@ -370,52 +402,49 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  habitHeaderInfo: {
-    flex: 1,
-    gap: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
+    marginBottom: 4,
   },
   habitName: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#1E232E',
+    letterSpacing: -0.3,
+    textAlign: 'center',
   },
   habitMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
     flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   habitFrequency: {
     fontSize: 14,
-    color: '#34415A',
+  },
+  reminderBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
   },
   habitReminder: {
-    fontSize: 14,
-    color: '#425474',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E4DEBC',
+    fontSize: 13,
+    fontWeight: '600',
   },
   statsRow: {
     flexDirection: 'row',
     gap: 10,
   },
   calendarCard: {
-    gap: 16,
+    borderRadius: 20,
+    padding: 16,
+    gap: 14,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -423,71 +452,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 8,
   },
   calendarTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E232E',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   calendarWeekdays: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
   },
   calendarWeekday: {
-    width: 40,
+    width: 38,
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '600',
-    color: '#425474',
   },
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    justifyContent: 'space-between',
+    rowGap: 8,
   },
   calendarDay: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  calendarDayCompleted: {
-    backgroundColor: '#5A955A',
-  },
-  calendarDayToday: {
-    borderWidth: 2,
-    borderColor: '#5A955A',
-  },
-  calendarDayFuture: {
-    opacity: 0.3,
   },
   calendarDayText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#1E232E',
-  },
-  calendarDayTextCompleted: {
-    color: 'white',
-  },
-  calendarDayTextToday: {
-    color: '#5A955A',
-  },
-  calendarDayTextFuture: {
-    color: '#425474',
   },
   calendarLegend: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 20,
     paddingTop: 8,
-    flexWrap: 'wrap',
   },
   legendItem: {
     flexDirection: 'row',
@@ -499,52 +502,36 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
-  legendDotCompleted: {
-    backgroundColor: '#5A955A',
-  },
-  legendDotToday: {
-    borderWidth: 2,
-    borderColor: '#5A955A',
-  },
-  legendDotEmpty: {
-    backgroundColor: '#E4DEBC',
-  },
   legendText: {
     fontSize: 12,
-    color: '#425474',
   },
   notesCard: {
-    gap: 8,
+    padding: 16,
+    borderRadius: 18,
+    gap: 6,
   },
   notesLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#34415A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   notesText: {
     fontSize: 15,
-    color: '#1E232E',
     lineHeight: 22,
   },
   encouragementCard: {
-    padding: 20,
+    padding: 18,
     borderRadius: 20,
-    backgroundColor: 'rgba(143, 188, 143, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(143, 188, 143, 0.3)',
     alignItems: 'center',
   },
   encouragementText: {
-    fontSize: 15,
-    color: '#1E232E',
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
   },
   loadingText: {
-    textAlign: 'center',
-    marginTop: 100,
-    color: '#425474',
+    fontSize: 15,
   },
 });

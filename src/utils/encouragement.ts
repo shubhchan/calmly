@@ -1,94 +1,94 @@
 const ENCOURAGEMENT_MESSAGES = {
   habit: {
     complete: [
-      "Beautiful! One step at a time 🌱",
+      "Beautiful! One step at a time",
       "You showed up for yourself today. That matters.",
-      "Small wins build big changes ✨",
-      "Progress, not perfection 🌿",
+      "Small wins build big changes",
+      "Progress, not perfection",
       "Your future self will thank you",
       "Consistency > intensity",
       "You're building something meaningful",
-      "One habit, one day at a time 🌻",
+      "One habit, one day at a time",
     ],
     streak: [
-      "Incredible streak! You're on fire 🔥",
-      "Look at you go! 🌟",
+      "Incredible streak! You're on fire",
+      "Look at you go!",
       "Consistency is your superpower",
       "Day {streak} — you're unstoppable",
       "This streak is proof of your commitment",
     ],
     missed: [
-      "You missed yesterday. That's okay. Start again today 🌱",
+      "You missed yesterday. That's okay. Start again today",
       "A missed day doesn't erase your progress",
-      "Tomorrow is a fresh start. No guilt needed 🌿",
+      "Tomorrow is a fresh start. No guilt needed",
       "Life happens. What matters is coming back",
       "One off day won't break your journey",
-      "Be gentle with yourself. Begin again 🌸",
+      "Be gentle with yourself. Begin again",
     ],
     empty: [
-      "No habits yet. Your first one can start small 🌱",
+      "No habits yet. Your first one can start small",
       "Ready to build something? Start with one tiny habit",
-      "Small steps lead to big transformations ✨",
+      "Small steps lead to big transformations",
     ],
   },
   journal: {
     empty: [
-      "No entries yet. Your first thought can start here 🌱",
+      "No entries yet. Your first thought can start here",
       "Your story begins with a single word",
-      "This space is yours. Fill it at your pace ✨",
+      "This space is yours. Fill it at your pace",
     ],
     complete: [
-      "Your thoughts are safe here 📖",
+      "Your thoughts are safe here",
       "Writing it down makes it real",
       "Another page in your journey",
     ],
   },
   calm: {
     complete: [
-      "You took time to breathe. That's powerful 🌿",
+      "You took time to breathe. That's powerful",
       "Calm restored. Carry this feeling forward",
-      "Your nervous system thanks you ✨",
+      "Your nervous system thanks you",
     ],
   },
   gratitude: {
     empty: [
-      "No gratitude entries yet. Notice something good? 🌱",
-      "Gratitude grows when you water it 🌿",
-      "Your first 'thank you' can start here ✨",
+      "No gratitude entries yet. Notice something good?",
+      "Gratitude grows when you water it",
+      "Your first 'thank you' can start here",
     ],
     complete: [
-      "Gratitude saved. Your heart grows lighter 🌿",
-      "Noticing the good changes everything ✨",
-      "Another moment of appreciation captured 🌱",
+      "Gratitude saved. Your heart grows lighter",
+      "Noticing the good changes everything",
+      "Another moment of appreciation captured",
     ],
     resurfaced: [
-      "Remember this? ❤️ A little sunshine from your past",
-      "You wrote this when you needed it. You need it now too 🌿",
-      "A gift from your past self 🌱",
+      "Remember this? A little sunshine from your past",
+      "You wrote this when you needed it. You need it now too",
+      "A gift from your past self",
     ],
   },
   positive: {
     empty: [
-      "No good things saved yet. Capture a win? ✨",
-      "Small moments matter. Save one today 🌿",
-      "Your highlight reel starts with one entry 🌱",
+      "No good things saved yet. Capture a win?",
+      "Small moments matter. Save one today",
+      "Your highlight reel starts with one entry",
     ],
     complete: [
-      "Good thing saved. Joy compounds 🌿",
-      "Another win for your collection ✨",
-      "You're building a reservoir of light 🌱",
+      "Good thing saved. Joy compounds",
+      "Another win for your collection",
+      "You're building a reservoir of light",
     ],
     resurfaced: [
-      "Remember this? ❤️ A little sunshine from your past",
-      "You wrote this when you needed it. You need it now too 🌿",
-      "A gift from your past self 🌱",
+      "Remember this? A little sunshine from your past",
+      "You wrote this when you needed it. You need it now too",
+      "A gift from your past self",
     ],
   },
   general: [
-    "You're doing better than you know 🌱",
+    "You're doing better than you know",
     "One moment at a time",
     "Small steps, big heart",
-    "Progress isn't always visible. Trust the process 🌿",
+    "Progress isn't always visible. Trust the process",
   ],
 };
 
@@ -98,7 +98,7 @@ function getRandom<T>(arr: T[]): T {
   return safe[Math.floor(Math.random() * safe.length)] ?? safe[0] ?? ('' as unknown as T);
 }
 
-const FALLBACK_GENERAL = ["You're doing better than you know 🌱"];
+const FALLBACK_GENERAL = ["You're doing better than you know"];
 
 export function getEncouragement(
   category: keyof typeof ENCOURAGEMENT_MESSAGES,
@@ -125,7 +125,7 @@ export function getEncouragement(
 
     return getRandom((ENCOURAGEMENT_MESSAGES as any)?.general ?? FALLBACK_GENERAL);
   } catch {
-    return "You're doing better than you know 🌱";
+    return "You're doing better than you know";
   }
 }
 

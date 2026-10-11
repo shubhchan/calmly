@@ -1,33 +1,71 @@
 import React, { forwardRef } from 'react';
-import { View, Pressable, ViewStyle } from 'react-native';
+import { View, Pressable, ViewStyle, StyleProp } from 'react-native';
+import { useThemeColors } from '../theme/ThemeContext';
 
 interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'elevated' | 'outlined';
   className?: string;
   onPress?: () => void;
 }
 
-// Driven by the app's own CSS variables (which follow ThemeContext's manual
-// light/dark/system choice) rather than Tailwind's `dark:` variant, which only
-// tracks the device's system setting and would drift out of sync when the user
-// picks a theme explicitly in-app. `navy-*` was also never defined in the
-// Tailwind config, so it rendered as nothing.
-const variants: Record<string, string> = {
-  default: 'bg-[var(--color-bg-card)] shadow-card',
-  elevated: 'bg-[var(--color-bg-card)] shadow-card-hover',
-  outlined: 'bg-[var(--color-bg-card)] border border-[var(--color-border-light)]',
-};
-
 const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
   ({ children, style, variant = 'default', className = '', onPress, ...props }, ref) => {
+    let colors: any;
+    try {
+      colors = useThemeColors();
+    } catch {
+      colors = {
+        bgCard: '#FFFFFF',
+        borderLight: '#E6E0D4',
+        textPrimary: '#1A212D',
+        isDark: false,
+      };
+    }
+
+    const isDark = !!colors?.isDark;
+
+    const baseCardStyle: ViewStyle = {
+      backgroundColor: colors?.bgCard ?? '#FFFFFF',
+      borderRadius: variant === 'elevated' ? 24 : 20,
+      borderWidth: 1,
+      borderColor: colors?.borderLight ?? '#E6E0D4',
+      overflow: 'hidden',
+    };
+
+    const variantStyles: Record<string, ViewStyle> = {
+      default: {
+        shadowColor: colors?.textPrimary ?? '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: isDark ? 0.25 : 0.04,
+        shadowRadius: 8,
+        elevation: 2,
+      },
+      elevated: {
+        shadowColor: colors?.textPrimary ?? '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: isDark ? 0.35 : 0.07,
+        shadowRadius: 14,
+        elevation: 3.5,
+      },
+      outlined: {
+        shadowOpacity: 0,
+        elevation: 0,
+      },
+    };
+
+    const combinedStyle = [baseCardStyle, variantStyles[variant], style];
+
     if (onPress) {
       return (
         <Pressable
           ref={ref}
-          className={`rounded-3xl ${variants[variant]} ${className}`}
-          style={style}
+          className={className}
+          style={({ pressed }) => [
+            combinedStyle,
+            pressed && { opacity: 0.92, transform: [{ scale: 0.992 }] },
+          ]}
           onPress={onPress}
           {...props}
         >
@@ -35,11 +73,12 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
         </Pressable>
       );
     }
+
     return (
       <View
         ref={ref}
-        className={`rounded-3xl ${variants[variant]} ${className}`}
-        style={style}
+        className={className}
+        style={combinedStyle}
         {...props}
       >
         {children}
@@ -50,22 +89,42 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
 
 Card.displayName = 'Card';
 
-export const CardHeader = ({ children, className = '', ...props }: React.ComponentProps<typeof View>) => (
-  <View className={`px-6 pt-6 pb-4 ${className}`} {...props}>
+export const CardHeader = ({ children, style, className = '', ...props }: React.ComponentProps<typeof View>) => (
+  <View style={[{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }, style]} className={className} {...props}>
     {children}
   </View>
 );
 
-export const CardContent = ({ children, className = '', ...props }: React.ComponentProps<typeof View>) => (
-  <View className={`px-6 pb-6 ${className}`} {...props}>
+export const CardContent = ({ children, style, className = '', ...props }: React.ComponentProps<typeof View>) => (
+  <View style={[{ paddingHorizontal: 20, paddingVertical: 18 }, style]} className={className} {...props}>
     {children}
   </View>
 );
 
-export const CardFooter = ({ children, className = '', ...props }: React.ComponentProps<typeof View>) => (
-  <View className={`px-6 pb-6 pt-4 border-t border-[var(--color-border-light)] ${className}`} {...props}>
-    {children}
-  </View>
-);
+export const CardFooter = ({ children, style, className = '', ...props }: React.ComponentProps<typeof View>) => {
+  let colors: any;
+  try {
+    colors = useThemeColors();
+  } catch {
+    colors = { borderLight: '#E6E0D4' };
+  }
+  return (
+    <View
+      style={[
+        {
+          paddingHorizontal: 20,
+          paddingVertical: 14,
+          borderTopWidth: 1,
+          borderTopColor: colors?.borderLight ?? '#E6E0D4',
+        },
+        style,
+      ]}
+      className={className}
+      {...props}
+    >
+      {children}
+    </View>
+  );
+};
 
 export { Card };

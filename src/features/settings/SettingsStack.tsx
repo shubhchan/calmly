@@ -8,14 +8,14 @@ import { SetPinScreen } from './SetPinScreen';
 import { DataManagementScreen } from './DataManagementScreen';
 import { OnboardingScreen } from './OnboardingScreen';
 
-type SettingsStackParamList = Pick<RootStackParamList, 'Settings' | 'Notifications' | 'AppLockSettings' | 'SetPin' | 'DataManagement' | 'Onboarding'>;
+type SettingsStackParamList = Pick<RootStackParamList, 'SettingsMain' | 'Notifications' | 'AppLockSettings' | 'SetPin' | 'DataManagement' | 'Onboarding'>;
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
 
 export function SettingsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="SettingsMain" component={SettingsScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="AppLockSettings" component={AppLockSettingsScreen} />
       <Stack.Screen name="SetPin" component={SetPinScreen} />

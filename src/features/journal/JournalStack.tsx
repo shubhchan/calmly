@@ -4,14 +4,14 @@ import { RootStackParamList } from '../../types/navigation';
 import { JournalScreen } from './JournalScreen';
 import { JournalEntryScreen } from './JournalEntryScreen';
 
-type JournalStackParamList = Pick<RootStackParamList, 'Journal' | 'JournalEntry'>;
+type JournalStackParamList = Pick<RootStackParamList, 'JournalMain' | 'JournalEntry'>;
 
 const Stack = createNativeStackNavigator<JournalStackParamList>();
 
 export function JournalStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Journal" component={JournalScreen} />
+      <Stack.Screen name="JournalMain" component={JournalScreen} />
       <Stack.Screen name="JournalEntry" component={JournalEntryScreen} />
     </Stack.Navigator>
   );

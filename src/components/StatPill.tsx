@@ -27,7 +27,23 @@ export const StatPill = ({
   labelStyle,
   valueStyle,
 }: StatPillProps) => {
-  const colors = useThemeColors();
+  let colors: any;
+  try {
+    colors = useThemeColors();
+  } catch {
+    colors = {
+      accentPrimary: '#3E7B52',
+      bgCard: '#FFFFFF',
+      borderLight: '#E6E0D4',
+      textPrimary: '#1A212D',
+      textSecondary: '#384455',
+      textTertiary: '#607085',
+      success: '#3E7B52',
+      error: '#DB3A60',
+      isDark: false,
+    };
+  }
+
   const resolvedAccent = accentColor ?? colors.accentPrimary;
 
   const trendColors = {
@@ -44,44 +60,79 @@ export const StatPill = ({
 
   return (
     <View
-      className={`
-        flex-row items-center px-4 py-3 rounded-full
-        bg-[var(--color-bg-card)] border border-[var(--color-border-light)]
-        shadow-card
-        ${className}
-      `}
-      style={style}
+      className={className}
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          borderRadius: 20,
+          backgroundColor: colors.bgCard,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+          shadowColor: colors.textPrimary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: colors.isDark ? 0.2 : 0.04,
+          shadowRadius: 6,
+          elevation: 1.5,
+          flex: 1,
+        },
+        style,
+      ]}
     >
       {icon && (
         <View
-          className="mr-3 flex items-center justify-center"
           style={{
-            width: 28,
-            height: 28,
-            borderRadius: 14,
-            backgroundColor: resolvedAccent + '20',
+            marginRight: 12,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: resolvedAccent + '18',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           {icon}
         </View>
       )}
-      <View className="flex-1">
+      <View style={{ flex: 1 }}>
         <Text
-          className="text-body-sm font-medium"
-          style={[{ color: colors.textSecondary }, labelStyle]}
+          style={[
+            {
+              fontSize: 12,
+              fontWeight: '500',
+              color: colors.textTertiary,
+              letterSpacing: 0.1,
+            },
+            labelStyle,
+          ]}
         >
           {label}
         </Text>
-        <View className="flex-row items-baseline mt-0.5">
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 2 }}>
           <Text
-            className="font-bold text-headline-sm"
-            style={[{ color: colors.textPrimary }, valueStyle]}
+            style={[
+              {
+                fontSize: 17,
+                fontWeight: '700',
+                color: colors.textPrimary,
+                letterSpacing: -0.2,
+              },
+              valueStyle,
+            ]}
           >
             {value}
           </Text>
           {trendValue && (
-            <View className="flex-row items-center ml-2">
-              <Text className="text-label-sm" style={{ color: trendColors[trend] }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  color: trendColors[trend],
+                }}
+              >
                 {trendIcons[trend]} {trendValue}
               </Text>
             </View>
@@ -107,39 +158,81 @@ export const MoodStatPill = ({
   className = '',
   style,
 }: MoodStatPillProps) => {
-  const colors = useThemeColors();
+  let colors: any;
+  try {
+    colors = useThemeColors();
+  } catch {
+    colors = {
+      bgCard: '#FFFFFF',
+      borderLight: '#E6E0D4',
+      textPrimary: '#1A212D',
+      textSecondary: '#384455',
+      textTertiary: '#607085',
+      isDark: false,
+    };
+  }
 
   return (
     <View
-      className={`
-        flex-row items-center px-4 py-3 rounded-full
-        bg-[var(--color-bg-card)] border
-        shadow-card
-        ${className}
-      `}
-      style={[style, { borderColor: color + '40' }]}
+      className={className}
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderRadius: 18,
+          backgroundColor: colors.bgCard,
+          borderWidth: 1,
+          borderColor: color + '30',
+          shadowColor: colors.textPrimary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: colors.isDark ? 0.2 : 0.04,
+          shadowRadius: 6,
+          elevation: 1.5,
+        },
+        style,
+      ]}
     >
       <View
-        className="mr-3 flex items-center justify-center rounded-full"
-        style={{ width: 32, height: 32, backgroundColor: color + '20' }}
+        style={{
+          marginRight: 12,
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: color + '1A',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
-        <View className="rounded-full" style={{ width: 16, height: 16, backgroundColor: color }} />
+        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: color }} />
       </View>
-      <View className="flex-1">
-        <Text className="text-body-sm font-medium" style={{ color: colors.textSecondary }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 13, fontWeight: '500', color: colors.textSecondary }}>
           {mood}
         </Text>
-        <View className="flex-row items-baseline mt-0.5">
-          <Text className="font-bold text-headline-sm" style={{ color: colors.textPrimary }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary, minWidth: 42 }}>
             {Math.round(percentage)}%
           </Text>
           <View
-            className="ml-2 h-1.5 flex-1 max-w-20 rounded-full overflow-hidden"
-            style={{ backgroundColor: colors.borderLight }}
+            style={{
+              marginLeft: 8,
+              height: 5,
+              flex: 1,
+              maxWidth: 90,
+              borderRadius: 3,
+              backgroundColor: colors.borderLight,
+              overflow: 'hidden',
+            }}
           >
             <View
-              className="h-full rounded-full"
-              style={{ width: `${Math.max(0, Math.min(100, percentage))}%`, backgroundColor: color }}
+              style={{
+                height: '100%',
+                borderRadius: 3,
+                width: `${Math.max(0, Math.min(100, percentage))}%`,
+                backgroundColor: color,
+              }}
             />
           </View>
         </View>
@@ -147,3 +240,4 @@ export const MoodStatPill = ({
     </View>
   );
 };
+

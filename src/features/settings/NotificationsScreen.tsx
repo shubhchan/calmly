@@ -5,23 +5,24 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/Card';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { notificationService, NotificationCategory } from '../../services/notifications';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Notifications'>['navigation'];
 
-const NOTIFICATION_CATEGORIES: { key: NotificationCategory; label: string; description: string; icon: string; color: string }[] = [
-  { key: 'morningCheckIn', label: 'Morning Check-In', description: 'A gentle prompt to start your day mindfully', icon: 'sunny', color: '#F5C6A5' },
-  { key: 'journalReminder', label: 'Journal Reminder', description: 'Evening nudge to reflect on your day', icon: 'book', color: '#877FC5' },
-  { key: 'habitReminder', label: 'Habit Reminder', description: 'Friendly reminders for your daily habits', icon: 'checkbox', color: '#5A955A' },
-  { key: 'eveningReflection', label: 'Evening Reflection', description: 'Wind down with a brief reflection', icon: 'moon', color: '#6B9BCD' },
-  { key: 'sleepRoutine', label: 'Sleep Routine', description: 'Prepare for restful sleep', icon: 'bed', color: '#877FC5' },
-  { key: 'weeklyReflection', label: 'Weekly Reflection', description: 'Sunday check-in on your progress', icon: 'calendar', color: '#EB876D' },
+const NOTIFICATION_CATEGORIES: { key: NotificationCategory; label: string; description: string; icon: any; color: string }[] = [
+  { key: 'morningCheckIn', label: 'Morning Check-In', description: 'A gentle prompt to start your day mindfully', icon: 'sunny-outline', color: '#EB876D' },
+  { key: 'journalReminder', label: 'Journal Reminder', description: 'Evening nudge to reflect on your day', icon: 'book-outline', color: '#877FC5' },
+  { key: 'habitReminder', label: 'Habit Reminder', description: 'Friendly encouragement for your daily habits', icon: 'checkmark-circle-outline', color: '#5A955A' },
+  { key: 'eveningReflection', label: 'Evening Reflection', description: 'Wind down with a brief mindful reflection', icon: 'moon-outline', color: '#6B9BCD' },
+  { key: 'sleepRoutine', label: 'Sleep Routine', description: 'Prepare body and mind for restful sleep', icon: 'bed-outline', color: '#877FC5' },
+  { key: 'weeklyReflection', label: 'Weekly Reflection', description: 'Sunday celebration of your progress', icon: 'calendar-outline', color: '#EB876D' },
 ];
 
 export function NotificationsScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const colors = useThemeColors();
   const [masterEnabled, setMasterEnabled] = useState(false);
   const [categories, setCategories] = useState<Record<NotificationCategory, boolean>>({} as any);
   const [times, setTimes] = useState<Record<NotificationCategory, string>>({} as any);
@@ -31,15 +32,15 @@ export function NotificationsScreen() {
   const loadSettings = useCallback(async () => {
     setLoading(true);
     try {
-      const { status } = (await require('expo-notifications')?.getPermissionsAsync?.()) ?? {};
+      const status = await notificationService.getPermissionStatus();
       setPermission(status ?? 'undetermined');
-      
+
       const config = (await settingsRepository?.getNotificationConfig?.()) ?? {};
       setMasterEnabled(config?.enabled ?? false);
-      
-      NOTIFICATION_CATEGORIES.forEach(cat => {
-        setCategories(prev => ({ ...(prev ?? {}), [cat?.key]: config?.categories?.[cat?.key] ?? false }));
-        setTimes(prev => ({ ...(prev ?? {}), [cat?.key]: config?.times?.[cat?.key] ?? '08:00' }));
+
+      NOTIFICATION_CATEGORIES.forEach((cat) => {
+        setCategories((prev) => ({ ...(prev ?? {}), [cat?.key]: config?.categories?.[cat?.key] ?? false }));
+        setTimes((prev) => ({ ...(prev ?? {}), [cat?.key]: config?.times?.[cat?.key] ?? '08:00' }));
       });
     } catch (error) {
       console.error('Failed to load notification settings:', error);
@@ -54,27 +55,32 @@ export function NotificationsScreen() {
 
   const handleMasterToggle = async (enabled: boolean) => {
     try {
-    setMasterEnabled(enabled ?? false);
-    await settingsRepository?.updateNotificationConfig?.({ enabled: enabled ?? false });
-    if (enabled) {
-      await notificationService?.scheduleAll?.();
-    } else {
-      await notificationService?.cancelAll?.();
-    }
+      setMasterEnabled(enabled ?? false);
+      await settingsRepository?.updateNotificationConfig?.({ enabled: enabled ?? false });
+      if (enabled) {
+        await notificationService?.scheduleAll?.();
+      } else {
+        await notificationService?.cancelAll?.();
+      }
     } catch (error) {
       console.error('Failed to toggle master:', error);
     }
   };
 
   const handleCategoryToggle = async (category: NotificationCategory, enabled: boolean) => {
-    setCategories(prev => ({ ...prev, [category]: enabled }));
+    setCategories((prev) => ({ ...prev, [category]: enabled }));
     await settingsRepository.updateNotificationConfig({
-      [category === 'morningCheckIn' ? 'morningCheckInCat' :
-       category === 'journalReminder' ? 'journalReminderCat' :
-       category === 'habitReminder' ? 'habitReminderCat' :
-       category === 'eveningReflection' ? 'eveningReflectionCat' :
-       category === 'sleepRoutine' ? 'sleepRoutineCat' :
-       'weeklyReflectionCat']: enabled,
+      [category === 'morningCheckIn'
+        ? 'morningCheckInCat'
+        : category === 'journalReminder'
+        ? 'journalReminderCat'
+        : category === 'habitReminder'
+        ? 'habitReminderCat'
+        : category === 'eveningReflection'
+        ? 'eveningReflectionCat'
+        : category === 'sleepRoutine'
+        ? 'sleepRoutineCat'
+        : 'weeklyReflectionCat']: enabled,
     });
     if (enabled && masterEnabled) {
       await notificationService.scheduleAll();
@@ -83,143 +89,86 @@ export function NotificationsScreen() {
     }
   };
 
-  const handleTimeChange = async (category: NotificationCategory, time: string) => {
-    setTimes(prev => ({ ...prev, [category]: time }));
-    await settingsRepository.updateNotificationConfig({
-      [category]: time,
-    });
-    if (masterEnabled && categories[category]) {
-      await notificationService.scheduleAll();
-    }
-  };
-
   const handleTestNotification = async (category: NotificationCategory) => {
     await notificationService.scheduleTestNotification(category);
-    Alert.alert('Test Sent', 'Check your notifications in a few seconds!');
+    Alert.alert('Test Scheduled', 'You will receive a notification in a few seconds!');
   };
-
-  const handlePermissionPress = async () => {
-    if (permission === 'denied') {
-      Alert.alert(
-        'Permission Required',
-        'Please enable notifications in your device settings to receive reminders.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => require('expo-linking')?.openSettings?.() },
-        ]
-      );
-    } else {
-      await notificationService.requestPermissions();
-      loadSettings();
-    }
-  };
-
-  const renderTimePicker = (category: NotificationCategory) => (
-    <TouchableOpacity
-      onPress={() => {
-        // `prompt()` is web-only and undefined on iOS/Android (ReferenceError in
-        // release builds). Offer preset times via a native dialog instead.
-        const current = (times ?? {})[category] ?? '08:00';
-        const presets = ['07:00', '08:00', '09:00', '12:00', '18:00', '20:00', '21:00', '22:00'];
-        Alert.alert(
-          'Reminder time',
-          `Current: ${current}. Pick a new time:`,
-          [
-            ...presets
-              .filter((t) => t !== current)
-              .slice(0, 4)
-              .map((t) => ({
-                text: t,
-                onPress: () => handleTimeChange(category, t),
-              })),
-            { text: 'Cancel', style: 'cancel' },
-          ]
-        );
-      }}
-      style={styles.timeButton}
-    >
-      <Text style={styles.timeButtonText}>{(times ?? {})[category] ?? '--:--'}</Text>
-      <Ionicons name="time" size={20} color="#425474" />
-    </TouchableOpacity>
-  );
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#5A955A" style={{ marginTop: 100 }} />
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => (navigation as any)?.goBack?.()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#1E232E" />
+        <TouchableOpacity
+          onPress={() => (navigation as any)?.goBack?.()}
+          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          hitSlop={10}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Mindful Reminders</Text>
+        <View style={{ width: 40 }} />
       </View>
-
-      {permission !== 'granted' && (
-        <Card variant="outlined" style={styles.permissionCard}>
-          <View style={styles.permissionContent}>
-            <Ionicons name="notifications-off" size={32} color="#EB876D" />
-            <View style={styles.permissionText}>
-              <Text style={styles.permissionTitle}>Notifications Disabled</Text>
-              <Text style={styles.permissionDesc}>
-                Enable notifications to receive gentle reminders and check-ins.
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity onPress={handlePermissionPress} style={styles.permissionButton}>
-            <Text style={styles.permissionButtonText}>
-              {permission === 'denied' ? 'Open Settings' : 'Enable Notifications'}
-            </Text>
-          </TouchableOpacity>
-        </Card>
-      )}
 
       <Card style={styles.card}>
         <View style={styles.masterRow}>
           <View style={styles.masterInfo}>
-            <Text style={styles.masterLabel}>All Notifications</Text>
-            <Text style={styles.masterDesc}>Master switch for all reminders</Text>
+            <Text style={[styles.masterLabel, { color: colors.textPrimary }]}>All Reminders</Text>
+            <Text style={[styles.masterDesc, { color: colors.textTertiary }]}>Master toggle for notifications</Text>
           </View>
           <Switch
             value={masterEnabled}
             onValueChange={handleMasterToggle}
-            thumbColor={masterEnabled ? '#5A955A' : '#425474'}
-            trackColor={{ false: '#E4DEBC', true: '#5A955A' }}
+            thumbColor="#FFFFFF"
+            trackColor={{ false: colors.borderLight, true: colors.accentPrimary }}
             disabled={permission !== 'granted'}
           />
         </View>
       </Card>
 
       <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Reminder Categories</Text>
-        <Text style={styles.sectionDesc}>
-          Customize which reminders you receive and when. All copy is invitational, never guilt-based.
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Categories</Text>
+        <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
+          Invitational, non-guilt prompts calibrated for mindful presence.
         </Text>
-        {(NOTIFICATION_CATEGORIES ?? []).map((cat) => (
-          <View key={cat?.key ?? Math.random().toString()} style={styles.categoryItem}>
-            <View style={[styles.categoryIcon, { backgroundColor: (cat?.color ?? '#5A955A') + '20' }]}>
-              <Ionicons name={(cat?.icon ?? 'notifications') as any} size={22} color={cat?.color ?? '#5A955A'} />
+        {(NOTIFICATION_CATEGORIES ?? []).map((cat, idx) => (
+          <View
+            key={cat.key}
+            style={[
+              styles.categoryItem,
+              { borderBottomColor: colors.borderLight },
+              idx === NOTIFICATION_CATEGORIES.length - 1 && { borderBottomWidth: 0 },
+            ]}
+          >
+            <View style={[styles.categoryIcon, { backgroundColor: cat.color + '18' }]}>
+              <Ionicons name={cat.icon} size={22} color={cat.color} />
             </View>
             <View style={styles.categoryInfo}>
-              <Text style={styles.categoryLabel}>{cat?.label ?? ''}</Text>
-              <Text style={styles.categoryDesc}>{cat?.description ?? ''}</Text>
+              <Text style={[styles.categoryLabel, { color: colors.textPrimary }]}>{cat.label}</Text>
+              <Text style={[styles.categoryDesc, { color: colors.textTertiary }]}>{cat.description}</Text>
             </View>
             <View style={styles.categoryControls}>
-              <TouchableOpacity onPress={() => cat?.key && handleTestNotification(cat.key)} style={styles.testButton}>
-                <Text style={styles.testButtonText}>Test</Text>
+              <TouchableOpacity
+                onPress={() => handleTestNotification(cat.key)}
+                style={[styles.testButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+              >
+                <Text style={[styles.testButtonText, { color: colors.accentPrimary }]}>Test</Text>
               </TouchableOpacity>
-              {cat?.key ? renderTimePicker(cat.key) : null}
               <Switch
-                value={(categories ?? {})[cat?.key] && masterEnabled}
-                onValueChange={enabled => cat?.key && handleCategoryToggle(cat.key, enabled)}
-                thumbColor={(categories ?? {})[cat?.key] ? '#5A955A' : '#425474'}
-                trackColor={{ false: '#E4DEBC', true: '#5A955A' }}
+                value={(categories ?? {})[cat.key] && masterEnabled}
+                onValueChange={(enabled) => handleCategoryToggle(cat.key, enabled)}
+                thumbColor="#FFFFFF"
+                trackColor={{ false: colors.borderLight, true: colors.accentPrimary }}
                 disabled={!masterEnabled || permission !== 'granted'}
               />
             </View>
@@ -227,12 +176,11 @@ export function NotificationsScreen() {
         ))}
       </Card>
 
-      <Card variant="outlined" style={styles.noteCard}>
+      <Card variant="outlined" style={[styles.noteCard, { backgroundColor: colors.accentPrimary + '10', borderColor: colors.accentPrimary + '30' }]}>
         <View style={styles.noteContent}>
-          <Ionicons name="information-circle" size={20} color="#6B9BCD" />
-          <Text style={styles.noteText}>
-            All notifications use encouraging, non-guilt-based language. 
-            Times use 24-hour format. Changes apply immediately.
+          <Ionicons name="information-circle-outline" size={20} color={colors.accentPrimary} />
+          <Text style={[styles.noteText, { color: colors.textSecondary }]}>
+            All notification messages use gentle, encouraging language. No aggressive streak warnings or guilt prompts.
           </Text>
         </View>
       </Card>
@@ -241,37 +189,50 @@ export function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDFBF7' },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, gap: 16 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: 20, fontWeight: '600', color: '#1E232E', textAlign: 'center' },
-  headerSpacer: { width: 44 },
-  permissionCard: { backgroundColor: 'rgba(235, 135, 109, 0.1)', borderColor: '#EB876D' },
-  permissionContent: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  permissionText: { flex: 1, gap: 2 },
-  permissionTitle: { fontSize: 16, fontWeight: '600', color: '#1E232E' },
-  permissionDesc: { fontSize: 14, color: '#34415A' },
-  permissionButton: { alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: '#EB876D' },
-  permissionButtonText: { fontSize: 14, fontWeight: '600', color: 'white' },
-  card: { marginBottom: 16, gap: 12 },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 60, gap: 16 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  card: { padding: 18, borderRadius: 20, gap: 12 },
   masterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   masterInfo: { flex: 1 },
-  masterLabel: { fontSize: 16, fontWeight: '600', color: '#1E232E' },
-  masterDesc: { fontSize: 13, color: '#425474', marginTop: 2 },
-  sectionTitle: { fontSize: 17, fontWeight: '600', color: '#1E232E', marginBottom: 4 },
-  sectionDesc: { fontSize: 14, color: '#34415A', lineHeight: 20, marginBottom: 16 },
-  categoryItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E4DEBC' },
-  categoryIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  categoryInfo: { flex: 1, gap: 2 },
-  categoryLabel: { fontSize: 16, fontWeight: '500', color: '#1E232E' },
-  categoryDesc: { fontSize: 13, color: '#425474' },
-  categoryControls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  testButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DEBC' },
-  testButtonText: { fontSize: 12, fontWeight: '600', color: '#5A955A' },
-  timeButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DEBC' },
-  timeButtonText: { fontSize: 14, fontWeight: '500', color: '#1E232E', fontFamily: 'monospace', minWidth: 60 },
-  noteCard: { backgroundColor: 'rgba(107, 155, 205, 0.1)', borderColor: '#6B9BCD' },
-  noteContent: { flexDirection: 'row', gap: 8 },
-  noteText: { flex: 1, fontSize: 13, color: '#34415A', lineHeight: 18 },
+  masterLabel: { fontSize: 16, fontWeight: '700' },
+  masterDesc: { fontSize: 13, marginTop: 2 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
+  sectionDesc: { fontSize: 14, lineHeight: 20, marginBottom: 8 },
+  categoryItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  categoryIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  categoryInfo: { flex: 1, gap: 3 },
+  categoryLabel: { fontSize: 15, fontWeight: '600' },
+  categoryDesc: { fontSize: 12, lineHeight: 17 },
+  categoryControls: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 },
+  testButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  testButtonText: { fontSize: 12, fontWeight: '600' },
+  noteCard: { padding: 16, borderRadius: 16 },
+  noteContent: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  noteText: { flex: 1, fontSize: 13, lineHeight: 18 },
 });

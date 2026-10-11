@@ -34,7 +34,7 @@ export interface ReflectionData {
 export const reflectionRepository = {
   async create(data: ReflectionData) {
     return database.write(async () => {
-      return reflectionCollection.create((r) => {
+      return reflectionCollection.create((r: any) => {
         r.type = data.type;
         r.periodStart = data.periodStart;
         r.periodEnd = data.periodEnd;
@@ -48,7 +48,7 @@ export const reflectionRepository = {
         r.prompt1 = data.prompt1;
         r.response1 = data.response1 || '';
         r.prompt2 = data.prompt2;
-        r.response3 = data.prompt3 || '';
+        r.response2 = data.prompt3 || '';
         r.response3 = data.response3 || '';
         r.createdAt = Date.now();
         r.updatedAt = Date.now();
@@ -73,10 +73,10 @@ export const reflectionRepository = {
     return entries[0] || null;
   },
 
-  async update(id: string, data: Partial<Reflection>) {
+  async update(id: string, data: any) {
     return database.write(async () => {
       const reflection = await reflectionCollection.find(id);
-      await reflection.update((r) => {
+      await reflection.update((r: any) => {
         if (data.response1 !== undefined) r.response1 = data.response1;
         if (data.response2 !== undefined) r.response2 = data.response2;
         if (data.response3 !== undefined) r.response3 = data.response3;

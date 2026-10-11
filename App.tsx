@@ -1,13 +1,14 @@
 import 'react-native-gesture-handler';
 import './global.css';
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View, StatusBar as RNStatusBar, Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider } from './src/theme/ThemeContext';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemeProvider, useThemeColors } from './src/theme/ThemeContext';
+import { AppIcon } from './src/components/AppIcon';
 import { RootNavigator } from './src/routing/navigation';
 import {
   ErrorBoundary,
@@ -20,12 +21,43 @@ import {
 const NAV_READY_TIMEOUT_MS = 12000;
 
 /**
+ * Reserve the status-bar height once at the app shell so every screen starts
+ * below it (edge-to-edge Android draws behind the status bar otherwise).
+ * Theme-tinted so there's no cream strip in dark mode. Renders nothing when
+ * the inset is 0. Must stay inside SafeAreaProvider + ThemeProvider.
+ */
+function TopInsetSpacer() {
+  const insets = useSafeAreaInsets();
+  let colors: any;
+  try {
+    colors = useThemeColors();
+  } catch {
+    colors = { bgPrimary: '#FBF9F5', isDark: false };
+  }
+  const top = insets?.top ?? 0;
+  if (!top) return null;
+  const barColor = colors?.bgPrimary ?? (colors?.isDark ? '#0F141C' : '#FBF9F5');
+  return <View style={{ height: top, backgroundColor: barColor }} />;
+}
+
+/**
  * Paints instantly (first commit) underneath the navigation tree, so the user
  * never stares at a blank/native-grey window while navigation initializes.
  * It stays mounted until NavigationContainer reports ready, then unmounts.
  * Absolutely positioned so it never affects the navigation layout.
  */
 function BootSplash() {
+  let colors: any;
+  try {
+    colors = useThemeColors();
+  } catch {
+    colors = {
+      bgPrimary: '#FBF9F5',
+      accentPrimary: '#3E7B52',
+      textPrimary: '#1A212D',
+      textTertiary: '#607085',
+    };
+  }
   return (
     <View
       style={{
@@ -34,23 +66,39 @@ function BootSplash() {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: '#FDFBF7',
+        backgroundColor: colors?.bgPrimary ?? '#FBF9F5',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 32,
       }}
     >
-      <Text style={{ fontSize: 44 }}>🌿</Text>
-      <Text style={{ marginTop: 12, fontSize: 24, fontWeight: '700', color: '#1E232E' }}>
+      <AppIcon name="i-leaf" size={48} color={colors?.accentPrimary ?? '#3E7B52'} />
+      <Text
+        style={{
+          marginTop: 14,
+          fontSize: 26,
+          fontWeight: '700',
+          color: colors?.textPrimary ?? '#1A212D',
+          letterSpacing: -0.3,
+        }}
+      >
         Calmly
       </Text>
-      <Text style={{ marginTop: 6, fontSize: 14, color: '#425474', textAlign: 'center' }}>
-        Take a breath… loading your space
+      <Text
+        style={{
+          marginTop: 6,
+          fontSize: 14,
+          color: colors?.textTertiary ?? '#607085',
+          textAlign: 'center',
+        }}
+      >
+        Take a gentle breath…
       </Text>
-      <ActivityIndicator size="large" color="#5A955A" style={{ marginTop: 20 }} />
+      <ActivityIndicator size="large" color={colors?.accentPrimary ?? '#3E7B52'} style={{ marginTop: 24 }} />
     </View>
   );
 }
+
 
 /**
  * Shown (dismissibly, ON TOP of the still-mounted app) only if navigation
@@ -70,6 +118,7 @@ function StallOverlay({
   onDismiss: () => void;
 }) {
   const trail = getBootTrail().slice(-10).join('\n');
+  bootLog('stall-overlay-render');
   return (
     <View
       style={{
@@ -83,7 +132,7 @@ function StallOverlay({
         paddingHorizontal: 20,
       }}
     >
-      <Text style={{ fontSize: 40, textAlign: 'center' }}>🐢</Text>
+      <AppIcon name="i-time" size={40} color="#EB876D" />
       <Text
         style={{
           marginTop: 8,
@@ -155,6 +204,108 @@ function StallOverlay({
   );
 }
 
+/**
+ * Commits ONLY if the Suspense boundary above the navigation tree pends.
+ * Distinguishes "nav tree suspended (promise never resolved)" from
+ * "NavigationContainer never rendered children".
+ */
+function SuspenseFallbackProbe() {
+  useEffect(() => {
+    bootLog('suspense-fallback-shown (nav tree suspended)');
+  }, []);
+  return null;
+}
+
+/**
+ * Render-phase marker placed as a direct child of NavigationContainer.
+ * If this logs but root-navigator-render doesn't, RootNavigator itself is
+ * the blocker. If this never logs, NavigationContainer never rendered
+ * children (threw before children, or the boundary pended first).
+ */
+function NavChildrenProbe({ children }: { children: React.ReactNode }) {
+  const loggedRef = useRef(false);
+  if (!loggedRef.current) {
+    loggedRef.current = true;
+    bootLog('nav-container-children-render');
+  }
+  return <>{children}</>;
+}
+
+function AppShell({
+  navReady,
+  navStalled,
+  navKey,
+  copied,
+  handleNavReady,
+  handleStateChange,
+  handleReloadNavigation,
+  handleCopyReport,
+  setNavStalled,
+}: {
+  navReady: boolean;
+  navStalled: boolean;
+  navKey: number;
+  copied: boolean;
+  handleNavReady: () => void;
+  handleStateChange: () => void;
+  handleReloadNavigation: () => void;
+  handleCopyReport: () => void;
+  setNavStalled: (s: boolean) => void;
+}) {
+  let colors: any;
+  try {
+    colors = useThemeColors();
+  } catch {
+    colors = { bgPrimary: '#FBF9F5', isDark: false };
+  }
+  const isDark = !!colors?.isDark;
+  const statusBarColor = colors?.bgPrimary ?? (isDark ? '#0F141C' : '#FBF9F5');
+  const barStyle = isDark ? 'light-content' : 'dark-content';
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      try {
+        RNStatusBar.setBarStyle(barStyle, true);
+        RNStatusBar.setBackgroundColor(statusBarColor, true);
+      } catch (e) {
+        console.warn('Status bar update error:', e);
+      }
+    }
+  }, [isDark, statusBarColor, barStyle]);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: statusBarColor }}>
+      <TopInsetSpacer />
+      <RNStatusBar
+        barStyle={barStyle}
+        backgroundColor={statusBarColor}
+        translucent={true}
+      />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      {!navReady && <BootSplash />}
+      <Suspense fallback={<SuspenseFallbackProbe />}>
+        <NavigationContainer
+          key={`nav-${navKey}`}
+          onReady={handleNavReady}
+          onStateChange={handleStateChange}
+        >
+          <NavChildrenProbe>
+            <RootNavigator />
+          </NavChildrenProbe>
+        </NavigationContainer>
+      </Suspense>
+      {navStalled && !navReady && (
+        <StallOverlay
+          copied={copied}
+          onCopy={handleCopyReport}
+          onReload={handleReloadNavigation}
+          onDismiss={() => setNavStalled(false)}
+        />
+      )}
+    </View>
+  );
+}
+
 export default function App() {
   const [navReady, setNavReady] = useState(false);
   const [navStalled, setNavStalled] = useState(false);
@@ -162,6 +313,16 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const navReadyRef = useRef(false);
   const firstStateChangeLoggedRef = useRef(false);
+  const renderMarkerRef = useRef(false);
+  if (!renderMarkerRef.current) {
+    renderMarkerRef.current = true;
+    bootLog('app-render v3-probes');
+  }
+  const bisectMarkerRef = useRef(false);
+  if (!bisectMarkerRef.current) {
+    bisectMarkerRef.current = true;
+    bootLog('bisect-marker-render');
+  }
 
   useEffect(() => {
     bootLog('app-mounted');
@@ -220,42 +381,25 @@ export default function App() {
   return (
     <ErrorBoundary>
       <GlobalErrorShield>
-        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FDFBF7' }}>
-          <ThemeProvider>
+        <ThemeProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaProvider>
-              {/* Solid fallback background: if NativeWind theme vars ever fail to
-                  resolve in a release bundle, the window still paints the light
-                  theme base instead of the native root view's grey. */}
-              <View style={{ flex: 1, backgroundColor: '#FDFBF7' }}>
-                <StatusBar />
-                {/* Instant paint under navigation; hidden once nav is ready. */}
-                {!navReady && <BootSplash />}
-                <Suspense fallback={null}>
-                  <NavigationContainer
-                    key={`nav-${navKey}`}
-                    onReady={handleNavReady}
-                    onStateChange={handleStateChange}
-                  >
-                    <View style={{ flex: 1, backgroundColor: '#FDFBF7' }}>
-                      <RootNavigator />
-                    </View>
-                  </NavigationContainer>
-                </Suspense>
-                {/* Dismissible diagnostics overlay — the app underneath is never
-                    unmounted by the watchdog. */}
-                {navStalled && !navReady && (
-                  <StallOverlay
-                    copied={copied}
-                    onCopy={handleCopyReport}
-                    onReload={handleReloadNavigation}
-                    onDismiss={() => setNavStalled(false)}
-                  />
-                )}
-              </View>
+              <AppShell
+                navReady={navReady}
+                navStalled={navStalled}
+                navKey={navKey}
+                copied={copied}
+                handleNavReady={handleNavReady}
+                handleStateChange={handleStateChange}
+                handleReloadNavigation={handleReloadNavigation}
+                handleCopyReport={handleCopyReport}
+                setNavStalled={setNavStalled}
+              />
             </SafeAreaProvider>
-          </ThemeProvider>
-        </GestureHandlerRootView>
+          </GestureHandlerRootView>
+        </ThemeProvider>
       </GlobalErrorShield>
     </ErrorBoundary>
   );
 }
+

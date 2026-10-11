@@ -19,6 +19,15 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.calmly"
     },
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#FBF9F5",
+      "translucent": true
+    },
+    "androidNavigationBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#FBF9F5"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },

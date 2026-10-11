@@ -17,69 +17,127 @@ interface PrimaryButtonProps {
   fullWidth?: boolean;
 }
 
-const variants = {
-  primary: 'bg-[var(--color-accent-primary)] text-white',
-  secondary: 'bg-[var(--color-accent-bg)] text-[var(--color-accent-primary)] border border-[var(--color-accent-border)]',
-  outline: 'border-2 border-[var(--color-accent-primary)] text-[var(--color-accent-primary)] bg-transparent',
-  ghost: 'text-[var(--color-accent-primary)] bg-transparent',
-};
-
-const sizes = {
-  sm: 'px-4 py-2 text-label-md',
-  md: 'px-6 py-3 text-label-lg',
-  lg: 'px-8 py-4 text-headline-sm',
-};
-
 export const PrimaryButton = React.forwardRef<React.ElementRef<typeof Pressable>, PrimaryButtonProps>(
-  ({
-    title,
-    onPress,
-    variant = 'primary',
-    size = 'md',
-    disabled = false,
-    loading = false,
-    leftIcon,
-    rightIcon,
-    className = '',
-    style,
-    textStyle,
-    fullWidth = true,
-    ...props
-  }, ref) => {
+  (
+    {
+      title,
+      onPress,
+      variant = 'primary',
+      size = 'md',
+      disabled = false,
+      loading = false,
+      leftIcon,
+      rightIcon,
+      className = '',
+      style,
+      textStyle,
+      fullWidth = true,
+      ...props
+    },
+    ref
+  ) => {
     const isDisabled = disabled || loading;
-    const colors = useThemeColors();
+    let colors: any;
+    try {
+      colors = useThemeColors();
+    } catch {
+      colors = {
+        accentPrimary: '#3E7B52',
+        accentBg: '#EDF5EF',
+        accentBorder: '#C2DCBF',
+        textPrimary: '#1A212D',
+        textInverse: '#FBF9F5',
+        isDark: false,
+      };
+    }
+
+    const paddingStyles = {
+      sm: { paddingVertical: 10, paddingHorizontal: 16, minHeight: 40 },
+      md: { paddingVertical: 14, paddingHorizontal: 22, minHeight: 48 },
+      lg: { paddingVertical: 16, paddingHorizontal: 28, minHeight: 54 },
+    }[size];
+
+    const fontSizes = {
+      sm: 14,
+      md: 16,
+      lg: 17,
+    }[size];
+
+    const variantStyles: Record<string, ViewStyle> = {
+      primary: {
+        backgroundColor: colors.accentPrimary,
+        borderWidth: 0,
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: colors.isDark ? 0.35 : 0.2,
+        shadowRadius: 8,
+        elevation: 3,
+      },
+      secondary: {
+        backgroundColor: colors.accentBg,
+        borderColor: colors.accentBorder,
+        borderWidth: 1,
+      },
+      outline: {
+        backgroundColor: 'transparent',
+        borderColor: colors.accentPrimary,
+        borderWidth: 1.5,
+      },
+      ghost: {
+        backgroundColor: 'transparent',
+        borderWidth: 0,
+      },
+    };
+
+    const textColor =
+      variant === 'primary'
+        ? '#FFFFFF'
+        : colors.accentPrimary;
 
     return (
       <Pressable
         ref={ref}
         onPress={onPress}
         disabled={isDisabled}
-        className={`
-          flex-row items-center justify-center rounded-full
-          transition-all duration-200
-          ${variants[variant]}
-          ${sizes[size]}
-          ${fullWidth ? 'w-full' : ''}
-          ${isDisabled ? 'opacity-50' : 'active:scale-[0.98]'}
-          ${className}
-        `}
-        style={style}
-        android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+        className={className}
+        style={({ pressed }) => [
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 9999,
+            width: fullWidth ? '100%' : undefined,
+            opacity: isDisabled ? 0.5 : pressed ? 0.88 : 1,
+            transform: [{ scale: pressed && !isDisabled ? 0.98 : 1 }],
+          },
+          paddingStyles,
+          variantStyles[variant],
+          style,
+        ]}
+        android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: false }}
         {...props}
       >
         {loading && (
-          <View className="mr-2" style={{ width: 16, height: 16 }}>
-            <CircularProgress size={16} color={variant === 'primary' ? 'white' : colors.accentPrimary} />
+          <View style={{ marginRight: 8, width: 16, height: 16 }}>
+            <CircularProgress size={16} color={textColor} />
           </View>
         )}
-        {!loading && leftIcon && <View className="mr-2">{leftIcon}</View>}
+        {!loading && leftIcon && <View style={{ marginRight: 8 }}>{leftIcon}</View>}
         <Text
-          className={`font-semibold ${variant === 'outline' || variant === 'ghost' ? '' : ''}`}
-          style={textStyle}
+          style={[
+            {
+              color: textColor,
+              fontSize: fontSizes,
+              fontWeight: '600',
+              letterSpacing: 0.2,
+              textAlign: 'center',
+            },
+            textStyle,
+          ]}
         >
           {title}
         </Text>
-        {!loading && rightIcon && <View className="ml-2">{rightIcon}</View>}
+        {!loading && rightIcon && <View style={{ marginLeft: 8 }}>{rightIcon}</View>}
       </Pressable>
     );
   }

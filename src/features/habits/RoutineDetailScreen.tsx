@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Keyboard, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Keyboard } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -9,19 +9,39 @@ import Habit from '../../database/models/Habit';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'RoutineDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'RoutineDetail'>['route'];
 
-const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; icon: string; color: string; emoji: string }> = {
-  morning: { label: 'Morning', icon: 'sunny', color: '#F5C6A5', emoji: '🌅' },
-  afternoon: { label: 'Afternoon', icon: 'sunny-outline', color: '#A8D0E6', emoji: '☀️' },
-  evening: { label: 'Evening', icon: 'moon', color: '#B19CD9', emoji: '🌙' },
+const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; icon: any; color: string }> = {
+  morning: { label: 'Morning', icon: 'sunny-outline', color: '#EB876D' },
+  afternoon: { label: 'Afternoon', icon: 'sunny', color: '#5A955A' },
+  evening: { label: 'Evening', icon: 'moon-outline', color: '#877FC5' },
 };
+
+const FREQUENCY_LABELS: Record<string, string> = {
+  daily: 'Daily',
+  weekdays: 'Weekdays',
+  custom: 'Custom',
+};
+
+function getIconName(icon?: string | null): any {
+  const iconMap: Record<string, string> = {
+    water: 'water-outline', fitness: 'fitness-outline', book: 'book-outline', meditation: 'flower-outline',
+    sunny: 'sunny-outline', moon: 'moon-outline', leaf: 'leaf-outline', heart: 'heart-outline',
+    'musical-notes': 'musical-notes-outline', camera: 'camera-outline', bicycle: 'bicycle-outline',
+    walk: 'walk-outline', sleep: 'bed-outline', nutrition: 'nutrition-outline', code: 'code-slash-outline',
+    brush: 'brush-outline', pill: 'medical-outline', flash: 'flash-outline', diamond: 'diamond-outline',
+    star: 'star-outline', flower: 'flower-outline', tree: 'leaf-outline', cloud: 'cloud-outline', flame: 'flame-outline',
+  };
+  return iconMap[icon ?? ''] || 'checkbox-outline';
+}
 
 export function RoutineDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
+  const colors = useThemeColors();
   const { timeOfDay = 'morning', routine } = route.params ?? {};
   const isEditing = !!routine;
 
@@ -57,15 +77,6 @@ export function RoutineDetailScreen() {
     setSelectedHabitIds((prev) =>
       (prev ?? []).includes(habitId) ? (prev ?? []).filter((id) => id !== habitId) : [...(prev ?? []), habitId]
     );
-  };
-
-  const moveHabit = (fromIndex: number, toIndex: number) => {
-    const safeIds = selectedHabitIds ?? [];
-    if (fromIndex < 0 || toIndex < 0 || fromIndex >= safeIds.length || toIndex >= safeIds.length) return;
-    const newOrder = [...safeIds];
-    const [removed] = newOrder.splice(fromIndex, 1);
-    newOrder.splice(toIndex, 0, removed);
-    setSelectedHabitIds(newOrder);
   };
 
   const validate = (): boolean => {
@@ -106,7 +117,7 @@ export function RoutineDetailScreen() {
     if (!routine?.id) return;
     Alert.alert(
       'Delete routine?',
-      'This will remove the routine but your habits will remain.',
+      'This will remove the routine but your habits will remain safe.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -122,104 +133,37 @@ export function RoutineDetailScreen() {
     );
   };
 
-  const selectedHabits = (() => {
-    try {
-      return ((selectedHabitIds ?? []).map((id) => {
-        try {
-          return (habits ?? []).find((h) => h?.id === id);
-        } catch {
-          return undefined;
-        }
-      }).filter(Boolean) ?? []) as Habit[];
-    } catch {
-      return [] as Habit[];
-    }
-  })();
-
-  const renderHabitItem = ({ item, index }: { item: Habit; index: number }) => {
-    if (!item) return null;
-    const isSelected = (selectedHabitIds ?? []).includes(item?.id);
-    return (
-    <TouchableOpacity
-      style={[
-        styles.habitSelectItem,
-        isSelected && styles.habitSelectItemSelected,
-      ]}
-      onPress={() => item?.id && toggleHabit(item.id)}
-    >
-      <View style={styles.habitSelectLeft}>
-        <View style={styles.dragHandle}>
-          <Ionicons name="reorder-three-outline" size={20} color="#425474" />
-        </View>
-        <View style={[styles.habitSelectIcon, { backgroundColor: item?.color ?? '#8FBC8F' }]}>
-          <Ionicons name={getIconName(item?.icon ?? '')} size={20} color="white" />
-        </View>
-        <View style={styles.habitSelectInfo}>
-          <Text style={styles.habitSelectName}>{item?.name ?? ''}</Text>
-          <Text style={styles.habitSelectFrequency}>{FREQUENCY_LABELS[item?.frequency ?? ''] ?? item?.frequency ?? ''}</Text>
-        </View>
-      </View>
-      <View style={styles.habitSelectRight}>
-        <Ionicons
-          name={isSelected ? 'checkmark-circle' : 'circle-outline'}
-          size={24}
-          color={isSelected ? '#5A955A' : '#425474'}
-        />
-        {isSelected && (
-          <Text style={styles.habitSelectOrder}>#{(selectedHabitIds ?? []).indexOf(item?.id) + 1}</Text>
-        )}
-      </View>
-    </TouchableOpacity>
-    );
-  };
-
-  function getIconName(icon?: string | null): string {
-    const iconMap: Record<string, string> = {
-      water: 'water', fitness: 'fitness', book: 'book', meditation: 'meditation',
-      sunny: 'sunny', moon: 'moon', leaf: 'leaf', heart: 'heart',
-      'musical-notes': 'musical-notes', camera: 'camera', bicycle: 'bicycle',
-      walk: 'walk', sleep: 'bed', nutrition: 'nutrition', code: 'code',
-      brush: 'brush', pill: 'pill', flash: 'flash', diamond: 'diamond',
-      star: 'star', flower: 'flower', tree: 'tree', cloud: 'cloud', flame: 'flame',
-    };
-    return iconMap[icon ?? ''] || 'checkbox-outline';
-  }
-
-  const FREQUENCY_LABELS: Record<string, string> = {
-    daily: 'Daily',
-    weekdays: 'Weekdays',
-    custom: 'Custom',
-  };
-
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={styles.topNav}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          hitSlop={10}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+          {isEditing ? 'Edit Routine' : `New ${config.label} Routine`}
+        </Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         onTouchStart={() => Keyboard.dismiss()}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color="#1E232E" />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <View style={[styles.headerIcon, { backgroundColor: config?.color ?? '#8FBC8F' }]}>
-              <Ionicons name={config?.icon ?? 'list-outline'} size={28} color="white" />
-            </View>
-            <Text style={styles.headerTitle}>{config?.emoji ?? ''} {config?.label ?? ''} Routine</Text>
-          </View>
-          <View style={styles.headerSpacer} />
-        </View>
-
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Routine Name</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Routine Title</Text>
           <TextInput
-            style={styles.input}
-            placeholder={`${config?.label ?? 'Routine'} routine name`}
+            style={[styles.input, { color: colors.textPrimary, borderBottomColor: colors.borderLight }]}
+            placeholder={`e.g. ${config.label} Awakening`}
             value={name}
             onChangeText={setName}
-            placeholderTextColor="#425474"
+            placeholderTextColor={colors.textTertiary}
             autoCapitalize="words"
             maxLength={50}
           />
@@ -227,142 +171,147 @@ export function RoutineDetailScreen() {
 
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Habits ({(selectedHabitIds ?? []).length})</Text>
-            {(selectedHabitIds ?? []).length > 0 && (
-              <Text style={styles.sectionSubtitle}>Drag to reorder</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+              Linked Habits ({selectedHabitIds.length})
+            </Text>
+            {selectedHabitIds.length > 0 && (
+              <Text style={{ fontSize: 12, color: colors.accentPrimary, fontWeight: '600' }}>
+                Tap checkbox to toggle
+              </Text>
             )}
           </View>
 
-          {(habits ?? []).length === 0 ? (
+          {habits.length === 0 ? (
             <View style={styles.noHabits}>
-              <Ionicons name="add-circle-outline" size={32} color="#425474" />
-              <Text style={styles.noHabitsText}>No habits created yet</Text>
-              <Text style={styles.noHabitsSubtext}>Create habits first, then add them here</Text>
+              <Ionicons name="leaf-outline" size={36} color={colors.textTertiary} />
+              <Text style={[styles.noHabitsText, { color: colors.textSecondary }]}>No habits available</Text>
+              <Text style={[styles.noHabitsSubtext, { color: colors.textTertiary }]}>
+                Create habits in the Habits tab first, then link them to this routine.
+              </Text>
             </View>
           ) : (
-            <FlatList
-              data={habits ?? []}
-              keyExtractor={(item, idx) => item?.id ?? String(idx)}
-              renderItem={renderHabitItem}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              ListEmptyComponent={
-                <View style={styles.noSelected}>
-                  <Ionicons name="checkbox-outline" size={32} color="#425474" />
-                  <Text style={styles.noSelectedText}>No habits selected</Text>
-                  <Text style={styles.noSelectedSubtext}>Tap habits above to add them</Text>
-                </View>
-              }
-            />
+            <View style={styles.habitList}>
+              {habits.map((item) => {
+                const isSelected = selectedHabitIds.includes(item.id);
+                const order = selectedHabitIds.indexOf(item.id) + 1;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.habitSelectItem,
+                      { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: isSelected ? colors.accentPrimary : colors.borderLight },
+                      isSelected && { backgroundColor: colors.accentPrimary + '15', borderWidth: 2 },
+                    ]}
+                    onPress={() => toggleHabit(item.id)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.habitSelectLeft}>
+                      <View style={[styles.habitSelectIcon, { backgroundColor: item.color || config.color }]}>
+                        <Ionicons name={getIconName(item.icon)} size={20} color="#FFFFFF" />
+                      </View>
+                      <View style={styles.habitSelectInfo}>
+                        <Text style={[styles.habitSelectName, { color: colors.textPrimary }]}>{item.name}</Text>
+                        <Text style={[styles.habitSelectFrequency, { color: colors.textTertiary }]}>
+                          {FREQUENCY_LABELS[item.frequency] || item.frequency}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.habitSelectRight}>
+                      {isSelected && (
+                        <View style={[styles.orderBadge, { backgroundColor: colors.accentPrimary }]}>
+                          <Text style={styles.orderBadgeText}>{order}</Text>
+                        </View>
+                      )}
+                      <Ionicons
+                        name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={22}
+                        color={isSelected ? colors.accentPrimary : colors.textTertiary}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           )}
         </Card>
 
-        {isEditing && (
-          <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-            <Text style={styles.deleteButtonText}>Delete Routine</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.buttonRow}>
+          <View style={{ flex: 1 }}>
+            <PrimaryButton
+              onPress={handleSave}
+              loading={loading}
+              title={isEditing ? 'Save Routine' : 'Create Routine'}
+              fullWidth
+            />
+          </View>
+          {isEditing && (
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={[styles.deleteButton, { borderColor: colors.accentRose || '#EB697F' }]}
+            >
+              <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </ScrollView>
-
-      <View style={styles.bottomBar}>
-        <PrimaryButton onPress={handleSave} loading={loading} title={isEditing ? 'Save Changes' : 'Create Routine'} style={styles.saveButton} />
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FDFBF7',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 100,
-    gap: 16,
-  },
-  header: {
+  container: { flex: 1 },
+  topNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 10,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-    justifyContent: 'center',
-  },
-  headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1E232E',
-  },
-  headerSpacer: {
-    width: 44,
-  },
-  section: {
-    gap: 12,
-  },
+  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110, gap: 16 },
+  section: { gap: 10, padding: 16, borderRadius: 20 },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#34415A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#425474',
-  },
   input: {
     fontSize: 17,
-    color: '#1E232E',
-    minHeight: 44,
+    fontWeight: '500',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
   },
+  habitList: { gap: 10, marginTop: 4 },
   habitSelectItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-  },
-  habitSelectItemSelected: {
-    backgroundColor: 'rgba(143, 188, 143, 0.05)',
-    borderRadius: 12,
-    marginHorizontal: -4,
-    paddingHorizontal: 4,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
   },
   habitSelectLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
     flex: 1,
-  },
-  dragHandle: {
-    padding: 8,
   },
   habitSelectIcon: {
     width: 40,
@@ -370,89 +319,43 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 2,
   },
-  habitSelectInfo: {
-    gap: 2,
-  },
-  habitSelectName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1E232E',
-  },
-  habitSelectFrequency: {
-    fontSize: 12,
-    color: '#425474',
-  },
+  habitSelectInfo: { flex: 1, gap: 3 },
+  habitSelectName: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
+  habitSelectFrequency: { fontSize: 12, lineHeight: 16 },
   habitSelectRight: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 2,
+  },
+  orderBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
-  habitSelectOrder: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#5A955A',
-    minWidth: 20,
-    textAlign: 'center',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#E4DEBC',
-    marginHorizontal: -4,
+  orderBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   noHabits: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingVertical: 24,
     gap: 8,
   },
-  noHabitsText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#34415A',
-  },
-  noHabitsSubtext: {
-    fontSize: 14,
-    color: '#425474',
-    textAlign: 'center',
-  },
-  noSelected: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    gap: 8,
-  },
-  noSelectedText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#34415A',
-  },
-  noSelectedSubtext: {
-    fontSize: 14,
-    color: '#425474',
-    textAlign: 'center',
-  },
+  noHabitsText: { fontSize: 15, fontWeight: '600' },
+  noHabitsSubtext: { fontSize: 13, textAlign: 'center', lineHeight: 18, paddingHorizontal: 16 },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
   deleteButton: {
-    marginTop: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F5A9A9',
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 12,
-    backgroundColor: '#FDFBF7',
-    borderTopWidth: 1,
-    borderTopColor: '#E4DEBC',
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  saveButton: {
-    minHeight: 56,
-  },
+  deleteButtonText: { fontSize: 15, fontWeight: '600' },
 });

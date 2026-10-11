@@ -153,6 +153,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
+    bootLog(`render-crash-caught: ${getMessage(error)}`);
     console.error('App crashed:', error, info.componentStack);
     this.setState((prev) =>
       prev.crash
@@ -198,6 +199,11 @@ export function GlobalErrorShield({ children }: Props) {
         console.error('[GlobalErrorShield] uncaught error:', error);
       } catch {
         // never throw from the error handler itself
+      }
+      try {
+        bootLog(`uncaught-js-caught: ${getMessage(error)}`);
+      } catch {
+        // logging must never crash the app
       }
       // Keep the first crash (avoid loops if the crash screen itself errors —
       // that case is owned by the outer ErrorBoundary).

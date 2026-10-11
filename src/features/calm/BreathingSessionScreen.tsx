@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
 import { PrimaryButton, ProgressRing } from '../../components';
 import { RootStackParamList, BreathingPreset } from '../../types/navigation';
 import Svg, { Circle } from 'react-native-svg';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import { useThemeColors } from '../../theme/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 
 const presetPatterns: Record<BreathingPreset, { inhale: number; hold: number; exhale: number; holdExhale: number }> = {
   box: { inhale: 4, hold: 4, exhale: 4, holdExhale: 4 },
@@ -21,7 +23,7 @@ const presetLabels: Record<BreathingPreset, string> = {
   '4-7-8': '4-7-8 Technique',
   deep: 'Deep Breathing',
   slow: 'Slow Breathing',
-  relaxation: 'Relaxation',
+  relaxation: 'Relaxation Flow',
 };
 
 type Phase = 'inhale' | 'hold' | 'exhale' | 'holdExhale' | 'complete';
@@ -40,6 +42,25 @@ export function BreathingSessionScreen() {
   const totalCycleTime = safeInhale + safeHold + safeExhale + safeHoldExhale;
   const totalCycles = totalCycleTime > 0 ? Math.max(1, Math.floor((safeDuration * 60) / totalCycleTime)) : 1;
 
+  let themeColors: ReturnType<typeof useThemeColors> | undefined;
+  try {
+    themeColors = useThemeColors();
+  } catch {
+    themeColors = undefined;
+  }
+  const colors = themeColors ?? {
+    bgPrimary: '#FBF9F5',
+    bgCard: '#FFFFFF',
+    borderLight: '#E6E0D4',
+    textPrimary: '#1A212D',
+    textSecondary: '#384455',
+    textTertiary: '#607085',
+    accentPrimary: '#3E7B52',
+    accentBg: '#EDF5EF',
+    accentBorder: '#C2DCBF',
+    isDark: false,
+  } as any;
+
   const [phase, setPhase] = useState<Phase>('inhale');
   const [cycle, setCycle] = useState(0);
   const [timeLeft, setTimeLeft] = useState(safeInhale > 0 ? safeInhale : 4);
@@ -55,11 +76,11 @@ export function BreathingSessionScreen() {
   }));
 
   const phaseConfig = {
-    inhale: { label: 'Breathe in', color: '#5A955A', duration: safeInhale, scale: 1.2 },
-    hold: { label: 'Hold', color: '#6B9BCD', duration: safeHold, scale: 1.2 },
-    exhale: { label: 'Breathe out', color: '#877FC5', duration: safeExhale, scale: 0.8 },
-    holdExhale: { label: 'Hold', color: '#EB876D', duration: safeHoldExhale, scale: 0.8 },
-    complete: { label: 'Session complete', color: '#5A955A', duration: 0, scale: 1 },
+    inhale: { label: 'Breathe in', color: colors.accentPrimary, duration: safeInhale, scale: 1.18 },
+    hold: { label: 'Hold breath', color: '#2563EB', duration: safeHold, scale: 1.18 },
+    exhale: { label: 'Release slowly', color: '#6C5CE7', duration: safeExhale, scale: 0.84 },
+    holdExhale: { label: 'Rest', color: '#D96547', duration: safeHoldExhale, scale: 0.84 },
+    complete: { label: 'Session complete', color: colors.accentPrimary, duration: 0, scale: 1 },
   };
 
   const currentConfig = phaseConfig[phase] ?? phaseConfig.inhale;
@@ -117,9 +138,9 @@ export function BreathingSessionScreen() {
   const animatePhaseTransition = (nextPhase: Phase) => {
     const nextConfig = phaseConfig[nextPhase] ?? phaseConfig.inhale;
     const safeScale = nextConfig?.scale ?? 1;
-    scale.value = withTiming(safeScale, { duration: 500, easing: Easing.out(Easing.quad) });
-    opacity.value = withTiming(0.3, { duration: 200 }, () => {
-      opacity.value = withTiming(1, { duration: 300 });
+    scale.value = withTiming(safeScale, { duration: 600, easing: Easing.out(Easing.quad) });
+    opacity.value = withTiming(0.4, { duration: 200 }, () => {
+      opacity.value = withTiming(1, { duration: 400 });
     });
   };
 
@@ -150,58 +171,85 @@ export function BreathingSessionScreen() {
   const progress = Number.isFinite(safeProgress) ? Math.max(0, Math.min(1, safeProgress)) : 0;
 
   return (
-    <View className="flex-1 bg-[var(--color-bg-primary)] flex flex-col">
-      <View className="flex-1 flex items-center justify-center px-20">
+    <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
+      {/* Top Bar */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Pressable
+          onPress={() => navigation?.goBack?.()}
+          style={({ pressed }) => [
+            {
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: colors.bgCard,
+              borderWidth: 1,
+              borderColor: colors.borderLight,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
+        </Pressable>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>
+          {presetLabels[safePreset] ?? 'Breathing'}
+        </Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* Breathing Circle Area */}
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
         <Animated.View style={animatedCircleStyle}>
-          <Svg width={280} height={280}>
+          <Svg width={260} height={260}>
             <Circle
-              cx={140}
-              cy={140}
-              r={120}
+              cx={130}
+              cy={130}
+              r={110}
               fill="none"
-              stroke="#E4DEBC"
+              stroke={colors.borderLight}
               strokeWidth={8}
             />
             <Circle
-              cx={140}
-              cy={140}
-              r={120}
+              cx={130}
+              cy={130}
+              r={110}
               fill="none"
-              stroke={currentConfig?.color ?? '#5A955A'}
+              stroke={currentConfig?.color ?? colors.accentPrimary}
               strokeWidth={8}
-              strokeDasharray={2 * Math.PI * 120}
-              strokeDashoffset={2 * Math.PI * 120 * (1 - Math.min(1, progress ?? 0))}
+              strokeDasharray={2 * Math.PI * 110}
+              strokeDashoffset={2 * Math.PI * 110 * (1 - Math.min(1, progress ?? 0))}
               strokeLinecap="round"
-              transform="rotate(-90 140 140)"
+              transform="rotate(-90 130 130)"
             />
           </Svg>
         </Animated.View>
 
-        <View className="mt-8 flex items-center">
-          <Text className="text-display-md font-bold text-center" style={{ color: currentConfig?.color ?? '#5A955A' }}>
+        <View style={{ marginTop: 28, alignItems: 'center' }}>
+          <Text style={{ fontSize: 22, fontWeight: '800', textAlign: 'center', color: currentConfig?.color ?? colors.accentPrimary }}>
             {currentConfig?.label ?? 'Breathe'}
           </Text>
-          <Text className="text-display-xl font-bold mt-2" style={{ color: '#1E232E' }}>
+          <Text style={{ fontSize: 44, fontWeight: '800', marginTop: 4, color: colors.textPrimary, letterSpacing: -1 }}>
             {(Number.isFinite(timeLeft) ? timeLeft : 0)}s
           </Text>
           {!isComplete && (
-            <Text className="text-body-md mt-2 text-center" style={{ color: '#425474' }}>
+            <Text style={{ fontSize: 14, color: colors.textTertiary, marginTop: 4 }}>
               Cycle {Math.min(cycle + 1, safeTotalCycles)} of {safeTotalCycles}
             </Text>
           )}
         </View>
       </View>
 
-      <View className="px-20 pb-10 flex items-center">
-        <View className="w-full flex-row justify-center gap-4 mb-4">
+      {/* Bottom Controls */}
+      <View style={{ paddingHorizontal: 24, paddingBottom: 40, alignItems: 'center' }}>
+        <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
           <PrimaryButton
-            title={isRunning ? 'Pause' : isComplete ? 'Done' : 'Start'}
+            title={isRunning ? 'Pause' : isComplete ? 'Complete' : 'Start'}
             variant="primary"
             size="lg"
             onPress={toggleSession}
-            className="flex-1 max-w-[160px]"
-            fullWidth
-            disabled={false}
+            style={{ flex: 1, maxWidth: 170 }}
+            fullWidth={false}
           />
           {!isComplete && (
             <PrimaryButton
@@ -209,22 +257,14 @@ export function BreathingSessionScreen() {
               variant="outline"
               size="lg"
               onPress={resetSession}
-              className="flex-1 max-w-[160px]"
-              fullWidth
+              style={{ flex: 1, maxWidth: 170 }}
+              fullWidth={false}
             />
           )}
         </View>
 
-        <ProgressRing
-          progress={Number.isFinite(progress) ? progress : 0}
-          size={60}
-          strokeWidth={4}
-          showPercentage={true}
-          className="mt-4"
-        />
-
-        <Text className="text-body-sm text-center mt-2" style={{ color: '#425474' }}>
-          {(presetLabels[safePreset] ?? presetLabels.box ?? 'Breathing')} · {safeDuration} min
+        <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: 'center' }}>
+          {safeDuration} min session · Stay gentle with yourself
         </Text>
       </View>
     </View>

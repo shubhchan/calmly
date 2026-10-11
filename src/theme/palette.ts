@@ -9,57 +9,57 @@ export type AccentColor = 'sage' | 'lavender' | 'sky' | 'peach' | 'rose' | 'ocea
 
 const base = {
   light: {
-    bgPrimary: '#FDFBF7',
-    bgSecondary: '#FAF6ED',
-    bgTertiary: '#F5F0DE',
+    bgPrimary: '#FBF9F5',
+    bgSecondary: '#F4EFE6',
+    bgTertiary: '#ECE5D8',
     bgCard: '#FFFFFF',
-    bgCardHover: '#FAF6ED',
-    textPrimary: '#1E232E',
-    textSecondary: '#34415A',
-    textTertiary: '#425474',
-    textInverse: '#FDFBF7',
-    borderLight: '#E4DEBC',
-    borderMedium: '#DBD4A9',
-    success: '#5A955A',
-    warning: '#EB876D',
-    error: '#EB697F',
-    info: '#6B9BCD',
+    bgCardHover: '#F8F4EC',
+    textPrimary: '#1A212D',
+    textSecondary: '#384455',
+    textTertiary: '#607085',
+    textInverse: '#FBF9F5',
+    borderLight: '#E6E0D4',
+    borderMedium: '#D5CCC0',
+    success: '#3E7B52',
+    warning: '#D96547',
+    error: '#DB3A60',
+    info: '#2563EB',
   },
   dark: {
-    bgPrimary: '#151A23',
-    bgSecondary: '#1E232E',
-    bgTertiary: '#293143',
-    bgCard: '#1E232E',
-    bgCardHover: '#293143',
-    textPrimary: '#FDFBF7',
-    textSecondary: '#E1EBF5',
-    textTertiary: '#C3D7EB',
-    textInverse: '#151A23',
-    borderLight: '#34415A',
-    borderMedium: '#425474',
-    success: '#74AC74',
-    warning: '#EF9F8A',
-    error: '#EF8799',
-    info: '#87AFD7',
+    bgPrimary: '#0F141C',
+    bgSecondary: '#151C28',
+    bgTertiary: '#1C2536',
+    bgCard: '#182130',
+    bgCardHover: '#202B3E',
+    textPrimary: '#F9FAFB',
+    textSecondary: '#D1D5DB',
+    textTertiary: '#94A3B8',
+    textInverse: '#0F141C',
+    borderLight: '#263346',
+    borderMedium: '#34435C',
+    success: '#5EBE7B',
+    warning: '#FB923C',
+    error: '#F47293',
+    info: '#60A5FA',
   },
 };
 
 const accents = {
   light: {
-    sage: { primary: '#5A955A', hover: '#477747', bg: '#F0F4F0', border: '#BAD6BA' },
-    lavender: { primary: '#877FC5', hover: '#6E64A8', bg: '#F3F1FA', border: '#CFCBE9' },
-    sky: { primary: '#6B9BCD', hover: '#5282B0', bg: '#F0F5FA', border: '#C3D7EB' },
-    peach: { primary: '#EB876D', hover: '#E06E50', bg: '#FDF3F0', border: '#F7CFC4' },
-    rose: { primary: '#EB697F', hover: '#E04E65', bg: '#FDF0F3', border: '#F7C3CD' },
-    ocean: { primary: '#5F9BB4', hover: '#4A8095', bg: '#EFF5F7', border: '#BFD7E1' },
+    sage: { primary: '#3E7B52', hover: '#316342', bg: '#EDF5EF', border: '#C2DCBF' },
+    lavender: { primary: '#6C5CE7', hover: '#5849C4', bg: '#F2F0FB', border: '#D0CAFC' },
+    sky: { primary: '#2563EB', hover: '#1D4ED8', bg: '#EFF5FF', border: '#BFDBFE' },
+    peach: { primary: '#D96547', hover: '#BD5034', bg: '#FDF2EE', border: '#F8CEBE' },
+    rose: { primary: '#DB3A60', hover: '#BF2C4F', bg: '#FDF1F4', border: '#F8C1CD' },
+    ocean: { primary: '#0E7490', hover: '#0B5E75', bg: '#EDF8FB', border: '#BAE6FD' },
   },
   dark: {
-    sage: { primary: '#74AC74', hover: '#97C197', bg: '#2D4B2D', border: '#385E38' },
-    lavender: { primary: '#9F98D1', hover: '#B7B2DD', bg: '#473F6E', border: '#584E8A' },
-    sky: { primary: '#87AFD7', hover: '#A5C3E1', bg: '#2E4660', border: '#365475' },
-    peach: { primary: '#EF9F8A', hover: '#F3B7A7', bg: '#5D3A2B', border: '#7A4A3A' },
-    rose: { primary: '#EF8799', hover: '#F3A5B3', bg: '#5D2E3A', border: '#7A3D4D' },
-    ocean: { primary: '#7FAFC3', hover: '#9FC3D2', bg: '#27414C', border: '#30515E' },
+    sage: { primary: '#5EBE7B', hover: '#7BD495', bg: '#172E1E', border: '#254E31' },
+    lavender: { primary: '#A78BFA', hover: '#C4B5FD', bg: '#29204A', border: '#433475' },
+    sky: { primary: '#60A5FA', hover: '#93C5FD', bg: '#172847', border: '#254073' },
+    peach: { primary: '#FB923C', hover: '#FDBA74', bg: '#3B2113', border: '#5C341E' },
+    rose: { primary: '#F47293', hover: '#F9A8D4', bg: '#3B1825', border: '#5C263A' },
+    ocean: { primary: '#38BDF8', hover: '#7DD3FC', bg: '#132838', border: '#1F425C' },
   },
 };
 
@@ -67,6 +67,9 @@ export function resolveColors(theme: ThemeMode, accent: AccentColor) {
   const b = base[theme];
   const a = accents[theme][accent];
   return {
+    isDark: theme === 'dark',
+    theme,
+    accent,
     bgPrimary: b.bgPrimary,
     bgSecondary: b.bgSecondary,
     bgTertiary: b.bgTertiary,
@@ -86,6 +89,12 @@ export function resolveColors(theme: ThemeMode, accent: AccentColor) {
     accentPrimaryHover: a.hover,
     accentBg: a.bg,
     accentBorder: a.border,
+    accentSage: accents[theme].sage.primary,
+    accentLavender: accents[theme].lavender.primary,
+    accentSky: accents[theme].sky.primary,
+    accentPeach: accents[theme].peach.primary,
+    accentRose: accents[theme].rose.primary,
+    accentOcean: accents[theme].ocean.primary,
   };
 }
 
@@ -96,6 +105,7 @@ export type ResolvedColors = ReturnType<typeof resolveColors>;
 export function toCssVars(colors: ResolvedColors): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(colors)) {
+    if (typeof value !== 'string') continue;
     const kebab = key.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
     out[`--color-${kebab}`] = value;
   }

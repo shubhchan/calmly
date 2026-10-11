@@ -12,6 +12,7 @@ interface ThemeContextType {
   theme: ThemeMode;
   accent: AccentColor;
   resolvedTheme: ResolvedMode;
+  isDark: boolean;
   colors: ReturnType<typeof resolveColors>;
   setTheme: (theme: ThemeMode) => Promise<void>;
   setAccent: (accent: AccentColor) => Promise<void>;
@@ -95,12 +96,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     await setTheme(newTheme);
   };
 
+    const isDark = resolvedTheme === 'dark';
+
   return (
     <ThemeContext.Provider
-      value={{ theme, accent, resolvedTheme, colors, setTheme, setAccent, toggleTheme }}
+      value={{ theme, accent, resolvedTheme, isDark, colors, setTheme, setAccent, toggleTheme }}
     >
       {/* This View carries the CSS variables for the whole native tree. */}
-      <View style={themeVars} className="flex-1">
+      {/* NOTE: flex:1 is set as a plain style (not only className) so a
+          CSS-interop failure can never collapse the root to zero size and
+          blank the entire app with no error. */}
+      <View style={[{ flex: 1 }, themeVars]} className="flex-1">
         {children}
       </View>
     </ThemeContext.Provider>
@@ -121,3 +127,9 @@ export function useTheme() {
 export function useThemeColors() {
   return useTheme().colors;
 }
+
+export function useThemedStyles<T>(styleCreator: (colors: ReturnType<typeof resolveColors>, isDark: boolean) => T): T {
+  const { colors, isDark } = useTheme();
+  return useMemo(() => styleCreator(colors, isDark), [colors, isDark, styleCreator]);
+}
+

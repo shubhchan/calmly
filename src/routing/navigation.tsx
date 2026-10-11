@@ -29,6 +29,11 @@ import { AppLockSettingsScreen } from '../features/settings/AppLockSettingsScree
 import { NotificationsScreen } from '../features/settings/NotificationsScreen';
 import { SetPinScreen } from '../features/settings/SetPinScreen';
 import { DataManagementScreen } from '../features/settings/DataManagementScreen';
+import { JournalEntryScreen } from '../features/journal/JournalEntryScreen';
+import { MoodCheckInScreen } from '../features/mood/MoodCheckInScreen';
+import { BreathingSessionScreen } from '../features/calm/BreathingSessionScreen';
+import { GroundingExerciseScreen } from '../features/calm/GroundingExerciseScreen';
+import { MoodCalendarScreen } from '../features/insights/MoodCalendarScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -49,48 +54,65 @@ function useRenderLog(label: string) {
 }
 
 function TabLoadingFallback() {
+  let colors: any;
+  try {
+    colors = useThemeColors();
+  } catch {
+    colors = { bgPrimary: '#FBF9F5', accentPrimary: '#3E7B52' };
+  }
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: '#FDFBF7',
+        backgroundColor: colors?.bgPrimary ?? '#FBF9F5',
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <ActivityIndicator size="large" color="#5A955A" />
+      <ActivityIndicator size="large" color={colors?.accentPrimary ?? '#3E7B52'} />
     </View>
   );
 }
 
 function TabCrashFallback({ tabName, onRetry }: { tabName: string; onRetry: () => void }) {
+  let colors: any;
+  try {
+    colors = useThemeColors();
+  } catch {
+    colors = {
+      bgPrimary: '#FBF9F5',
+      textPrimary: '#1A212D',
+      textTertiary: '#607085',
+      accentPrimary: '#3E7B52',
+    };
+  }
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: '#FDFBF7',
+        backgroundColor: colors?.bgPrimary ?? '#FBF9F5',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 32,
       }}
     >
-      <Text style={{ fontSize: 18, fontWeight: '700', color: '#1E232E', textAlign: 'center' }}>
+      <Text style={{ fontSize: 18, fontWeight: '700', color: colors?.textPrimary ?? '#1A212D', textAlign: 'center' }}>
         {tabName} couldn&apos;t load
       </Text>
-      <Text style={{ marginTop: 8, fontSize: 14, color: '#425474', textAlign: 'center' }}>
+      <Text style={{ marginTop: 8, fontSize: 14, color: colors?.textTertiary ?? '#607085', textAlign: 'center' }}>
         The rest of the app is fine — this tab hit a problem.
       </Text>
       <Pressable
         onPress={onRetry}
         style={{
           marginTop: 16,
-          backgroundColor: '#5A955A',
+          backgroundColor: colors?.accentPrimary ?? '#3E7B52',
           paddingVertical: 12,
           paddingHorizontal: 20,
-          borderRadius: 10,
+          borderRadius: 12,
         }}
       >
-        <Text style={{ color: '#FDFBF7', fontWeight: '700' }}>Try again</Text>
+        <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Try again</Text>
       </Pressable>
     </View>
   );
@@ -158,9 +180,9 @@ function tabIcon(routeName: keyof TabParamList, focused: boolean): TabIconName {
     case 'Calm':
       return focused ? 'leaf' : 'leaf-outline';
     case 'Insights':
-      return focused ? 'bar-chart' : 'bar-chart-outline';
+      return focused ? 'stats-chart' : 'stats-chart-outline';
     case 'Settings':
-      return focused ? 'person' : 'person-outline';
+      return focused ? 'settings' : 'settings-outline';
     default:
       return 'ellipse';
   }
@@ -172,8 +194,6 @@ export function AppNavigator() {
     bootLog('app-navigator-mounted');
   }, []);
 
-  // Same defensive pattern as HomeScreen: a theme failure must never take
-  // down the whole tab bar — fall back to light-theme literals.
   let themeColors: ReturnType<typeof useThemeColors> | undefined;
   try {
     themeColors = useThemeColors();
@@ -181,11 +201,13 @@ export function AppNavigator() {
     themeColors = undefined;
   }
   const colors = themeColors ?? {
-    accentPrimary: '#5A955A',
-    textTertiary: '#425474',
+    accentPrimary: '#3E7B52',
+    textTertiary: '#607085',
+    textPrimary: '#1A212D',
     bgCard: '#FFFFFF',
-    borderLight: '#E4DEBC',
-  };
+    borderLight: '#E6E0D4',
+    isDark: false,
+  } as any;
 
   return (
     <Tab.Navigator
@@ -194,15 +216,30 @@ export function AppNavigator() {
         headerShown: false,
         tabBarActiveTintColor: colors.accentPrimary,
         tabBarInactiveTintColor: colors.textTertiary,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.1,
+          marginTop: -2,
+          marginBottom: 4,
+        },
         tabBarStyle: {
           backgroundColor: colors.bgCard,
           borderTopColor: colors.borderLight,
           borderTopWidth: 1,
-          elevation: 0,
-          shadowOpacity: 0,
+          height: 60,
+          paddingTop: 6,
+          paddingBottom: 4,
+          elevation: 4,
+          shadowColor: colors.textPrimary ?? '#000000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: colors.isDark ? 0.3 : 0.04,
+          shadowRadius: 8,
         },
-        tabBarIcon: ({ color, size, focused }) => (
-          <Ionicons name={tabIcon(route.name, focused)} size={size} color={color} />
+        tabBarIcon: ({ color, focused }) => (
+          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name={tabIcon(route.name, focused)} size={22} color={color} />
+          </View>
         ),
       })}
     >
@@ -214,6 +251,7 @@ export function AppNavigator() {
     </Tab.Navigator>
   );
 }
+
 
 export function RootNavigator() {
   useRenderLog('root-navigator-render');
@@ -245,6 +283,11 @@ export function RootNavigator() {
       <RootStack.Screen name="AppLockSettings" component={AppLockSettingsScreen} />
       <RootStack.Screen name="SetPin" component={SetPinScreen} />
       <RootStack.Screen name="DataManagement" component={DataManagementScreen} />
+      <RootStack.Screen name="JournalEntry" component={JournalEntryScreen} />
+      <RootStack.Screen name="MoodCheckIn" component={MoodCheckInScreen} />
+      <RootStack.Screen name="BreathingSession" component={BreathingSessionScreen} />
+      <RootStack.Screen name="GroundingExercise" component={GroundingExerciseScreen} />
+      <RootStack.Screen name="MoodCalendar" component={MoodCalendarScreen} />
     </RootStack.Navigator>
   );
 }

@@ -1,6 +1,8 @@
 import 'nativewind';
 import 'react-native';
 
+declare module '*.css';
+
 declare module 'react-native' {
   interface ViewProps {
     className?: string;

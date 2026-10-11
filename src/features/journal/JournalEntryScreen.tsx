@@ -1,8 +1,11 @@
-import React from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, StyleProp, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TextInput, Pressable } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton } from '../../components';
+import { Card, CardContent, PrimaryButton, AppIcon } from '../../components';
+import type { AppIconName } from '../../components';
 import { RootStackParamList, JournalType } from '../../types/navigation';
+import { useThemeColors } from '../../theme/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 
 const journalTypeLabels: Record<JournalType, string> = {
   free: 'Free writing',
@@ -15,15 +18,15 @@ const journalTypeLabels: Record<JournalType, string> = {
   brain_dump: 'Brain dump',
 };
 
-const journalTypeIcons: Record<JournalType, string> = {
-  free: '✍️',
-  daily_reflection: '🌅',
-  gratitude: '🙏',
-  stress: '💨',
-  sleep: '🌙',
-  morning: '☀️',
-  evening: '🌆',
-  brain_dump: '🧠',
+const journalTypeIcons: Record<JournalType, AppIconName> = {
+  free: 'l-write',
+  daily_reflection: 'i-sun',
+  gratitude: 'l-gift',
+  stress: 'l-pulse',
+  sleep: 'i-moon',
+  morning: 'i-sun',
+  evening: 'i-moon',
+  brain_dump: 'i-bulb',
 };
 
 export function JournalEntryScreen() {
@@ -34,111 +37,218 @@ export function JournalEntryScreen() {
   const type: JournalType = (rawType && (journalTypeLabels as any)[rawType] ? rawType : 'free') as JournalType;
   const id = (params as any)?.id ?? undefined;
   const isEditing = !!id;
-  const typeIcon = (journalTypeIcons as any)?.[type] ?? '✍️';
+  const typeIcon: AppIconName = (journalTypeIcons as any)?.[type] ?? 'l-write';
   const typeLabel = (journalTypeLabels as any)?.[type] ?? (typeof type === 'string' ? type : 'Entry');
+
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  let themeColors: ReturnType<typeof useThemeColors> | undefined;
+  try {
+    themeColors = useThemeColors();
+  } catch {
+    themeColors = undefined;
+  }
+  const colors = themeColors ?? {
+    bgPrimary: '#FBF9F5',
+    bgCard: '#FFFFFF',
+    borderLight: '#E6E0D4',
+    textPrimary: '#1A212D',
+    textSecondary: '#384455',
+    textTertiary: '#607085',
+    accentPrimary: '#3E7B52',
+    accentBg: '#EDF5EF',
+    accentBorder: '#C2DCBF',
+    isDark: false,
+  } as any;
 
   return (
     <ScrollView
-      className="flex-1 bg-[var(--color-bg-primary)]"
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100 }}
+      style={{ flex: 1, backgroundColor: colors.bgPrimary }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 }}
+      showsVerticalScrollIndicator={false}
     >
-      <View className="mb-6">
+      {/* Header Bar */}
+      <View style={{ marginBottom: 20 }}>
         <Pressable
           onPress={() => navigation?.goBack?.()}
-          className="flex-row items-center"
+          style={({ pressed }) => [
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
         >
-          <Text style={{ fontSize: 24, marginRight: 8 }}>←</Text>
-          <Text className="text-body-lg font-medium" style={{ color: '#1E232E' }}>
-            {isEditing ? 'Edit Entry' : 'New Entry'}
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} style={{ marginRight: 8 }} />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
+            {isEditing ? 'Edit Reflection' : 'New Reflection'}
           </Text>
         </Pressable>
       </View>
 
-      <Card variant="elevated" className="mb-6">
-        <CardContent>
-          <View className="flex-row items-center mb-4">
+      <Card variant="elevated" style={{ marginBottom: 20 }}>
+        <CardContent style={{ padding: 20 }}>
+          {/* Type Badge Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
             <View
-              className="flex items-center justify-center rounded-full"
               style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#F0F4F0',
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: colors.accentBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: colors.accentBorder,
               }}
             >
-              <Text style={{ fontSize: 20 }}>{typeIcon}</Text>
+              <AppIcon name={typeIcon} size={22} color={colors.accentPrimary} />
             </View>
-            <View className="ml-3">
-              <Text className="text-headline-sm font-semibold" style={{ color: '#1E232E' }}>
+            <View style={{ marginLeft: 12 }}>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary }}>
                 {typeLabel}
               </Text>
-              <Text className="text-body-sm" style={{ color: '#425474' }}>
-                {isEditing ? 'Editing existing entry' : 'Start writing...'}
+              <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 2 }}>
+                {isEditing ? 'Editing existing entry' : 'Write freely in your calm space'}
               </Text>
             </View>
           </View>
 
+          {/* Title input */}
           <TextInput
             placeholder="Title (optional)"
-            className="text-headline-md font-semibold mb-4 bg-transparent"
+            placeholderTextColor={colors.textTertiary}
+            value={title}
+            onChangeText={setTitle}
             style={{
-              color: '#1E232E',
+              fontSize: 20,
+              fontWeight: '700',
+              color: colors.textPrimary,
               borderBottomWidth: 1,
-              borderBottomColor: '#E4DEBC',
-              paddingBottom: 8,
+              borderBottomColor: colors.borderLight,
+              paddingBottom: 12,
+              marginBottom: 16,
             }}
           />
 
+          {/* Content input */}
           <TextInput
             multiline
-            numberOfLines={15}
-            placeholder="What's on your mind?"
-            className="text-body-lg bg-transparent"
+            numberOfLines={12}
+            placeholder="What thoughts or feelings are present for you right now?"
+            placeholderTextColor={colors.textTertiary}
+            value={content}
+            onChangeText={setContent}
             style={{
-              color: '#1E232E',
+              fontSize: 16,
+              lineHeight: 24,
+              color: colors.textPrimary,
               minHeight: 200,
               textAlignVertical: 'top',
+              paddingTop: 4,
             }}
           />
 
-          <View className="mt-6 pt-4 border-t border-[var(--color-border-light)] flex-row items-center justify-between">
-            <View className="flex-row gap-2">
-              <Pressable className="flex-row items-center gap-1 px-3 py-1.5 rounded-full" style={{ backgroundColor: '#F5F0DE' }}>
-                <Text style={{ fontSize: 16 }}>🏷️</Text>
-                <Text className="text-label-sm" style={{ color: '#34415A' }}>Add tag</Text>
+          {/* Bottom Actions Row */}
+          <View
+            style={{
+              marginTop: 20,
+              paddingTop: 16,
+              borderTopWidth: 1,
+              borderTopColor: colors.borderLight,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable
+                style={({ pressed }) => [
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 9999,
+                    backgroundColor: colors.accentBg,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="pricetag-outline" size={15} color={colors.accentPrimary} style={{ marginRight: 4 }} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.accentPrimary }}>Tag</Text>
               </Pressable>
-              <Pressable className="flex-row items-center gap-1 px-3 py-1.5 rounded-full" style={{ backgroundColor: '#F5F0DE' }}>
-                <Text style={{ fontSize: 16 }}>📷</Text>
-                <Text className="text-label-sm" style={{ color: '#34415A' }}>Add photo</Text>
-              </Pressable>
-              <Pressable className="flex-row items-center gap-1 px-3 py-1.5 rounded-full" style={{ backgroundColor: '#F5F0DE' }}>
-                <Text style={{ fontSize: 16 }}>🎤</Text>
-                <Text className="text-label-sm" style={{ color: '#34415A' }}>Record audio</Text>
+              <Pressable
+                style={({ pressed }) => [
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 9999,
+                    backgroundColor: colors.accentBg,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="camera-outline" size={15} color={colors.accentPrimary} style={{ marginRight: 4 }} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.accentPrimary }}>Photo</Text>
               </Pressable>
             </View>
-            <Pressable className="flex-row items-center gap-1 px-3 py-1.5 rounded-full" style={{ backgroundColor: '#F0F4F0' }}>
-              <Text style={{ fontSize: 16 }}>❤️</Text>
-              <Text className="text-label-sm" style={{ color: '#5A955A' }}>Favorite</Text>
+
+            <Pressable
+              onPress={() => setIsFavorite(!isFavorite)}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 9999,
+                  backgroundColor: isFavorite ? '#FDF1F4' : colors.accentBg,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Ionicons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={16}
+                color={isFavorite ? '#DB3A60' : colors.textTertiary}
+                style={{ marginRight: 4 }}
+              />
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  color: isFavorite ? '#DB3A60' : colors.textTertiary,
+                }}
+              >
+                {isFavorite ? 'Favorited' : 'Favorite'}
+              </Text>
             </Pressable>
           </View>
         </CardContent>
       </Card>
 
-      <View className="flex-row gap-3">
+      {/* Buttons */}
+      <View style={{ flexDirection: 'row', gap: 12 }}>
         <PrimaryButton
-          title="Save"
+          title="Save Reflection"
           variant="primary"
           size="lg"
           onPress={() => navigation?.goBack?.()}
-          className="flex-1"
-          fullWidth
+          style={{ flex: 2 }}
+          fullWidth={false}
         />
         <PrimaryButton
           title="Cancel"
           variant="outline"
           size="lg"
           onPress={() => navigation?.goBack?.()}
-          className="flex-1"
-          fullWidth
+          style={{ flex: 1 }}
+          fullWidth={false}
         />
       </View>
     </ScrollView>

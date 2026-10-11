@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository } from '../../database/repositories/insightsRepository';
 import { MoodEntry } from '../../database/models';
-import { Card, CardContent } from '../../components';
+import { Card, CardContent, AppIcon, moodIcon } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday } from 'date-fns';
+import { format } from 'date-fns';
+import { useThemeColors } from '../../theme/ThemeContext';
 
-const MOOD_COLORS = {
+const MOOD_COLORS: Record<string, string> = {
   happy: '#5A955A',
   peaceful: '#6B9BCD',
   grateful: '#EB876D',
@@ -22,21 +23,6 @@ const MOOD_COLORS = {
   excited: '#EB876D',
   content: '#5A955A',
   hopeful: '#6B9BCD',
-};
-
-const MOOD_EMOJIS: Record<string, string> = {
-  happy: '😊',
-  peaceful: '😌',
-  grateful: '🙏',
-  stressed: '😰',
-  overwhelmed: '🤯',
-  anxious: '😟',
-  sad: '😢',
-  angry: '😠',
-  exhausted: '😴',
-  excited: '🤩',
-  content: '😌',
-  hopeful: '🌱',
 };
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'MoodCalendar'>['navigation'];
@@ -53,6 +39,7 @@ interface DayMoodData {
 
 export function MoodCalendarScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const colors = useThemeColors();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [moodData, setMoodData] = useState<Record<number, DayMoodData>>({});
@@ -66,7 +53,7 @@ export function MoodCalendarScreen() {
       const month = safeDate?.getMonth?.() ?? 0;
 
       const data = (await insightsRepository.getMoodCalendarData(year, month)) ?? {};
-      
+
       const entriesByDay: Record<number, MoodEntry[]> = {};
       Object.values(data ?? {}).forEach((entry: any) => {
         if (!entry?.createdAt) return;
@@ -157,8 +144,8 @@ export function MoodCalendarScreen() {
 
     const dayData = hasData ? (moodData ?? {})[day] ?? null : null;
     const moodKey = (dayData as any)?.mood ?? '';
-    const moodColor = hasData ? (MOOD_COLORS as any)?.[moodKey] || '#5A955A' : '#5A955A';
-    const moodEmoji = hasData ? (MOOD_EMOJIS as any)?.[moodKey] || '😊' : '😊';
+    const moodColor = hasData ? MOOD_COLORS[moodKey] || colors.accentPrimary : colors.accentPrimary;
+    const moodIconName = hasData ? moodIcon(moodKey) : moodIcon(null);
 
     return (
       <Pressable
@@ -167,22 +154,24 @@ export function MoodCalendarScreen() {
         disabled={!hasData}
         style={[
           styles.dayCell,
-          isSelected && styles.daySelected,
-          isTodayDay && !isSelected && styles.dayToday,
-          !hasData && styles.dayEmpty,
+          isSelected && { backgroundColor: colors.accentPrimary },
+          isTodayDay && !isSelected && { borderWidth: 2, borderColor: colors.accentPrimary },
+          !hasData && { opacity: 0.4 },
         ]}
-        activeOpacity={0.8}
       >
-        <Text style={[
-          styles.dayText,
-          isSelected && styles.dayTextSelected,
-          isTodayDay && !isSelected && styles.dayTextToday,
-        ]}>
+        <Text
+          style={[
+            styles.dayText,
+            { color: colors.textPrimary },
+            isSelected && { color: '#FFFFFF', fontWeight: '700' },
+            isTodayDay && !isSelected && { color: colors.accentPrimary, fontWeight: '700' },
+          ]}
+        >
           {day}
         </Text>
         {hasData && (
           <View style={[styles.moodIndicator, { backgroundColor: moodColor }]}>
-            <Text style={{ fontSize: 12 }}>{moodEmoji}</Text>
+            <AppIcon name={moodIconName} size={10} loop={false} />
           </View>
         )}
       </Pressable>
@@ -193,75 +182,93 @@ export function MoodCalendarScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#5A955A" />
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
       <View style={styles.header}>
-        <Pressable onPress={handlePrevMonth} style={styles.navButton}>
-          <Ionicons name="chevron-back" size={28} color="#1E232E" />
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+          style={[styles.navButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>
-          {monthName} {year}
-        </Text>
-        <Pressable onPress={handleNextMonth} style={styles.navButton}>
-          <Ionicons name="chevron-forward" size={28} color="#1E232E" />
-        </Pressable>
+        <View style={styles.monthNav}>
+          <Pressable onPress={handlePrevMonth} hitSlop={10} style={styles.arrowButton}>
+            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+            {monthName} {year}
+          </Text>
+          <Pressable onPress={handleNextMonth} hitSlop={10} style={styles.arrowButton}>
+            <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
+          </Pressable>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.weekdays}>
-          {(weekDays ?? []).map((day) => (
-            <Text key={day ?? Math.random().toString()} style={styles.weekday}>{day ?? ''}</Text>
-          ))}
-        </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.calendarCard, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
+          <View style={styles.weekdays}>
+            {(weekDays ?? []).map((day) => (
+              <Text key={day ?? Math.random().toString()} style={[styles.weekday, { color: colors.textTertiary }]}>
+                {day ?? ''}
+              </Text>
+            ))}
+          </View>
 
-        <View style={styles.calendarGrid}>
-          {[...Array(Math.max(0, firstDay ?? 0))].map((_, i) => (
-            <View key={`empty-${i}`} style={styles.dayCell} />
-          ))}
-          {[...Array(Math.max(0, daysInMonth ?? 0))].map((_, i) => renderDay(i + 1))}
+          <View style={styles.calendarGrid}>
+            {[...Array(Math.max(0, firstDay ?? 0))].map((_, i) => (
+              <View key={`empty-${i}`} style={styles.dayCell} />
+            ))}
+            {[...Array(Math.max(0, daysInMonth ?? 0))].map((_, i) => renderDay(i + 1))}
+          </View>
         </View>
 
         {selectedDayData && (
           <Card variant="elevated" style={styles.detailCard}>
             <CardContent>
-              <Text style={styles.detailDate}>
+              <Text style={[styles.detailDate, { color: colors.textPrimary }]}>
                 {selectedDay ?? ''} {monthName ?? ''} {year ?? ''}
               </Text>
               <View style={styles.detailMoodRow}>
-                <View style={[
-                  styles.moodCircle,
-                  { backgroundColor: ((MOOD_COLORS as any)?.[(selectedDayData as any)?.mood] ?? '#5A955A') + '20' },
-                ]}>
-                  <Text style={{ fontSize: 32 }}>{(MOOD_EMOJIS as any)?.[(selectedDayData as any)?.mood] || '😊'}</Text>
+                <View
+                  style={[
+                    styles.moodCircle,
+                    {
+                      backgroundColor:
+                        ((MOOD_COLORS[(selectedDayData as any)?.mood] || colors.accentPrimary) + '22'),
+                    },
+                  ]}
+                >
+                  <AppIcon name={moodIcon((selectedDayData as any)?.mood)} size={32} />
                 </View>
                 <View style={styles.detailMoodInfo}>
-                  <Text style={styles.detailMoodLabel}>
+                  <Text style={[styles.detailMoodLabel, { color: colors.textPrimary }]}>
                     {typeof (selectedDayData as any)?.mood === 'string' && (selectedDayData as any).mood.length > 0
                       ? (selectedDayData as any).mood.charAt(0).toUpperCase() + (selectedDayData as any).mood.slice(1)
                       : 'Unknown'}
                   </Text>
-                  <Text style={styles.detailMoodMeta}>
-                    Intensity: {(selectedDayData as any)?.intensity ?? 0}/10 · Stress: {(selectedDayData as any)?.stress ?? 0}/10 · Energy: {(selectedDayData as any)?.energy ?? '—'}
+                  <Text style={[styles.detailMoodMeta, { color: colors.textTertiary }]}>
+                    Intensity: {(selectedDayData as any)?.intensity ?? 0}/10 · Stress: {(selectedDayData as any)?.stress ?? 0}/10
                   </Text>
                 </View>
               </View>
 
-              <View style={styles.detailStats}>
+              <View style={[styles.detailStats, { borderTopColor: colors.borderLight }]}>
                 <View style={styles.detailStat}>
-                  <Text style={styles.detailStatLabel}>Journal</Text>
-                  <Text style={styles.detailStatValue}>
-                    {(selectedDayData as any)?.hasJournal ? '✓ Written' : '—'}
+                  <Text style={[styles.detailStatLabel, { color: colors.textTertiary }]}>Journal Entry</Text>
+                  <Text style={[styles.detailStatValue, { color: colors.textPrimary }]}>
+                    {(selectedDayData as any)?.hasJournal ? 'Recorded' : 'None'}
                   </Text>
                 </View>
                 <View style={styles.detailStat}>
-                  <Text style={styles.detailStatLabel}>Habits</Text>
-                  <Text style={styles.detailStatValue}>
+                  <Text style={[styles.detailStatLabel, { color: colors.textTertiary }]}>Habits Done</Text>
+                  <Text style={[styles.detailStatValue, { color: colors.textPrimary }]}>
                     {(selectedDayData as any)?.habitsCompleted ?? 0}/{(selectedDayData as any)?.habitsTotal ?? 0}
                   </Text>
                 </View>
@@ -273,10 +280,10 @@ export function MoodCalendarScreen() {
         {!selectedDayData && (
           <Card variant="outlined" style={styles.emptyCard}>
             <CardContent style={styles.emptyCardContent}>
-              <Text style={{ fontSize: 48 }}>📅</Text>
-              <Text style={styles.emptyTitle}>Tap a day with mood data</Text>
-              <Text style={styles.emptyText}>
-                Days with entries show an emoji. Tap to see details.
+              <Ionicons name="calendar-outline" size={36} color={colors.textTertiary} />
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Tap an entry date</Text>
+              <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
+                Days with logged moods have colored badges. Tap any highlighted date to inspect your state.
               </Text>
             </CardContent>
           </Card>
@@ -287,35 +294,64 @@ export function MoodCalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDFBF7' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16 },
-  navButton: { padding: 8 },
-  headerTitle: { fontSize: 20, fontWeight: '600', color: '#1E232E' },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
-  weekdays: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  weekday: { width: 40, textAlign: 'center', fontSize: 12, fontWeight: '600', color: '#425474' },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  dayCell: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  daySelected: { backgroundColor: '#5A955A' },
-  dayToday: { borderWidth: 2, borderColor: '#5A955A' },
-  dayEmpty: { opacity: 0.3 },
-  dayText: { fontSize: 14, fontWeight: '500', color: '#1E232E' },
-  dayTextSelected: { color: 'white' },
-  dayTextToday: { color: '#5A955A' },
-  moodIndicator: { marginTop: 2, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 },
-  detailCard: { marginTop: 16 },
-  detailDate: { fontSize: 18, fontWeight: '600', color: '#1E232E', marginBottom: 12, textAlign: 'center' },
-  detailMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 12,
+  },
+  navButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthNav: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  arrowButton: {
+    padding: 6,
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 110, gap: 16 },
+  calendarCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  weekdays: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  weekday: { width: 40, textAlign: 'center', fontSize: 12, fontWeight: '600' },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
+  dayCell: { width: 40, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  dayText: { fontSize: 14, fontWeight: '500' },
+  moodIndicator: { marginTop: 2, width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  detailCard: { marginTop: 0 },
+  detailDate: { fontSize: 18, fontWeight: '700', marginBottom: 14, textAlign: 'center' },
+  detailMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 },
   moodCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   detailMoodInfo: { flex: 1, gap: 4 },
-  detailMoodLabel: { fontSize: 18, fontWeight: '600', color: '#1E232E' },
-  detailMoodMeta: { fontSize: 13, color: '#425474' },
-  detailStats: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E4DEBC' },
+  detailMoodLabel: { fontSize: 18, fontWeight: '700' },
+  detailMoodMeta: { fontSize: 13 },
+  detailStats: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 12, borderTopWidth: 1 },
   detailStat: { alignItems: 'center', gap: 4 },
-  detailStatLabel: { fontSize: 12, fontWeight: '500', color: '#425474' },
-  detailStatValue: { fontSize: 14, fontWeight: '600', color: '#1E232E' },
-  emptyCard: { marginTop: 16 },
+  detailStatLabel: { fontSize: 12, fontWeight: '500' },
+  detailStatValue: { fontSize: 15, fontWeight: '600' },
+  emptyCard: { marginTop: 0 },
   emptyCardContent: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#34415A' },
-  emptyText: { fontSize: 14, color: '#425474', textAlign: 'center', paddingHorizontal: 20 },
+  emptyTitle: { fontSize: 16, fontWeight: '600' },
+  emptyText: { fontSize: 13, textAlign: 'center', paddingHorizontal: 20, lineHeight: 18 },
 });

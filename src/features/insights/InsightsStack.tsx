@@ -4,7 +4,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { InsightsScreen } from './InsightsScreen';
 import { MoodCalendarScreen } from './MoodCalendarScreen';
 
-type InsightsStackParamList = Pick<RootStackParamList, 'Insights' | 'MoodCalendar'>;
+type InsightsStackParamList = Pick<RootStackParamList, 'InsightsMain' | 'MoodCalendar'>;
 
 const Stack = createNativeStackNavigator<InsightsStackParamList>();
 
@@ -14,8 +14,8 @@ const SafeMoodCalendarScreen = (MoodCalendarScreen ?? FallbackScreen) as React.C
 
 export function InsightsStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Insights">
-      <Stack.Screen name="Insights" component={SafeInsightsScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="InsightsMain">
+      <Stack.Screen name="InsightsMain" component={SafeInsightsScreen} />
       <Stack.Screen name="MoodCalendar" component={SafeMoodCalendarScreen} />
     </Stack.Navigator>
   );

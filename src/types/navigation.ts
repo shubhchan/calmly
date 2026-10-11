@@ -1,20 +1,25 @@
 export type RootStackParamList = {
   App: undefined;
   Home: undefined;
+  HomeMain: undefined;
   Journal: undefined;
-  JournalEntry: { id?: string; type?: JournalType };
+  JournalMain: undefined;
+  JournalEntry?: { id?: string; type?: JournalType };
   Calm: undefined;
-  BreathingSession: { preset?: BreathingPreset; duration?: number };
-  GroundingExercise: { type: GroundingType };
+  CalmMain: undefined;
+  BreathingSession?: { preset?: BreathingPreset; duration?: number };
+  GroundingExercise?: { type: GroundingType };
   Insights: undefined;
+  InsightsMain: undefined;
   MoodCalendar: undefined;
   Settings: undefined;
-  MoodCheckIn: { fromHome?: boolean };
+  SettingsMain: undefined;
+  MoodCheckIn?: { fromHome?: boolean };
   Onboarding: undefined;
   AppLock: undefined;
   Habits: undefined;
   HabitDetail: { id: string };
-  HabitForm: { id?: string };
+  HabitForm?: { id?: string };
   Routines: undefined;
   RoutineDetail: { timeOfDay: 'morning' | 'afternoon' | 'evening'; routine?: any };
   Gratitude: { type: 'gratitude' | 'positive' };
@@ -26,7 +31,7 @@ export type RootStackParamList = {
   ThoughtReframing: undefined;
   Notifications: undefined;
   AppLockSettings: undefined;
-  SetPin: { onComplete?: () => void };
+  SetPin?: { onComplete?: () => void };
   DataManagement: undefined;
 };
 

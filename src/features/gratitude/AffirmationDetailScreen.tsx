@@ -6,8 +6,8 @@ import { RootStackParamList } from '../../types/navigation';
 import { database } from '../../database';
 import Affirmation from '../../database/models/Affirmation';
 import { Card } from '../../components/Card';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'AffirmationDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'AffirmationDetail'>['route'];
@@ -15,6 +15,7 @@ type RouteProp = NativeStackScreenProps<RootStackParamList, 'AffirmationDetail'>
 export function AffirmationDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
+  const colors = useThemeColors();
   const { id } = route.params ?? {};
 
   const [affirmation, setAffirmation] = useState<{
@@ -71,7 +72,9 @@ export function AffirmationDetailScreen() {
       }
       if (!a) return;
       await database.write(async () => {
-        await a.update(aff => { aff.favorite = !affirmation.favorite; });
+        await a.update((aff) => {
+          aff.favorite = !affirmation.favorite;
+        });
       });
       setAffirmation({ ...affirmation, favorite: !affirmation.favorite });
     } catch (error) {
@@ -83,17 +86,12 @@ export function AffirmationDetailScreen() {
     if (!affirmation) return;
     try {
       await Share.share({
-        title: 'Affirmation',
-        message: `${affirmation?.text ?? ''}\n\n— via Calmly`,
+        title: 'Mindful Affirmation',
+        message: `"${affirmation?.text ?? ''}"\n\n— via Calmly`,
       });
     } catch (error) {
       console.error('Failed to share:', error);
     }
-  };
-
-  const handleCopy = () => {
-    if (!affirmation) return;
-    Alert.alert('Copied!', 'Affirmation copied to clipboard');
   };
 
   const handleDelete = () => {
@@ -128,64 +126,78 @@ export function AffirmationDetailScreen() {
 
   if (!id) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Not found</Text>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: colors.textSecondary }}>Not found</Text>
       </View>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: colors.textSecondary }}>Loading affirmation...</Text>
       </View>
     );
   }
 
   if (!affirmation) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Not found</Text>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: colors.textSecondary }}>Affirmation not found</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color="#1E232E" />
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+            hitSlop={10}
+          >
+            <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{affirmation?.category ?? ''}</Text>
-          <View style={styles.headerSpacer} />
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{affirmation?.category ?? ''}</Text>
+          <View style={{ width: 40 }} />
         </View>
 
         <Card style={styles.affirmationCard}>
-          <Text style={styles.affirmationText}>{affirmation?.text ?? ''}</Text>
+          <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.accentPrimary + '60'} style={{ marginBottom: 4 }} />
+          <Text style={[styles.affirmationText, { color: colors.textPrimary }]}>{affirmation?.text ?? ''}</Text>
         </Card>
 
         <View style={styles.actions}>
-          <TouchableOpacity onPress={handleToggleFavorite} style={styles.actionButton}>
+          <TouchableOpacity
+            onPress={handleToggleFavorite}
+            style={[
+              styles.actionButton,
+              { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+              affirmation?.favorite && { borderColor: (colors.accentPeach || '#EB876D') + '60' },
+            ]}
+          >
             <Ionicons
               name={affirmation?.favorite ? 'heart' : 'heart-outline'}
-              size={24}
-              color={affirmation?.favorite ? '#F5A9A9' : '#5A955A'}
+              size={20}
+              color={affirmation?.favorite ? (colors.accentPeach || '#EB876D') : colors.accentPrimary}
             />
-            <Text style={styles.actionLabel}>{affirmation?.favorite ? 'Favorited' : 'Favorite'}</Text>
+            <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>
+              {affirmation?.favorite ? 'Favorited' : 'Favorite'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleShare} style={styles.actionButton}>
-            <Ionicons name="share" size={24} color="#5A955A" />
-            <Text style={styles.actionLabel}>Share</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleCopy} style={styles.actionButton}>
-            <Ionicons name="copy" size={24} color="#5A955A" />
-            <Text style={styles.actionLabel}>Copy</Text>
+
+          <TouchableOpacity
+            onPress={handleShare}
+            style={[styles.actionButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          >
+            <Ionicons name="share-outline" size={20} color={colors.accentPrimary} />
+            <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Share</Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-          <Text style={styles.deleteButtonText}>Delete</Text>
+          <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete Affirmation</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -193,18 +205,47 @@ export function AffirmationDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDFBF7' },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, gap: 20 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '600', color: '#1E232E', textAlign: 'center', textTransform: 'capitalize' },
-  headerSpacer: { width: 44 },
-  affirmationCard: { padding: 24, gap: 12 },
-  affirmationText: { fontSize: 22, fontWeight: '500', color: '#1E232E', lineHeight: 32, textAlign: 'center', fontStyle: 'italic' },
-  actions: { flexDirection: 'row', justifyContent: 'space-around', gap: 16 },
-  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DEBC' },
-  actionLabel: { fontSize: 13, fontWeight: '500', color: '#34415A' },
-  deleteButton: { marginTop: 8, paddingVertical: 14, alignItems: 'center' },
-  deleteButtonText: { fontSize: 16, fontWeight: '600', color: '#F5A9A9' },
-  loadingText: { textAlign: 'center', marginTop: 100, color: '#425474' },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 60, gap: 20 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', textTransform: 'capitalize', letterSpacing: -0.3 },
+  affirmationCard: {
+    padding: 28,
+    borderRadius: 24,
+    alignItems: 'center',
+    gap: 12,
+  },
+  affirmationText: {
+    fontSize: 24,
+    fontWeight: '600',
+    lineHeight: 36,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  actions: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  actionLabel: { fontSize: 14, fontWeight: '600' },
+  deleteButton: { marginTop: 12, paddingVertical: 14, alignItems: 'center' },
+  deleteButtonText: { fontSize: 15, fontWeight: '600' },
 });

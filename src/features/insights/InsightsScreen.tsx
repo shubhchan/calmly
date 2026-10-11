@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, Share } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository, WeeklyStats, Insight, HabitStats } from '../../database/repositories/insightsRepository';
-import { Card, CardContent, PrimaryButton, StatPill, MoodStatPill, ProgressRing } from '../../components';
+import { Card, CardContent, PrimaryButton, AppIcon } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
-import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
+import { format } from 'date-fns';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Insights'>['navigation'];
 
@@ -18,13 +19,13 @@ interface MoodTrendPoint {
 
 export function InsightsScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const colors = useThemeColors();
   const [stats, setStats] = useState<WeeklyStats | null>(null);
   const [habitStats, setHabitStats] = useState<HabitStats[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [moodTrend, setMoodTrend] = useState<MoodTrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'week' | 'month'>('week');
-  const [totalMoods, setTotalMoods] = useState(0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -48,7 +49,7 @@ export function InsightsScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [timeRange]);
 
   const loadMoodTrend = async (): Promise<MoodTrendPoint[]> => {
     try {
@@ -95,34 +96,6 @@ export function InsightsScreen() {
     loadData();
   }, [loadData, timeRange]);
 
-  useEffect(() => {
-    const loadMoodCount = async () => {
-      try {
-        const { database } = require('../../database');
-        const { Q } = require('@nozbe/watermelondb');
-        const moodCollection = database?.get('mood_entries');
-        if (!moodCollection) {
-          setTotalMoods(0);
-          return;
-        }
-        const now = Date.now();
-        const weekAgo = now - 7 * 86400000;
-        const safeNow = Number.isFinite(now) ? now : Date.now();
-        const safeWeekAgo = Number.isFinite(weekAgo) ? weekAgo : 0;
-        if (safeWeekAgo > safeNow) {
-          setTotalMoods(0);
-          return;
-        }
-        const entries = (await moodCollection.query(Q.where('created_at', Q.between(safeWeekAgo, safeNow))).fetch()) ?? [];
-        setTotalMoods((entries ?? []).length ?? 0);
-      } catch (error) {
-        console.error('Failed to load mood count:', error);
-        setTotalMoods(0);
-      }
-    };
-    loadMoodCount();
-  }, [timeRange]);
-
   const handleExport = async () => {
     try {
       const { database } = require('../../database');
@@ -153,7 +126,6 @@ export function InsightsScreen() {
         },
       };
 
-      const { Share } = require('react-native');
       await Share.share({
         title: 'Calmly Data Export',
         message: JSON.stringify(exportData, null, 2),
@@ -167,7 +139,7 @@ export function InsightsScreen() {
   const handleDeleteAll = () => {
     Alert.alert(
       'Delete All Data?',
-      'This will permanently delete ALL your data: mood entries, journals, habits, gratitudes, and calm sessions. This cannot be undone.',
+      'This will permanently delete all your mood entries, journals, habits, gratitudes, and calm sessions. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -203,137 +175,299 @@ export function InsightsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#5A955A" style={{ marginTop: 100 }} />
+      <View style={[styles.centerContainer, { backgroundColor: colors.bgPrimary }]}>
+        <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
   }
 
-  if (!stats) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.emptyText}>No data yet. Start tracking to see insights!</Text>
-      </View>
-    );
-  }
-
-  const moodColors = [
-    { mood: 'Happy', percentage: 0, color: '#5A955A' },
-    { mood: 'Peaceful', percentage: 0, color: '#6B9BCD' },
-    { mood: 'Grateful', percentage: 0, color: '#EB876D' },
-    { mood: 'Stressed', percentage: 0, color: '#EB697F' },
-    { mood: 'Anxious', percentage: 0, color: '#EF8799' },
-  ];
+  const activeHabitsCount = (habitStats ?? []).filter(h => (h.completedThisWeek || 0) > 0).length;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Insights</Text>
-        <Text style={styles.subtitle}>Patterns from your journey</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Insights</Text>
+          <View style={[styles.headerBadge, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}>
+            <AppIcon name="l-chart" size={18} loop />
+            <Text style={[styles.headerBadgeText, { color: colors.accentPrimary }]}>Mindful Data</Text>
+          </View>
+        </View>
+        <Text style={[styles.subtitle, { color: colors.textTertiary }]}>
+          Understand your personal emotional rhythms and consistency
+        </Text>
       </View>
 
-      <View style={styles.timeRangePicker}>
+      {/* Segmented Time Range Picker */}
+      <View style={[styles.segmentedControl, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
         <Pressable
           onPress={() => setTimeRange('week')}
-          style={[styles.timeRangeButton, timeRange === 'week' && styles.timeRangeButtonActive]}
+          style={[
+            styles.segmentButton,
+            timeRange === 'week' && [styles.segmentButtonActive, { backgroundColor: colors.accentPrimary }],
+          ]}
         >
-          <Text style={[styles.timeRangeButtonText, timeRange === 'week' && styles.timeRangeButtonTextActive]}>Week</Text>
+          <Text
+            style={[
+              styles.segmentText,
+              { color: colors.textSecondary },
+              timeRange === 'week' && styles.segmentTextActive,
+            ]}
+          >
+            Past 7 Days
+          </Text>
         </Pressable>
         <Pressable
           onPress={() => setTimeRange('month')}
-          style={[styles.timeRangeButton, timeRange === 'month' && styles.timeRangeButtonActive]}
+          style={[
+            styles.segmentButton,
+            timeRange === 'month' && [styles.segmentButtonActive, { backgroundColor: colors.accentPrimary }],
+          ]}
         >
-          <Text style={[styles.timeRangeButtonText, timeRange === 'month' && styles.timeRangeButtonTextActive]}>Month</Text>
+          <Text
+            style={[
+              styles.segmentText,
+              { color: colors.textSecondary },
+              timeRange === 'month' && styles.segmentTextActive,
+            ]}
+          >
+            Past 30 Days
+          </Text>
         </Pressable>
       </View>
 
-      <Card variant="elevated" style={styles.card}>
-        <CardContent>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Mood Distribution</Text>
-            <Pressable onPress={() => navigation.navigate('MoodCalendar')} style={styles.link}>
-              <Text style={styles.linkText}>View calendar</Text>
-              <Ionicons name="chevron-forward" size={16} color="#5A955A" />
+      {/* 2x2 Metric Grid (Symmetrical 2-row layout) */}
+      <View style={{ gap: 12 }}>
+        <View style={styles.metricRow}>
+          {/* Metric 1: Avg Mood */}
+          <Card variant="elevated" style={styles.metricCard}>
+            <CardContent style={styles.metricCardContent}>
+              <View style={styles.metricTopRow}>
+                <View style={[styles.metricIconOrb, { backgroundColor: colors.accentBg }]}>
+                  <AppIcon name="l-heart" size={26} loop />
+                </View>
+                <View style={[styles.trendBadge, { backgroundColor: ((stats?.avgMood ?? 0) >= 6 ? colors.success : colors.textTertiary) + '15' }]}>
+                  <Text style={[styles.trendBadgeText, { color: (stats?.avgMood ?? 0) >= 6 ? colors.success : colors.textTertiary }]}>
+                    {(stats?.avgMood ?? 0) >= 6 ? '↑ Good' : '→ Calm'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>
+                {stats?.avgMood ? `${stats.avgMood}/10` : '—'}
+              </Text>
+              <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
+                Average Mood
+              </Text>
+            </CardContent>
+          </Card>
+
+          {/* Metric 2: Mindful Minutes */}
+          <Card variant="elevated" style={styles.metricCard}>
+            <CardContent style={styles.metricCardContent}>
+              <View style={styles.metricTopRow}>
+                <View style={[styles.metricIconOrb, { backgroundColor: (colors.accentSky || '#6B9BCD') + '15' }]}>
+                  <AppIcon name="l-expand" size={26} loop />
+                </View>
+                <View style={[styles.trendBadge, { backgroundColor: colors.accentBg }]}>
+                  <Text style={[styles.trendBadgeText, { color: colors.accentPrimary }]}>
+                    Somatic
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>
+                {stats?.breathingMinutes ? `${stats.breathingMinutes}m` : '0m'}
+              </Text>
+              <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
+                Mindful Breathwork
+              </Text>
+            </CardContent>
+          </Card>
+        </View>
+
+        <View style={styles.metricRow}>
+          {/* Metric 3: Journal Entries */}
+          <Card variant="elevated" style={styles.metricCard}>
+            <CardContent style={styles.metricCardContent}>
+              <View style={styles.metricTopRow}>
+                <View style={[styles.metricIconOrb, { backgroundColor: (colors.accentLavender || '#877FC5') + '15' }]}>
+                  <AppIcon name="l-book" size={26} loop />
+                </View>
+                <View style={[styles.trendBadge, { backgroundColor: (colors.accentLavender || '#877FC5') + '15' }]}>
+                  <Text style={[styles.trendBadgeText, { color: colors.accentLavender || '#877FC5' }]}>
+                    {(stats?.journalCount ?? 0) >= 3 ? 'Active' : 'Light'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>
+                {stats?.journalCount ? `${stats.journalCount} logs` : '0 logs'}
+              </Text>
+              <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
+                Journal Reflections
+              </Text>
+            </CardContent>
+          </Card>
+
+          {/* Metric 4: Active Habits */}
+          <Card variant="elevated" style={styles.metricCard}>
+            <CardContent style={styles.metricCardContent}>
+              <View style={styles.metricTopRow}>
+                <View style={[styles.metricIconOrb, { backgroundColor: (colors.accentPeach || '#EB876D') + '15' }]}>
+                  <AppIcon name="l-star" size={26} loop />
+                </View>
+                <View style={[styles.trendBadge, { backgroundColor: (colors.accentPeach || '#EB876D') + '15' }]}>
+                  <Text style={[styles.trendBadgeText, { color: colors.accentPeach || '#EB876D' }]}>
+                    Streak
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>
+                {activeHabitsCount > 0 ? `${activeHabitsCount} active` : '0 active'}
+              </Text>
+              <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
+                Habits Maintained
+              </Text>
+            </CardContent>
+          </Card>
+        </View>
+      </View>
+
+      {/* Mood & Stress Trend Chart Card */}
+      <Card variant="elevated" style={styles.sectionCard}>
+        <CardContent style={styles.sectionCardContent}>
+          <View style={styles.sectionHeaderRow}>
+            <View>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Mood & Stress Rhythm</Text>
+              <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>
+                {timeRange === 'week' ? 'Daily emotional progression' : 'Monthly overview'}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => navigation.navigate('MoodCalendar')}
+              style={[styles.calendarLink, { backgroundColor: colors.accentBg }]}
+            >
+              <Ionicons name="calendar-outline" size={14} color={colors.accentPrimary} />
+              <Text style={[styles.calendarLinkText, { color: colors.accentPrimary }]}>Calendar</Text>
             </Pressable>
           </View>
 
-          {(moodTrend ?? []).length > 0 && (
-            <View style={styles.chartContainer}>
-              <Text style={styles.chartLabel}>Mood & Stress Trend ({timeRange === 'week' ? '7' : '30'} days)</Text>
-              <View style={styles.chart}>
+          {(moodTrend ?? []).length > 0 ? (
+            <View style={styles.chartWrapper}>
+              <View style={styles.chartContainer}>
                 {(moodTrend ?? []).map((point, i) => (
-                  <View key={point?.date ?? `point-${i}`} style={styles.chartBarWrapper}>
-                    <View style={[
-                      styles.chartBar,
-                      { height: Math.max(((point?.intensity ?? 0) / 10) * 100, 4) },
-                    ]} />
-                    <View style={[
-                      styles.chartBarStress,
-                      { height: Math.max(((point?.stress ?? 0) / 10) * 100, 4) },
-                    ]} />
-                    <Text style={styles.chartBarLabel}>{point?.date ?? ''}</Text>
+                  <View key={point?.date ?? `point-${i}`} style={styles.chartCol}>
+                    <View style={styles.barsContainer}>
+                      <View
+                        style={[
+                          styles.barPrimary,
+                          {
+                            height: Math.max(((point?.intensity ?? 0) / 10) * 110, 8),
+                            backgroundColor: colors.accentPrimary,
+                          },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.barSecondary,
+                          {
+                            height: Math.max(((point?.stress ?? 0) / 10) * 110, 8),
+                            backgroundColor: colors.accentRose || '#EB697F',
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={[styles.chartDayLabel, { color: colors.textTertiary }]}>
+                      {point?.date ?? ''}
+                    </Text>
                   </View>
                 ))}
-                <View style={styles.chartLegend}>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#5A955A' }]} />
-                    <Text style={styles.legendText}>Mood</Text>
-                  </View>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#EB697F' }]} />
-                    <Text style={styles.legendText}>Stress</Text>
-                  </View>
+              </View>
+
+              <View style={styles.chartLegend}>
+                <View style={styles.legendRow}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.accentPrimary }]} />
+                  <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Mood Intensity</Text>
+                </View>
+                <View style={styles.legendRow}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.accentRose || '#EB697F' }]} />
+                  <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Stress Level</Text>
                 </View>
               </View>
             </View>
+          ) : (
+            <View style={styles.emptyChartBox}>
+              <AppIcon name="l-chart" size={38} loop />
+              <Text style={[styles.emptyChartTitle, { color: colors.textPrimary }]}>
+                No data points yet
+              </Text>
+              <Text style={[styles.emptyChartSub, { color: colors.textTertiary }]}>
+                Check in your mood each day to see your rhythm chart appear here.
+              </Text>
+            </View>
           )}
-
-          <View style={styles.statsRow}>
-            <StatPill
-              label="Avg Mood"
-              value={`${stats?.avgMood ?? 0}/10`}
-              trend={(stats?.avgMood ?? 0) >= 6 ? 'up' : 'neutral'}
-              accentColor="#5A955A"
-              icon={<Ionicons name="happy" size={16} color="#5A955A" />}
-            />
-            <StatPill
-              label="Journaling"
-              value={`${stats?.journalCount ?? 0}/7 days`}
-              trend={(stats?.journalCount ?? 0) >= 3 ? 'up' : 'neutral'}
-              accentColor="#877FC5"
-              icon={<Ionicons name="book" size={16} color="#877FC5" />}
-            />
-            <StatPill
-              label="Breathing"
-              value={`${stats?.breathingMinutes ?? 0} min`}
-              trend={(stats?.breathingMinutes ?? 0) > 10 ? 'up' : 'neutral'}
-              accentColor="#6B9BCD"
-              icon={<Ionicons name="flower" size={16} color="#6B9BCD" />}
-            />
-          </View>
         </CardContent>
       </Card>
 
-      <Card variant="elevated" style={styles.card}>
-        <CardContent>
-          <Text style={styles.sectionTitle}>Habit Consistency</Text>
+      {/* Habit Consistency Progress Card */}
+      <Card variant="elevated" style={styles.sectionCard}>
+        <CardContent style={styles.sectionCardContent}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 4 }]}>
+            Habit Consistency
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textTertiary, marginBottom: 14 }]}>
+            Completion rates over the past 7 days
+          </Text>
+
           {(habitStats ?? []).length === 0 ? (
-            <Text style={styles.emptyHabits}>No habits yet. Create one to track consistency.</Text>
+            <View style={styles.emptyInlineBox}>
+              <AppIcon name="l-walk" size={32} loop />
+              <Text style={[styles.emptyInlineText, { color: colors.textTertiary }]}>
+                No habits tracked yet this week.
+              </Text>
+            </View>
           ) : (
             <View style={styles.habitList}>
               {(habitStats ?? []).slice(0, 5).map((h) => {
                 const completed = h?.completedThisWeek ?? 0;
                 const total = h?.totalThisWeek ?? 0;
-                const rate = total > 0 ? completed / total : 0;
+                const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+                const habitColor = h?.color || colors.accentPrimary;
+
                 return (
-                <StatPill
-                  key={h?.id ?? Math.random().toString()}
-                  label={h?.name ?? 'Habit'}
-                  value={`${completed}/${total}`}
-                  trend={rate >= 0.7 ? 'up' : rate >= 0.4 ? 'neutral' : 'down'}
-                  accentColor={h?.color ?? '#5A955A'}
-                  icon={<Ionicons name="checkmark-circle" size={16} color={h?.color ?? '#5A955A'} />}
-                />
+                  <View
+                    key={h?.id ?? Math.random().toString()}
+                    style={[styles.habitRowCard, { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: colors.borderLight }]}
+                  >
+                    <View style={styles.habitRowHeader}>
+                      <View style={styles.habitTitleRow}>
+                        <View style={[styles.habitColorDot, { backgroundColor: habitColor }]} />
+                        <Text style={[styles.habitName, { color: colors.textPrimary }]} numberOfLines={1}>
+                          {h?.name ?? 'Habit'}
+                        </Text>
+                      </View>
+                      <View style={[styles.habitRateBadge, { backgroundColor: habitColor + '18' }]}>
+                        <Text style={[styles.habitRateText, { color: habitColor }]}>
+                          {completed}/{total} ({percentage}%)
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={[styles.progressBarTrack, { backgroundColor: colors.borderLight }]}>
+                      <View
+                        style={[
+                          styles.progressBarFill,
+                          {
+                            width: `${Math.min(percentage, 100)}%`,
+                            backgroundColor: habitColor,
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
                 );
               })}
             </View>
@@ -341,33 +475,54 @@ export function InsightsScreen() {
         </CardContent>
       </Card>
 
-      <Card variant="outlined" style={styles.card}>
-        <CardContent>
-          <Text style={styles.sectionTitle}>Your Insights</Text>
+      {/* Mindful Reflections & Insights Card */}
+      <Card variant="outlined" style={styles.sectionCard}>
+        <CardContent style={styles.sectionCardContent}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 4 }]}>
+            Mindful Reflections
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textTertiary, marginBottom: 14 }]}>
+            Observations tailored to your patterns
+          </Text>
+
           {(insights ?? []).length === 0 ? (
-            <Text style={styles.emptyInsights}>Keep tracking to unlock personalized insights.</Text>
+            <View style={styles.emptyInlineBox}>
+              <AppIcon name="l-star" size={32} loop />
+              <Text style={[styles.emptyInlineText, { color: colors.textTertiary }]}>
+                Keep tracking daily to unlock mindful personal reflections.
+              </Text>
+            </View>
           ) : (
             <View style={styles.insightsList}>
               {(insights ?? []).map((insight) => (
-                <View key={insight?.id ?? Math.random().toString()} style={[
-                  styles.insightCard,
-                  insight?.type === 'positive' && styles.insightPositive,
-                  insight?.type === 'action' && styles.insightAction,
-                ]}>
-                  <View style={styles.insightIcon}>
-                    <Ionicons
-                      name={
-                        insight?.type === 'positive' ? 'checkmark-circle' :
-                        insight?.type === 'action' ? 'alert-circle' : 'information-circle'
-                      }
-                      size={20}
-                      color={
-                        insight?.type === 'positive' ? '#5A955A' :
-                        insight?.type === 'action' ? '#EB876D' : '#6B9BCD'
-                      }
+                <View
+                  key={insight?.id ?? Math.random().toString()}
+                  style={[
+                    styles.insightCard,
+                    {
+                      backgroundColor: colors.bgSecondary ?? '#F4EFE6',
+                      borderColor: colors.borderLight,
+                    },
+                    insight?.type === 'positive' && {
+                      borderColor: colors.accentPrimary + '50',
+                      backgroundColor: colors.accentPrimary + '0E',
+                    },
+                    insight?.type === 'action' && {
+                      borderColor: (colors.accentPeach || '#EB876D') + '50',
+                      backgroundColor: (colors.accentPeach || '#EB876D') + '0E',
+                    },
+                  ]}
+                >
+                  <View style={styles.insightIconOrb}>
+                    <AppIcon
+                      name={insight?.type === 'positive' ? 'l-heart' : insight?.type === 'action' ? 'l-star' : 'l-calm'}
+                      size={24}
+                      loop
                     />
                   </View>
-                  <Text style={styles.insightText}>{insight?.text ?? ''}</Text>
+                  <Text style={[styles.insightText, { color: colors.textPrimary }]}>
+                    {insight?.text ?? ''}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -375,37 +530,40 @@ export function InsightsScreen() {
         </CardContent>
       </Card>
 
-      <Card variant="elevated" style={styles.card}>
-        <CardContent>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+      {/* Export & Actions */}
+      <Card variant="elevated" style={styles.sectionCard}>
+        <CardContent style={styles.sectionCardContent}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 12 }]}>
+            Data Management
+          </Text>
           <View style={styles.actionButtons}>
-            <PrimaryButton
-              title="Mood Calendar"
-              variant="primary"
-              size="md"
-              onPress={() => navigation.navigate('MoodCalendar')}
-              className="flex-1"
-              fullWidth
-              leftIcon={<Text style={{ fontSize: 18 }}>📅</Text>}
-            />
-            <PrimaryButton
-              title="Export Data"
-              variant="outline"
-              size="md"
-              onPress={handleExport}
-              className="flex-1"
-              fullWidth
-              leftIcon={<Text style={{ fontSize: 18 }}>📊</Text>}
-            />
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                title="Mood Calendar"
+                variant="primary"
+                size="md"
+                onPress={() => navigation.navigate('MoodCalendar')}
+                fullWidth
+                leftIcon={<Ionicons name="calendar-outline" size={18} color="#FFFFFF" />}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                title="Export JSON"
+                variant="outline"
+                size="md"
+                onPress={handleExport}
+                fullWidth
+                leftIcon={<Ionicons name="download-outline" size={18} color={colors.accentPrimary} />}
+              />
+            </View>
           </View>
-          <PrimaryButton
-            title="Delete All Data"
-            variant="ghost"
-            size="sm"
-            onPress={handleDeleteAll}
-            style={styles.dangerButton}
-            fullWidth={false}
-          />
+          <Pressable onPress={handleDeleteAll} style={styles.deleteLink}>
+            <Ionicons name="trash-outline" size={15} color={colors.accentRose || '#EB697F'} />
+            <Text style={[styles.deleteLinkText, { color: colors.accentRose || '#EB697F' }]}>
+              Clear all app records
+            </Text>
+          </Pressable>
         </CardContent>
       </Card>
     </ScrollView>
@@ -413,43 +571,327 @@ export function InsightsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDFBF7' },
-  content: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100, gap: 16 },
-  header: { marginBottom: 8 },
-  title: { fontSize: 28, fontWeight: '700', color: '#1E232E' },
-  subtitle: { fontSize: 15, color: '#34415A', marginTop: 4 },
-  timeRangePicker: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  timeRangeButton: { flex: 1, paddingVertical: 10, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DEBC', alignItems: 'center' },
-  timeRangeButtonActive: { backgroundColor: '#5A955A', borderColor: '#5A955A' },
-  timeRangeButtonText: { fontSize: 14, fontWeight: '600', color: '#1E232E' },
-  timeRangeButtonTextActive: { color: 'white' },
-  card: { marginBottom: 16 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '600', color: '#1E232E' },
-  link: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  linkText: { fontSize: 14, color: '#5A955A' },
-  chartContainer: { gap: 8, marginBottom: 16 },
-  chartLabel: { fontSize: 13, fontWeight: '500', color: '#34415A', marginBottom: 8 },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 120, gap: 4, paddingBottom: 20 },
-  chartBarWrapper: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
-  chartBar: { width: '100%', backgroundColor: '#5A955A', borderRadius: 2, minHeight: 4 },
-  chartBarStress: { width: '100%', backgroundColor: '#EB697F', borderRadius: 2, minHeight: 4, marginTop: -2 },
-  chartBarLabel: { fontSize: 9, color: '#425474', marginTop: 4 },
-  chartLegend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 8 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: 11, color: '#425474' },
-  statsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  habitList: { gap: 10 },
-  emptyHabits: { textAlign: 'center', color: '#425474', paddingVertical: 16 },
-  insightsList: { gap: 10 },
-  insightCard: { flexDirection: 'row', gap: 10, padding: 12, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DEBC' },
-  insightPositive: { borderColor: '#5A955A', backgroundColor: 'rgba(90, 149, 90, 0.1)' },
-  insightAction: { borderColor: '#EB876D', backgroundColor: 'rgba(235, 135, 109, 0.1)' },
-  insightIcon: { marginTop: 2 },
-  insightText: { flex: 1, fontSize: 14, color: '#1E232E', lineHeight: 20 },
-  emptyInsights: { textAlign: 'center', color: '#425474', paddingVertical: 16 },
-  actionButtons: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  dangerButton: { marginTop: 12, alignSelf: 'center' },
-  emptyText: { textAlign: 'center', color: '#425474', marginTop: 100 },
+  container: {
+    flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 110,
+    gap: 16,
+  },
+  header: {
+    marginBottom: 2,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  headerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
+    borderWidth: 1,
+  },
+  headerBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  subtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 4,
+    gap: 6,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentButtonActive: {
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  segmentTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  metricRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    borderRadius: 20,
+  },
+  metricCardContent: {
+    padding: 16,
+    gap: 6,
+  },
+  metricTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  metricIconOrb: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trendBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  trendBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  metricValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  metricLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  sectionCard: {
+    borderRadius: 22,
+  },
+  sectionCardContent: {
+    padding: 18,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  calendarLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 9999,
+  },
+  calendarLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  chartWrapper: {
+    gap: 16,
+  },
+  chartContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 140,
+    gap: 8,
+    paddingBottom: 24,
+    paddingHorizontal: 4,
+  },
+  chartCol: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+  barsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  barPrimary: {
+    flex: 1,
+    maxWidth: 14,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    minHeight: 6,
+  },
+  barSecondary: {
+    flex: 1,
+    maxWidth: 14,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    minHeight: 6,
+    opacity: 0.85,
+  },
+  chartDayLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+    paddingTop: 4,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyChartBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    gap: 8,
+  },
+  emptyChartTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  emptyChartSub: {
+    fontSize: 13,
+    textAlign: 'center',
+    maxWidth: 240,
+    lineHeight: 18,
+  },
+  emptyInlineBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  emptyInlineText: {
+    fontSize: 13,
+  },
+  habitList: {
+    gap: 10,
+  },
+  habitRowCard: {
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+  },
+  habitRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  habitTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  habitColorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  habitName: {
+    fontSize: 14,
+    fontWeight: '700',
+    flex: 1,
+  },
+  habitRateBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  habitRateText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  progressBarTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  insightsList: {
+    gap: 10,
+  },
+  insightCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  insightIconOrb: {
+    marginTop: 2,
+  },
+  insightText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deleteLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 14,
+    paddingVertical: 6,
+  },
+  deleteLinkText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });

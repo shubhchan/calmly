@@ -1,0 +1,84 @@
+name: Build APK to Telegram
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22 (Expo SDK 57 requires Node >= 22.13)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Setup Java 17 (required by React Native 0.86 / AGP)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      # android/ is gitignored in this repo, so regenerate native code in CI.
+      # If you ever commit android/, this step just syncs it and is still safe.
+      - name: Expo prebuild (Android)
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g"
+
+      - name: Rename APK with version info
+        run: |
+          APK_SRC=$(ls android/app/build/outputs/apk/release/*.apk | head -n 1)
+          echo "Built: $APK_SRC"
+          ls -lh android/app/build/outputs/apk/release/
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          APK_DST="calmly-${SHORT_SHA}.apk"
+          cp "$APK_SRC" "$APK_DST"
+          echo "APK_PATH=$APK_DST" >> "$GITHUB_ENV"
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: calmly-apk
+          path: ${{ env.APK_PATH }}
+          retention-days: 14
+
+      - name: Warn if Telegram secrets are missing
+        if: ${{ secrets.TELEGRAM_BOT_TOKEN == '' || secrets.TELEGRAM_CHAT_ID == '' }}
+        run: |
+          echo "::warning::TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set. APK is saved as a workflow artifact, but was NOT sent to Telegram. Add them under GitHub repo Settings > Secrets and variables > Actions."
+
+      - name: Send APK to Telegram channel
+        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          CAPTION="calmly APK build
+          Branch: ${GITHUB_REF_NAME}
+          Commit: ${SHORT_SHA}
+          ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl -f -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
+            -F chat_id="${CHAT_ID}" \
+            -F document=@"${APK_PATH}" \
+            -F caption="${CAPTION}"

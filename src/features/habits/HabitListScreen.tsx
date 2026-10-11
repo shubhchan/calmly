@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
 import { getHabitEncouragement } from '../../utils/encouragement';
-import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { StatPill } from '../../components/StatPill';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Habits'>['navigation'];
 
@@ -19,49 +19,44 @@ const FREQUENCY_LABELS: Record<string, string> = {
   custom: 'Custom',
 };
 
-const ICONS = [
-  'water', 'fitness', 'book', 'meditation', 'sunny', 'moon', 'leaf', 'heart',
-  'musical-notes', 'camera', 'bicycle', 'walk', 'sleep', 'nutrition', 'code',
-  'brush', 'pill', 'flash', 'diamond', 'star', 'flower', 'tree', 'cloud', 'flame',
-];
-
 const COLORS = [
   '#8FBC8F', '#B19CD9', '#A8D0E6', '#F5C6A5', '#F5A9A9', '#9FD8A8',
   '#D8A8E8', '#A8D8E8', '#F5D8A8', '#E8A8D8', '#A8E8D8', '#E8D8A8',
 ];
 
-function getIconName(icon?: string | null): string {
+function getIconName(icon?: string | null): any {
   const iconMap: Record<string, string> = {
-    water: 'water',
-    fitness: 'fitness',
-    book: 'book',
-    meditation: 'meditation',
-    sunny: 'sunny',
-    moon: 'moon',
-    leaf: 'leaf',
-    heart: 'heart',
-    'musical-notes': 'musical-notes',
-    camera: 'camera',
-    bicycle: 'bicycle',
-    walk: 'walk',
-    sleep: 'bed',
-    nutrition: 'nutrition',
-    code: 'code',
-    brush: 'brush',
-    pill: 'pill',
-    flash: 'flash',
-    diamond: 'diamond',
-    star: 'star',
-    flower: 'flower',
-    tree: 'tree',
-    cloud: 'cloud',
-    flame: 'flame',
+    water: 'water-outline',
+    fitness: 'fitness-outline',
+    book: 'book-outline',
+    meditation: 'flower-outline',
+    sunny: 'sunny-outline',
+    moon: 'moon-outline',
+    leaf: 'leaf-outline',
+    heart: 'heart-outline',
+    'musical-notes': 'musical-notes-outline',
+    camera: 'camera-outline',
+    bicycle: 'bicycle-outline',
+    walk: 'walk-outline',
+    sleep: 'bed-outline',
+    nutrition: 'nutrition-outline',
+    code: 'code-slash-outline',
+    brush: 'brush-outline',
+    pill: 'medical-outline',
+    flash: 'flash-outline',
+    diamond: 'diamond-outline',
+    star: 'star-outline',
+    flower: 'flower-outline',
+    tree: 'leaf-outline',
+    cloud: 'cloud-outline',
+    flame: 'flame-outline',
   };
   return iconMap[icon ?? ''] || 'checkbox-outline';
 }
 
 export function HabitListScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const colors = useThemeColors();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -105,7 +100,7 @@ export function HabitListScreen() {
       if (!completed) {
         const streak = await habitRepository.getStreak(habit.id);
         if ((streak?.current ?? 0) > 1) {
-          Alert.alert('🔥 Streak!', getHabitEncouragement('streak', streak?.current ?? 0));
+          Alert.alert('Streak!', getHabitEncouragement('streak', streak?.current ?? 0));
         } else {
           Alert.alert('Done!', getHabitEncouragement('complete'));
         }
@@ -119,33 +114,9 @@ export function HabitListScreen() {
     navigation.navigate('HabitForm');
   };
 
-  const handleEditHabit = (habit: Habit) => {
-    if (!habit?.id) return;
-    navigation.navigate('HabitForm', { id: habit.id });
-  };
-
   const handleHabitPress = (habit: Habit) => {
     if (!habit?.id) return;
     navigation.navigate('HabitDetail', { id: habit.id });
-  };
-
-  const handleDeleteHabit = async (habit: Habit) => {
-    if (!habit?.id) return;
-    Alert.alert(
-      'Delete habit?',
-      `This will remove "${habit?.name ?? ''}" and all its history.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await habitRepository.delete(habit.id);
-            loadData();
-          },
-        },
-      ]
-    );
   };
 
   const isDueToday = (habit: Habit): boolean => {
@@ -169,8 +140,8 @@ export function HabitListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading habits...</Text>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading mindful habits...</Text>
       </View>
     );
   }
@@ -181,34 +152,71 @@ export function HabitListScreen() {
   const totalDue = (dueHabits ?? []).length;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>Today's Habits</Text>
-        <TouchableOpacity onPress={handleAddHabit} style={styles.addButton}>
-          <Ionicons name="add" size={24} color="#5A955A" />
+        <View>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Habits</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Nurture your daily rhythm</Text>
+        </View>
+        <TouchableOpacity
+          onPress={handleAddHabit}
+          style={[styles.addButton, { backgroundColor: colors.accentPrimary }]}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       {totalDue > 0 && (
-        <View style={styles.progressRow}>
-          <StatPill
-            label={`${completedCount}/${totalDue}`}
-            value={`${Math.round((completedCount / totalDue) * 100)}%`}
-            accentColor="#5A955A"
-          />
-          <Text style={styles.encouragement}>
-            {completedCount === totalDue && totalDue > 0
-              ? getHabitEncouragement('complete')
-              : getHabitEncouragement('empty')}
-          </Text>
+        <View
+          style={[
+            styles.progressCard,
+            { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+          ]}
+        >
+          <View style={styles.progressCardTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.progressNumber, { color: colors.textPrimary }]}>
+                {completedCount} of {totalDue} Completed
+              </Text>
+              <Text style={[styles.encouragementText, { color: colors.textTertiary }]}>
+                {completedCount === totalDue && totalDue > 0
+                  ? getHabitEncouragement('complete')
+                  : getHabitEncouragement('empty')}
+              </Text>
+            </View>
+            <View style={[styles.percentageBadge, { backgroundColor: colors.accentBg }]}>
+              <Text style={[styles.percentageText, { color: colors.accentPrimary }]}>
+                {totalDue > 0 ? Math.round((completedCount / totalDue) * 100) : 0}%
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.progressTrack, { backgroundColor: colors.borderLight }]}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${totalDue > 0 ? Math.min(Math.round((completedCount / totalDue) * 100), 100) : 0}%`,
+                  backgroundColor: colors.accentPrimary,
+                },
+              ]}
+            />
+          </View>
         </View>
       )}
 
       {showEmptyState ? (
         <View style={styles.emptyState}>
-          <Ionicons name="leaf" size={64} color="#425474" />
-          <Text style={styles.emptyTitle}>No habits yet</Text>
-          <Text style={styles.emptyText}>{getHabitEncouragement('empty')}</Text>
+          <View style={[styles.emptyIconWrap, { backgroundColor: colors.accentPrimary + '16' }]}>
+            <Ionicons name="leaf-outline" size={48} color={colors.accentPrimary} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No habits yet</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{getHabitEncouragement('empty')}</Text>
           <PrimaryButton onPress={handleAddHabit} title="Create Your First Habit" style={styles.emptyButton} />
         </View>
       ) : (
@@ -222,73 +230,81 @@ export function HabitListScreen() {
             } catch {
               dayLabels = [];
             }
+            const isCompleted = !!(habit?.id && safeCompletions[habit.id]);
+            const habitColor = habit?.color || COLORS[0];
+
             return (
-            <TouchableOpacity
-              key={habit?.id ?? Math.random().toString()}
-              onPress={() => handleHabitPress(habit)}
-              style={styles.habitCard}
-              activeOpacity={0.8}
-            >
-              <View style={styles.habitLeft}>
-                <View
-                  style={[
-                    styles.habitIcon,
-                    { backgroundColor: habit?.color || COLORS[0] },
-                  ]}
-                >
-                  <Ionicons
-                    name={getIconName(habit?.icon)}
-                    size={24}
-                    color="white"
-                  />
+              <TouchableOpacity
+                key={habit?.id ?? Math.random().toString()}
+                onPress={() => handleHabitPress(habit)}
+                style={[
+                  styles.habitCard,
+                  { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                  isCompleted && { borderColor: habitColor + '40' },
+                ]}
+                activeOpacity={0.75}
+              >
+                <View style={styles.habitLeft}>
+                  <View style={[styles.habitIcon, { backgroundColor: habitColor }]}>
+                    <Ionicons name={getIconName(habit?.icon)} size={22} color="#FFFFFF" />
+                  </View>
+                  <View style={styles.habitInfo}>
+                    <Text
+                      style={[
+                        styles.habitName,
+                        { color: colors.textPrimary },
+                        isCompleted && { opacity: 0.75, textDecorationLine: 'line-through' },
+                      ]}
+                    >
+                      {habit?.name ?? ''}
+                    </Text>
+                    <Text style={[styles.habitFrequency, { color: colors.textTertiary }]}>
+                      {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
+                      {habit?.frequency === 'custom' && dayLabels.length > 0 && ` • ${dayLabels.join(', ')}`}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.habitInfo}>
-                  <Text style={styles.habitName}>{habit?.name ?? ''}</Text>
-                  <Text style={styles.habitFrequency}>
-                    {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
-                    {habit?.frequency === 'custom' && (
-                      <>
-                        {' • '}
-                        {dayLabels.join(', ')}
-                      </>
-                    )}
-                  </Text>
+
+                <View style={styles.habitRight}>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleHabit(habit, isCompleted);
+                    }}
+                    style={[
+                      styles.checkButton,
+                      { borderColor: habitColor },
+                      isCompleted && { backgroundColor: habitColor },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={isCompleted ? 'checkmark' : 'checkmark-outline'}
+                      size={20}
+                      color={isCompleted ? '#FFFFFF' : habitColor}
+                    />
+                  </TouchableOpacity>
                 </View>
-              </View>
-              <View style={styles.habitRight}>
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    toggleHabit(habit, (safeCompletions[habit?.id] as boolean) || false);
-                  }}
-                  style={[
-                    styles.checkButton,
-                    habit?.id && safeCompletions[habit.id] && styles.checkButtonDone,
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={habit?.id && safeCompletions[habit.id] ? 'checkmark' : 'checkmark-outline'}
-                    size={24}
-                    color={habit?.id && safeCompletions[habit.id] ? 'white' : '#5A955A'}
-                  />
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
             );
           })}
+
           {(habits ?? []).length > (dueHabits ?? []).length && (
-            <Text style={styles.notDueText}>
-              {(habits ?? []).length - (dueHabits ?? []).length} habit{(habits ?? []).length - (dueHabits ?? []).length > 1 ? 's' : ''} not due today
+            <Text style={[styles.notDueText, { color: colors.textTertiary }]}>
+              {(habits ?? []).length - (dueHabits ?? []).length} habit{(habits ?? []).length - (dueHabits ?? []).length > 1 ? 's' : ''} scheduled for other days
             </Text>
           )}
         </View>
       )}
 
-      <View style={styles.bottomActions}>
-        <TouchableOpacity onPress={() => navigation.navigate('Routines')} style={styles.routineButton}>
-          <Ionicons name="list-outline" size={20} color="#5A955A" />
-          <Text style={styles.routineButtonText}>My Routines</Text>
+      <View style={[styles.bottomActions, { borderTopColor: colors.borderLight }]}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Routines')}
+          style={[styles.routineButton, { borderColor: colors.accentPrimary, backgroundColor: colors.bgCard }]}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="list-outline" size={20} color={colors.accentPrimary} />
+          <Text style={[styles.routineButtonText, { color: colors.accentPrimary }]}>Mindful Routines</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -296,136 +312,164 @@ export function HabitListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FDFBF7',
-  },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 100,
-  },
+  container: { flex: 1 },
+  content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1E232E',
-  },
+  title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5 },
+  subtitle: { fontSize: 15, marginTop: 4 },
   addButton: {
-    padding: 8,
-  },
-  progressRow: {
-    flexDirection: 'row',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  progressCard: {
+    padding: 18,
+    borderRadius: 20,
+    borderWidth: 1,
     marginBottom: 20,
     gap: 12,
   },
-  encouragement: {
-    fontSize: 14,
-    color: '#34415A',
-    flex: 1,
-    textAlign: 'right',
+  progressCardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  progressNumber: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  encouragementText: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 3,
+  },
+  percentageBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9999,
+  },
+  percentageText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  progressTrack: {
+    height: 7,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 48,
     gap: 12,
+  },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#1E232E',
+    fontWeight: '700',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#34415A',
+    fontSize: 15,
     textAlign: 'center',
     paddingHorizontal: 20,
+    lineHeight: 22,
   },
   emptyButton: {
-    marginTop: 8,
-    minWidth: 240,
+    marginTop: 12,
+    minWidth: 220,
   },
   list: {
     gap: 12,
   },
   habitCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E4DEBC',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    gap: 12,
   },
   habitLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 14,
     flex: 1,
   },
   habitIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 2,
   },
   habitInfo: {
-    gap: 2,
+    flex: 1,
+    gap: 3,
   },
   habitName: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1E232E',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
   },
   habitFrequency: {
     fontSize: 13,
-    color: '#425474',
+    lineHeight: 18,
   },
   habitRight: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    alignItems: 'flex-start',
+    gap: 10,
   },
   checkButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 2,
-    borderColor: '#5A955A',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkButtonDone: {
-    backgroundColor: '#5A955A',
-    borderColor: '#5A955A',
+    marginTop: 2,
   },
   notDueText: {
     fontSize: 13,
-    color: '#425474',
     textAlign: 'center',
     marginTop: 8,
     paddingVertical: 8,
   },
   bottomActions: {
-    paddingTop: 16,
+    paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E4DEBC',
-    marginTop: 8,
+    marginTop: 16,
   },
   routineButton: {
     flexDirection: 'row',
@@ -433,19 +477,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-    backgroundColor: 'transparent',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#5A955A',
   },
   routineButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#5A955A',
   },
   loadingText: {
-    textAlign: 'center',
-    marginTop: 100,
-    color: '#425474',
+    fontSize: 15,
   },
 });

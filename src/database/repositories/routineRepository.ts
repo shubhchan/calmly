@@ -55,7 +55,7 @@ export const routineRepository = {
           })
         );
 
-        return { ...routine, items: itemsWithHabits };
+        return Object.assign(routine, { items: itemsWithHabits }) as any;
       })
     );
   },
@@ -82,7 +82,7 @@ export const routineRepository = {
         })
       );
 
-      return { ...routine, items: itemsWithHabits };
+      return Object.assign(routine, { items: itemsWithHabits }) as any;
     } catch {
       return null;
     }

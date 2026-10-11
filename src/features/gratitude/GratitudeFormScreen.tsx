@@ -5,11 +5,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { gratitudeRepository } from '../../database/repositories/gratitudeRepository';
 import { positiveMomentRepository } from '../../database/repositories/positiveMomentRepository';
-import GratitudeEntry from '../../database/models/GratitudeEntry';
-import PositiveMoment from '../../database/models/PositiveMoment';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'GratitudeForm'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'GratitudeForm'>['route'];
@@ -19,6 +18,7 @@ type EntryType = 'gratitude' | 'positive';
 export function GratitudeFormScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
+  const colors = useThemeColors();
   const { type = 'gratitude', id } = (route.params ?? {}) as { type: EntryType; id?: string };
   const isEditing = !!id;
 
@@ -47,12 +47,7 @@ export function GratitudeFormScreen() {
       };
       if (type === 'gratitude') {
         const list = (await gratitudeRepository.getAll()) ?? [];
-        let entry = undefined;
-        try {
-          entry = list.find(e => e?.id === id);
-        } catch {
-          entry = undefined;
-        }
+        const entry = list.find((e) => e?.id === id);
         if (entry) {
           setText(entry?.text ?? '');
           setMood(entry?.mood ?? '');
@@ -61,12 +56,7 @@ export function GratitudeFormScreen() {
         }
       } else {
         const list = (await positiveMomentRepository.getAll()) ?? [];
-        let entry = undefined;
-        try {
-          entry = list.find(e => e?.id === id);
-        } catch {
-          entry = undefined;
-        }
+        const entry = list.find((e) => e?.id === id);
         if (entry) {
           setText(entry?.text ?? '');
           setMood(entry?.mood ?? '');
@@ -76,7 +66,6 @@ export function GratitudeFormScreen() {
       }
     } catch (error) {
       console.error('Failed to load entry:', error);
-      setTags((prev) => prev ?? []);
     } finally {
       setLoading(false);
     }
@@ -88,7 +77,7 @@ export function GratitudeFormScreen() {
 
   const validate = (): boolean => {
     if (!(text ?? '').trim()) {
-      Alert.alert('Missing text', 'Please write something');
+      Alert.alert('Missing reflection', 'Please share what you are grateful for or what went well');
       return false;
     }
     return true;
@@ -96,42 +85,52 @@ export function GratitudeFormScreen() {
 
   const handleSave = async () => {
     if (!validate()) return;
-    if (isEditing && !id) {
-      Alert.alert('Error', 'Missing entry id. Please try again.');
-      return;
-    }
     setLoading(true);
     try {
-      const data = {
-        text: (text ?? '').trim(),
-        mood: mood ?? '',
-        tags: tags ?? [],
-        favorite: favorite ?? false,
-      };
       if (type === 'gratitude') {
-        if (isEditing) {
-          await gratitudeRepository.update(id!, data);
+        if (isEditing && id) {
+          await gratitudeRepository.update(id, {
+            text: (text ?? '').trim(),
+            mood: mood || undefined,
+            tags: (tags ?? []).length > 0 ? JSON.stringify(tags) : '[]',
+            favorite,
+          });
         } else {
-          await gratitudeRepository.create(data);
+          await gratitudeRepository.create({
+            text: (text ?? '').trim(),
+            mood: mood || undefined,
+            tags: (tags ?? []).length > 0 ? tags : undefined,
+            favorite,
+          });
         }
       } else {
-        if (isEditing) {
-          await positiveMomentRepository.update(id!, data);
+        if (isEditing && id) {
+          await positiveMomentRepository.update(id, {
+            text: (text ?? '').trim(),
+            mood: mood || undefined,
+            tags: (tags ?? []).length > 0 ? JSON.stringify(tags) : '[]',
+            favorite,
+          });
         } else {
-          await positiveMomentRepository.create(data);
+          await positiveMomentRepository.create({
+            text: (text ?? '').trim(),
+            mood: mood || undefined,
+            tags: (tags ?? []).length > 0 ? tags : undefined,
+            favorite,
+          });
         }
       }
       navigation.goBack();
     } catch (error) {
-      console.error('Failed to save entry:', error);
-      Alert.alert('Error', 'Failed to save. Please try again.');
+      console.error('Failed to save reflection:', error);
+      Alert.alert('Error', 'Failed to save entry. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = () => {
-    if (isEditing && !id) return;
+    if (!id) return;
     Alert.alert(
       'Delete entry?',
       'This cannot be undone.',
@@ -141,7 +140,6 @@ export function GratitudeFormScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            if (!id) return;
             if (type === 'gratitude') {
               await gratitudeRepository.delete(id);
             } else {
@@ -154,72 +152,88 @@ export function GratitudeFormScreen() {
     );
   };
 
-  const title = type === 'gratitude' ? 'Gratitude' : 'Good Thing';
+  const title = isEditing
+    ? type === 'gratitude' ? 'Edit Gratitude' : 'Edit Good Thing'
+    : type === 'gratitude' ? 'New Gratitude' : 'New Good Thing';
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
+  const placeholder = type === 'gratitude'
+    ? 'What are you genuinely grateful for in this moment? What brought a gentle smile to your face?...'
+    : 'What went well today? A kind word, personal milestone, or peaceful moment?...';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          hitSlop={10}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{title}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         onTouchStart={() => Keyboard.dismiss()}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color="#1E232E" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isEditing ? 'Edit' : 'New'} {title}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>What are you grateful for?</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Your Reflection</Text>
           <TextInput
-            style={styles.textArea}
-            placeholder={type === 'gratitude' ? 'I\'m grateful for...' : 'Something good that happened...'}
+            style={[styles.textArea, { color: colors.textPrimary }]}
+            placeholder={placeholder}
             value={text}
             onChangeText={setText}
-            placeholderTextColor="#425474"
+            placeholderTextColor={colors.textTertiary}
             multiline
             numberOfLines={5}
             maxLength={1000}
+            autoFocus={!isEditing}
           />
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Mood (optional)</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodScroll}>
-            {(MOODS ?? []).map((m) => (
-              <TouchableOpacity
-                key={m}
-                onPress={() => setMood(mood === m ? '' : m)}
-                style={[
-                  styles.moodChip,
-                  mood === m && styles.moodChipSelected,
-                ]}
-              >
-                <Text style={[styles.moodChipText, mood === m && styles.moodChipTextSelected]}>{m}</Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Associated Emotion</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moodScroll}>
+            {(MOODS ?? []).map((m) => {
+              const isSelected = mood === m;
+              return (
+                <TouchableOpacity
+                  key={m}
+                  onPress={() => setMood(isSelected ? '' : m)}
+                  style={[
+                    styles.moodChip,
+                    { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                    isSelected && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.moodChipText,
+                      { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                      isSelected && { fontWeight: '700' },
+                    ]}
+                  >
+                    {m}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Tags (optional)</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Tags (Optional)</Text>
           <TextInput
-            style={styles.input}
-            placeholder="Add tags separated by commas"
+            style={[styles.input, { color: colors.textPrimary, borderBottomColor: colors.borderLight }]}
+            placeholder="e.g. morning, nature, friends (comma separated)"
             value={(tags ?? []).join(', ')}
-            onChangeText={(t) => setTags((t ?? '').split(',').map(s => s.trim()).filter(Boolean))}
-            placeholderTextColor="#425474"
+            onChangeText={(t) => setTags((t ?? '').split(',').map((s) => s.trim()).filter(Boolean))}
+            placeholderTextColor={colors.textTertiary}
           />
         </Card>
 
@@ -229,21 +243,23 @@ export function GratitudeFormScreen() {
               <Ionicons
                 name={favorite ? 'heart' : 'heart-outline'}
                 size={24}
-                color={favorite ? '#F5A9A9' : '#5A955A'}
+                color={favorite ? (colors.accentPeach || '#EB876D') : colors.textTertiary}
+                style={{ marginTop: 2 }}
               />
               <View style={styles.favoriteToggleInfo}>
-                <Text style={styles.favoriteToggleLabel}>Mark as favorite</Text>
-                <Text style={styles.favoriteToggleDesc}>
+                <Text style={[styles.favoriteToggleLabel, { color: colors.textPrimary }]}>Star as Favorite</Text>
+                <Text style={[styles.favoriteToggleDesc, { color: colors.textTertiary }]}>
                   {type === 'gratitude'
-                    ? 'Favorites appear in your gratitude collection'
-                    : 'Favorites may resurface as "Remember this?" prompts'}
+                    ? 'Featured in your mindful gratitude collection'
+                    : 'May resurface in gentle "Remember this?" reminders'}
                 </Text>
               </View>
             </View>
             <View
               style={[
                 styles.favoriteToggleSwitch,
-                favorite && styles.favoriteToggleSwitchOn,
+                { backgroundColor: colors.borderLight, marginTop: 2 },
+                favorite && { backgroundColor: colors.accentPrimary },
               ]}
             >
               <View style={[styles.favoriteToggleThumb, favorite && styles.favoriteToggleThumbOn]} />
@@ -251,54 +267,98 @@ export function GratitudeFormScreen() {
           </TouchableOpacity>
         </Card>
 
-        {isEditing && (
-          <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-            <Text style={styles.deleteButtonText}>Delete Entry</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.buttonRow}>
+          <View style={{ flex: 1 }}>
+            <PrimaryButton
+              onPress={handleSave}
+              loading={loading}
+              title={isEditing ? 'Save Changes' : 'Save Reflection'}
+              fullWidth
+            />
+          </View>
+          {isEditing && (
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={[styles.deleteButton, { borderColor: colors.accentRose || '#EB697F' }]}
+            >
+              <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </ScrollView>
-
-      <View style={styles.bottomBar}>
-        <PrimaryButton
-          onPress={handleSave}
-          loading={loading}
-          title={isEditing ? 'Save Changes' : 'Save'}
-          style={styles.saveButton}
-        />
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDFBF7' },
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100, gap: 16 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: 20, fontWeight: '600', color: '#1E232E', textAlign: 'center' },
-  headerSpacer: { width: 44 },
-  section: { gap: 12 },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: '#34415A', textTransform: 'uppercase', letterSpacing: 0.5 },
-  textArea: { fontSize: 17, color: '#1E232E', minHeight: 120, textAlignVertical: 'top', paddingTop: 4 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110, gap: 16 },
+  section: { gap: 10, padding: 16, borderRadius: 20 },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  textArea: { fontSize: 16, minHeight: 120, textAlignVertical: 'top', lineHeight: 24 },
   moodScroll: { gap: 8, paddingVertical: 4 },
-  moodChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DEBC' },
-  moodChipSelected: { backgroundColor: '#5A955A', borderColor: '#5A955A' },
-  moodChipText: { fontSize: 14, fontWeight: '500', color: '#1E232E' },
-  moodChipTextSelected: { color: 'white' },
-  input: { fontSize: 16, color: '#1E232E', minHeight: 44 },
-  favoriteToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
-  favoriteToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  favoriteToggleInfo: { gap: 2 },
-  favoriteToggleLabel: { fontSize: 16, fontWeight: '500', color: '#1E232E' },
-  favoriteToggleDesc: { fontSize: 13, color: '#425474' },
-  favoriteToggleSwitch: { width: 52, height: 28, borderRadius: 14, backgroundColor: '#E4DEBC', justifyContent: 'center', paddingHorizontal: 2 },
-  favoriteToggleSwitchOn: { backgroundColor: '#5A955A' },
-  favoriteToggleThumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'white', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
-  favoriteToggleThumbOn: { marginLeft: 24 },
-  deleteButton: { marginTop: 8, paddingVertical: 14, alignItems: 'center' },
-  deleteButtonText: { fontSize: 16, fontWeight: '600', color: '#F5A9A9' },
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 20, paddingTop: 12, backgroundColor: '#FDFBF7', borderTopWidth: 1, borderTopColor: '#E4DEBC' },
-  saveButton: { minHeight: 56 },
-  loadingText: { textAlign: 'center', marginTop: 100, color: '#425474' },
+  moodChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  moodChipText: { fontSize: 14, fontWeight: '500', textTransform: 'capitalize' },
+  input: { fontSize: 15, paddingVertical: 8, borderBottomWidth: 1 },
+  favoriteToggle: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  favoriteToggleLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1, paddingRight: 8 },
+  favoriteToggleInfo: { gap: 3, flex: 1 },
+  favoriteToggleLabel: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
+  favoriteToggleDesc: { fontSize: 12, lineHeight: 18 },
+  favoriteToggleSwitch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  favoriteToggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  favoriteToggleThumbOn: { marginLeft: 22 },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  deleteButton: {
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: { fontSize: 15, fontWeight: '600' },
 });

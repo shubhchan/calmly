@@ -1,5 +1,10 @@
-import { createMMKV } from 'react-native-mmkv';
-
+// NOTE: react-native-mmkv v4 is backed by react-native-nitro-modules,
+// which does NOT exist in Expo Go. A static `import { createMMKV }` would
+// evaluate the Nitro TurboModule at bundle-load time and throw
+// "Failed to get NitroModules" before any try/catch below can run,
+// grey-screening the whole app. So we lazy-require it inside a try/catch
+// and fall back to in-memory storage when native code is missing
+// (Expo Go) or the app hasn't been rebuilt after install (dev build).
 interface KeyValueStore {
   getString(key: string): string | undefined;
   set(key: string, value: string): void;
@@ -30,9 +35,13 @@ function createMemoryStore(): KeyValueStore {
 
 let storage: KeyValueStore;
 try {
+  // Lazy require: throws inside this try block (caught below) when
+  // NitroModules native code is absent instead of crashing at import time.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createMMKV } = require('react-native-mmkv') as typeof import('react-native-mmkv');
   storage = createMMKV();
 } catch (error) {
-  console.warn('MMKV unavailable, using in-memory storage:', error);
+  console.warn('MMKV unavailable (Expo Go or missing native rebuild?), using in-memory storage:', error);
   storage = createMemoryStore();
 }
 

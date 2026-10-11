@@ -4,19 +4,19 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { habitRepository } from '../../database/repositories/habitRepository';
-import Habit from '../../database/models/Habit';
 import { getIconName } from '../../utils/iconMap';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'HabitForm'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'HabitForm'>['route'];
 
 const FREQUENCY_OPTIONS = [
-  { value: 'daily', label: 'Daily', description: 'Every day' },
-  { value: 'weekdays', label: 'Weekdays', description: 'Mon–Fri only' },
-  { value: 'custom', label: 'Custom days', description: 'Choose specific days' },
+  { value: 'daily', label: 'Daily', description: 'Every single day' },
+  { value: 'weekdays', label: 'Weekdays', description: 'Monday to Friday only' },
+  { value: 'custom', label: 'Custom days', description: 'Select specific days' },
 ];
 
 const DAYS = [
@@ -36,15 +36,14 @@ const ICONS = [
 ];
 
 const COLORS = [
-  '#8FBC8F', '#B19CD9', '#A8D0E6', '#F5C6A5', '#F5A9A9', '#9FD8A8',
-  '#D8A8E8', '#A8D8E8', '#F5D8A8', '#E8A8D8', '#A8E8D8', '#E8D8A8',
+  '#5A955A', '#877FC5', '#6B9BCD', '#EB876D', '#EB697F', '#4EA5A5',
+  '#B19CD9', '#A8D0E6', '#F5C6A5', '#74AC74', '#9FD8A8', '#E8A8D8',
 ];
 
 export function HabitFormScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  // Create-flow navigates with no params at all — `route.params` is undefined
-  // then, and destructuring it threw (release grey screen). Default to {}.
+  const colors = useThemeColors();
   const { id } = route.params ?? {};
   const isEditing = !!id;
 
@@ -113,21 +112,28 @@ export function HabitFormScreen() {
     }
     setLoading(true);
     try {
-      const data = {
-        name: (name ?? '').trim(),
-        icon: icon ?? 'water',
-        color: color ?? COLORS[0],
-        frequency,
-        customDays: frequency === 'custom' ? (customDays ?? []) : [],
-        reminderTime: reminderTime ?? '',
-        goal: goal ?? 1,
-        notes: (notes ?? '').trim(),
-      };
-
       if (isEditing) {
-        await habitRepository.update(id, data);
+        await habitRepository.update(id, {
+          name: (name ?? '').trim(),
+          icon: icon ?? 'water',
+          color: color ?? COLORS[0],
+          frequency,
+          customDays: JSON.stringify(frequency === 'custom' ? (customDays ?? []) : []),
+          reminderTime: reminderTime ?? '',
+          goal: goal ?? 1,
+          notes: (notes ?? '').trim(),
+        });
       } else {
-        await habitRepository.create(data);
+        await habitRepository.create({
+          name: (name ?? '').trim(),
+          icon: icon ?? 'water',
+          color: color ?? COLORS[0],
+          frequency,
+          customDays: frequency === 'custom' ? (customDays ?? []) : [],
+          reminderTime: reminderTime ?? '',
+          goal: goal ?? 1,
+          notes: (notes ?? '').trim(),
+        });
       }
       navigation.goBack();
     } catch (error) {
@@ -165,8 +171,8 @@ export function HabitFormScreen() {
   };
 
   const renderIconPicker = () => (
-    <View style={styles.pickerContainer}>
-      <Text style={styles.pickerTitle}>Choose Icon</Text>
+    <View style={[styles.pickerContainer, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
+      <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Choose Icon</Text>
       <ScrollView horizontal style={styles.iconScroll} showsHorizontalScrollIndicator={false}>
         {(ICONS ?? []).map((i) => (
           <TouchableOpacity
@@ -177,10 +183,11 @@ export function HabitFormScreen() {
             }}
             style={[
               styles.iconOption,
-              icon === i && styles.iconOptionSelected,
+              { backgroundColor: colors.bgPrimary, borderColor: colors.borderLight },
+              icon === i && { backgroundColor: color, borderColor: color },
             ]}
           >
-            <Ionicons name={getIconName(i)} size={28} color={icon === i ? 'white' : '#1E232E'} />
+            <Ionicons name={getIconName(i) as any} size={26} color={icon === i ? '#FFFFFF' : colors.textPrimary} />
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -188,8 +195,8 @@ export function HabitFormScreen() {
   );
 
   const renderColorPicker = () => (
-    <View style={styles.pickerContainer}>
-      <Text style={styles.pickerTitle}>Choose Color</Text>
+    <View style={[styles.pickerContainer, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
+      <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Choose Color</Text>
       <View style={styles.colorGrid}>
         {(COLORS ?? []).map((c) => (
           <TouchableOpacity
@@ -200,7 +207,7 @@ export function HabitFormScreen() {
             }}
             style={[
               styles.colorOption,
-              color === c && styles.colorOptionSelected,
+              color === c && { borderColor: colors.accentPrimary },
             ]}
           >
             <View style={[styles.colorCircle, { backgroundColor: c }]} />
@@ -210,162 +217,189 @@ export function HabitFormScreen() {
     </View>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={styles.topNav}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          hitSlop={10}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+          {isEditing ? 'Edit Habit' : 'New Habit'}
+        </Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         onTouchStart={() => Keyboard.dismiss()}
+        showsVerticalScrollIndicator={false}
       >
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Basic Info</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Habit Name</Text>
           <TextInput
-            style={styles.input}
-            placeholder="Habit name (e.g., Morning walk)"
+            style={[styles.input, { color: colors.textPrimary, borderBottomColor: colors.borderLight }]}
+            placeholder="e.g. Mindful Morning Walk"
             value={name}
             onChangeText={setName}
-            placeholderTextColor="#425474"
+            placeholderTextColor={colors.textTertiary}
             autoCapitalize="words"
             maxLength={50}
           />
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Icon & Color</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Icon & Color Identity</Text>
           <View style={styles.iconColorRow}>
             <TouchableOpacity onPress={() => setShowIconPicker(true)} style={styles.iconPreview}>
-              <View style={[styles.iconPreviewCircle, { backgroundColor: color ?? COLORS[0] }]}>
-                <Ionicons name={getIconName(icon ?? 'water')} size={28} color="white" />
+              <View style={[styles.iconPreviewCircle, { backgroundColor: color }]}>
+                <Ionicons name={getIconName(icon) as any} size={28} color="#FFFFFF" />
               </View>
-              <Text style={styles.iconPreviewLabel}>Icon</Text>
+              <Text style={[styles.iconPreviewLabel, { color: colors.textSecondary }]}>Select Icon</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowColorPicker(true)} style={styles.colorPreview}>
-              <View style={[styles.colorPreviewCircle, { backgroundColor: color ?? COLORS[0] }]} />
-              <Text style={styles.iconPreviewLabel}>Color</Text>
+              <View style={[styles.colorPreviewCircle, { backgroundColor: color }]} />
+              <Text style={[styles.iconPreviewLabel, { color: colors.textSecondary }]}>Select Color</Text>
             </TouchableOpacity>
           </View>
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Frequency</Text>
-          {(FREQUENCY_OPTIONS ?? []).map((opt) => (
-            <TouchableOpacity
-              key={opt?.value ?? Math.random().toString()}
-              onPress={() => opt?.value && setFrequency(opt.value as 'daily' | 'weekdays' | 'custom')}
-              style={[
-                styles.frequencyOption,
-                frequency === opt?.value && styles.frequencyOptionSelected,
-              ]}
-            >
-              <View style={styles.frequencyOptionContent}>
-                <Text style={[
-                  styles.frequencyLabel,
-                  frequency === opt?.value && styles.frequencyLabelSelected,
-                ]}>
-                  {opt?.label ?? ''}
-                </Text>
-                <Text style={[
-                  styles.frequencyDesc,
-                  frequency === opt?.value && styles.frequencyDescSelected,
-                ]}>
-                  {opt?.description ?? ''}
-                </Text>
-              </View>
-              <Ionicons
-                name={frequency === opt?.value ? 'checkmark-circle' : 'circle-outline'}
-                size={24}
-                color={frequency === opt?.value ? '#5A955A' : '#425474'}
-              />
-            </TouchableOpacity>
-          ))}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Frequency</Text>
+          {(FREQUENCY_OPTIONS ?? []).map((opt) => {
+            const isSelected = frequency === opt?.value;
+            return (
+              <TouchableOpacity
+                key={opt?.value ?? Math.random().toString()}
+                onPress={() => opt?.value && setFrequency(opt.value as 'daily' | 'weekdays' | 'custom')}
+                style={[
+                  styles.frequencyOption,
+                  { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: isSelected ? colors.accentPrimary : colors.borderLight },
+                  isSelected && { backgroundColor: colors.accentPrimary + '14', borderWidth: 2 },
+                ]}
+              >
+                <View style={styles.frequencyOptionContent}>
+                  <Text style={[styles.frequencyLabel, { color: colors.textPrimary }, isSelected && { fontWeight: '700' }]}>
+                    {opt?.label ?? ''}
+                  </Text>
+                  <Text style={[styles.frequencyDesc, { color: colors.textTertiary }]}>{opt?.description ?? ''}</Text>
+                </View>
+                <Ionicons
+                  name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={22}
+                  color={isSelected ? colors.accentPrimary : colors.textTertiary}
+                  style={{ marginTop: 2 }}
+                />
+              </TouchableOpacity>
+            );
+          })}
 
           {frequency === 'custom' && (
             <View style={styles.dayPicker}>
-              <Text style={styles.dayPickerLabel}>Select days</Text>
+              <Text style={[styles.dayPickerLabel, { color: colors.textSecondary }]}>Active Days</Text>
               <View style={styles.dayButtons}>
-                {(DAYS ?? []).map((day) => (
-                  <TouchableOpacity
-                    key={day?.value ?? Math.random().toString()}
-                    onPress={() => day?.value && toggleDay(day.value)}
-                    style={[
-                      styles.dayButton,
-                      (customDays ?? []).includes(day?.value) && styles.dayButtonSelected,
-                    ]}
-                  >
-                    <Text style={[
-                      styles.dayButtonText,
-                      (customDays ?? []).includes(day?.value) && styles.dayButtonTextSelected,
-                    ]}>
-                      {day?.short ?? ''}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {(DAYS ?? []).map((day) => {
+                  const isDaySelected = (customDays ?? []).includes(day?.value);
+                  return (
+                    <TouchableOpacity
+                      key={day?.value ?? Math.random().toString()}
+                      onPress={() => day?.value && toggleDay(day.value)}
+                      style={[
+                        styles.dayButton,
+                        { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                        isDaySelected && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dayButtonText,
+                          { color: colors.textPrimary },
+                          isDaySelected && { color: '#FFFFFF', fontWeight: '700' },
+                        ]}
+                      >
+                        {day?.short ?? ''}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           )}
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Reminder</Text>
-          <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.reminderButton}>
-            <Ionicons name="alarm-outline" size={22} color="#5A955A" />
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Daily Reminder</Text>
+          <TouchableOpacity
+            onPress={() => setShowTimePicker(true)}
+            style={[styles.reminderButton, { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: colors.borderLight }]}
+          >
+            <Ionicons name="alarm-outline" size={22} color={colors.accentPrimary} style={{ marginTop: 2 }} />
             <View style={styles.reminderButtonContent}>
-              <Text style={styles.reminderButtonLabel}>Reminder time</Text>
-              <Text style={styles.reminderButtonValue}>
-                {reminderTime || 'Not set'}
+              <Text style={[styles.reminderButtonLabel, { color: colors.textPrimary }]}>Scheduled Time</Text>
+              <Text style={[styles.reminderButtonValue, { color: reminderTime ? colors.accentPrimary : colors.textTertiary }]}>
+                {reminderTime || 'None set'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={22} color="#425474" />
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} style={{ marginTop: 2 }} />
           </TouchableOpacity>
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Goal</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Daily Repetitions</Text>
           <View style={styles.goalRow}>
-            <TouchableOpacity onPress={() => setGoal(Math.max(1, (goal ?? 1) - 1))} style={styles.goalButton}>
-              <Ionicons name="remove" size={24} color="#1E232E" />
+            <TouchableOpacity
+              onPress={() => setGoal(Math.max(1, (goal ?? 1) - 1))}
+              style={[styles.goalButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+            >
+              <Ionicons name="remove" size={20} color={colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.goalValue}>{goal ?? 1}</Text>
-            <TouchableOpacity onPress={() => setGoal((goal ?? 1) + 1)} style={styles.goalButton}>
-              <Ionicons name="add" size={24} color="#1E232E" />
+            <Text style={[styles.goalValue, { color: colors.textPrimary }]}>{goal ?? 1}</Text>
+            <TouchableOpacity
+              onPress={() => setGoal((goal ?? 1) + 1)}
+              style={[styles.goalButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+            >
+              <Ionicons name="add" size={20} color={colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.goalLabel}>time{(goal ?? 1) !== 1 ? 's' : ''} per day</Text>
+            <Text style={[styles.goalLabel, { color: colors.textSecondary }]}>
+              time{(goal ?? 1) !== 1 ? 's' : ''} per day
+            </Text>
           </View>
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Notes (optional)</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Intention & Notes</Text>
           <TextInput
-            style={styles.textArea}
-            placeholder="Any notes, motivation, or context..."
+            style={[styles.textArea, { color: colors.textPrimary, borderColor: colors.borderLight, backgroundColor: colors.bgCard }]}
+            placeholder="Why is this habit meaningful to you?..."
             value={notes}
             onChangeText={setNotes}
-            placeholderTextColor="#425474"
+            placeholderTextColor={colors.textTertiary}
             multiline
-            numberOfLines={4}
+            numberOfLines={3}
             maxLength={500}
           />
         </Card>
 
         <View style={styles.buttonRow}>
-          <PrimaryButton
+          <View style={{ flex: 1 }}>
+            <PrimaryButton
               onPress={handleSave}
               loading={loading}
               title={isEditing ? 'Save Changes' : 'Create Habit'}
-              style={styles.saveButton}
+              fullWidth
             />
+          </View>
           {isEditing && (
-            <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-              <Text style={styles.deleteButtonText}>Delete Habit</Text>
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={[styles.deleteButton, { borderColor: colors.accentRose || '#EB697F' }]}
+            >
+              <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -385,10 +419,10 @@ export function HabitFormScreen() {
 
       {showTimePicker && (
         <View style={styles.modalOverlay} onTouchStart={() => setShowTimePicker(false)}>
-          <View style={styles.timePickerContainer}>
-            <Text style={styles.pickerTitle}>Set Reminder Time</Text>
+          <View style={[styles.timePickerContainer, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
+            <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Set Reminder Time</Text>
             <View style={styles.timePicker}>
-              <Text style={styles.timeDisplay}>{reminderTime || '--:--'}</Text>
+              <Text style={[styles.timeDisplay, { color: colors.accentPrimary }]}>{reminderTime || '--:--'}</Text>
               <View style={styles.timeButtons}>
                 {['06:00', '07:00', '08:00', '09:00', '12:00', '17:00', '18:00', '20:00', '21:00', '22:00'].map((t) => (
                   <TouchableOpacity
@@ -399,20 +433,30 @@ export function HabitFormScreen() {
                     }}
                     style={[
                       styles.timeButton,
-                      reminderTime === t && styles.timeButtonSelected,
+                      { backgroundColor: colors.bgPrimary, borderColor: colors.borderLight },
+                      reminderTime === t && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
                     ]}
                   >
-                    <Text style={[
-                      styles.timeButtonText,
-                      reminderTime === t && styles.timeButtonTextSelected,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.timeButtonText,
+                        { color: colors.textPrimary },
+                        reminderTime === t && { color: '#FFFFFF', fontWeight: '700' },
+                      ]}
+                    >
                       {t}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              <TouchableOpacity onPress={() => { setReminderTime(''); setShowTimePicker(false); }} style={styles.clearTimeButton}>
-                <Text style={styles.clearTimeButtonText}>Clear</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setReminderTime('');
+                  setShowTimePicker(false);
+                }}
+                style={[styles.clearTimeButton, { borderColor: colors.borderLight }]}
+              >
+                <Text style={[styles.clearTimeButtonText, { color: colors.textSecondary }]}>Clear</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -423,341 +467,185 @@ export function HabitFormScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FDFBF7',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
+  container: { flex: 1 },
+  topNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 100,
-    gap: 16,
+    paddingBottom: 10,
   },
-  section: {
-    gap: 12,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110, gap: 16 },
+  section: { gap: 10 },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#34415A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   input: {
     fontSize: 17,
-    color: '#1E232E',
-    minHeight: 44,
+    fontWeight: '500',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
   },
-  iconColorRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  iconPreview: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E4DEBC',
-  },
+  iconColorRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
+  iconPreview: { flex: 1, alignItems: 'center', gap: 6 },
+  colorPreview: { flex: 1, alignItems: 'center', gap: 6 },
   iconPreviewCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  colorPreview: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E4DEBC',
-  },
   colorPreviewCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
   },
-  iconPreviewLabel: {
-    fontSize: 13,
-    color: '#425474',
-  },
+  iconPreviewLabel: { fontSize: 13, fontWeight: '500' },
   frequencyOption: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E4DEBC',
-    backgroundColor: '#FFFFFF',
+    marginTop: 6,
+    gap: 12,
   },
-  frequencyOptionSelected: {
-    borderColor: '#5A955A',
-    backgroundColor: 'rgba(143, 188, 143, 0.1)',
-  },
-  frequencyOptionContent: {
-    flex: 1,
-    gap: 2,
-  },
-  frequencyLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E232E',
-  },
-  frequencyLabelSelected: {
-    color: '#5A955A',
-  },
-  frequencyDesc: {
-    fontSize: 13,
-    color: '#425474',
-  },
-  frequencyDescSelected: {
-    color: '#5A955A',
-  },
-  dayPicker: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E4DEBC',
-    gap: 10,
-  },
-  dayPickerLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#34415A',
-  },
-  dayButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+  frequencyOptionContent: { gap: 3, flex: 1 },
+  frequencyLabel: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
+  frequencyDesc: { fontSize: 12, lineHeight: 16 },
+  dayPicker: { marginTop: 10, gap: 8 },
+  dayPickerLabel: { fontSize: 12, fontWeight: '500' },
+  dayButtons: { flexDirection: 'row', justifyContent: 'space-between' },
   dayButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E4DEBC',
   },
-  dayButtonSelected: {
-    backgroundColor: '#5A955A',
-    borderColor: '#5A955A',
-  },
-  dayButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#34415A',
-  },
-  dayButtonTextSelected: {
-    color: 'white',
-  },
+  dayButtonText: { fontSize: 14, fontWeight: '600' },
   reminderButton: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
     gap: 12,
-    paddingVertical: 12,
   },
-  reminderButtonContent: {
-    flex: 1,
-    gap: 2,
-  },
-  reminderButtonLabel: {
-    fontSize: 16,
-    color: '#1E232E',
-  },
-  reminderButtonValue: {
-    fontSize: 14,
-    color: '#425474',
-  },
-  goalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
+  reminderButtonContent: { flex: 1, gap: 2 },
+  reminderButtonLabel: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
+  reminderButtonValue: { fontSize: 13, lineHeight: 18 },
+  goalRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   goalButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E4DEBC',
   },
-  goalValue: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1E232E',
-    minWidth: 60,
-    textAlign: 'center',
-  },
-  goalLabel: {
-    fontSize: 15,
-    color: '#425474',
-  },
+  goalValue: { fontSize: 20, fontWeight: '700' },
+  goalLabel: { fontSize: 14 },
   textArea: {
-    fontSize: 16,
-    color: '#1E232E',
-    minHeight: 100,
-    textAlignVertical: 'top',
-    paddingTop: 4,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  saveButton: {
-    flex: 1,
-  },
-  deleteButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
+    fontSize: 14,
+    lineHeight: 20,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F5A9A9',
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F5A9A9',
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  deleteButton: {
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: { fontSize: 15, fontWeight: '600' },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   pickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 24,
+    borderWidth: 1,
     padding: 20,
-    margin: 20,
+    width: '100%',
     maxHeight: '80%',
     gap: 16,
   },
-  pickerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E232E',
-    textAlign: 'center',
-  },
-  iconScroll: {
-    gap: 10,
-    paddingVertical: 4,
-  },
+  pickerTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  iconScroll: { gap: 12, paddingVertical: 4 },
   iconOption: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FDFBF7',
-    borderWidth: 1,
-    borderColor: '#E4DEBC',
+    marginRight: 10,
   },
-  iconOptionSelected: {
-    backgroundColor: '#5A955A',
-    borderColor: '#5A955A',
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'center',
-  },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },
   colorOption: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 3,
     borderColor: 'transparent',
-  },
-  colorOptionSelected: {
-    borderColor: '#5A955A',
-  },
-  colorCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
+  colorCircle: { width: 32, height: 32, borderRadius: 16 },
   timePickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 24,
+    borderWidth: 1,
     padding: 20,
-    margin: 20,
-    maxHeight: '80%',
-    width: '90%',
+    width: '100%',
     gap: 16,
   },
-  timePicker: {
-    gap: 12,
-  },
-  timeDisplay: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#1E232E',
-    textAlign: 'center',
-    fontFamily: 'monospace',
-  },
-  timeButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'center',
-  },
+  timePicker: { gap: 14 },
+  timeDisplay: { fontSize: 36, fontWeight: '700', textAlign: 'center' },
+  timeButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   timeButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#FDFBF7',
     borderWidth: 1,
-    borderColor: '#E4DEBC',
   },
-  timeButtonSelected: {
-    backgroundColor: '#5A955A',
-    borderColor: '#5A955A',
-  },
-  timeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E232E',
-    fontFamily: 'monospace',
-  },
-  timeButtonTextSelected: {
-    color: 'white',
-  },
+  timeButtonText: { fontSize: 14, fontWeight: '600' },
   clearTimeButton: {
     alignSelf: 'center',
-    marginTop: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#E4DEBC',
+    marginTop: 6,
   },
-  clearTimeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#34415A',
-  },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: 100,
-    color: '#425474',
-  },
+  clearTimeButtonText: { fontSize: 14, fontWeight: '600' },
 });

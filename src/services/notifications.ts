@@ -1,8 +1,47 @@
 import { useState, useEffect } from 'react';
-import * as Notifications from 'expo-notifications';
+import type * as NotificationsTypes from 'expo-notifications';
 import { Platform } from 'react-native';
 import { settingsRepository } from '../database/repositories/settingsRepository';
 import { getEncouragement } from '../utils/encouragement';
+
+// expo-notifications cannot be statically imported on Android Expo Go.
+// Its index pulls in DevicePushTokenAutoRegistration.fx, which calls
+// addPushTokenListener -> warnOfExpoGoPushUsage() at module scope and throws
+// "removed from Expo Go with SDK 53" (Expo SDK v57: remote push requires a
+// development build; local notifications remain available in Expo Go).
+// So we lazy-require inside try/catch and fall back to a disabled stub.
+type NotificationsModule = typeof NotificationsTypes;
+
+let cached: NotificationsModule | null | undefined;
+
+function getNotifications(): NotificationsModule | null {
+  if (cached !== undefined) return cached;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('expo-notifications') as NotificationsModule;
+    try {
+      mod.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldPlaySound: false,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+    } catch (error) {
+      console.warn('Notifications handler setup failed (notifications disabled):', error);
+    }
+    cached = mod;
+  } catch (error) {
+    console.warn('Notifications unavailable (Expo Go or missing native build, disabled):', error);
+    cached = null;
+  }
+  return cached;
+}
+
+function isNotificationsAvailable(): boolean {
+  return getNotifications() !== null;
+}
 
 export type NotificationCategory =
   | 'morningCheckIn'
@@ -17,36 +56,39 @@ export interface ScheduledNotification {
   category: NotificationCategory;
   title: string;
   body: string;
-  trigger: Notifications.NotificationTriggerInput;
+  trigger: NotificationsTypes.NotificationTriggerInput;
 }
 
-// setNotificationHandler touches native code at import time. On web (or a build
-// without the notifications native module) it throws, which used to
-// grey-screen the app before first paint. Guard it.
-try {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-} catch (error) {
-  console.warn('Notifications handler setup failed (notifications disabled):', error);
-}
+// setNotificationHandler is installed lazily inside getNotifications() above,
+// guarded so a missing native module can never grey-screen the app at import.
 
 export const notificationService = {
+  isAvailable(): boolean {
+    return isNotificationsAvailable();
+  },
+
+  async getPermissionStatus(): Promise<'granted' | 'denied' | 'undetermined'> {
+    try {
+      const mod = getNotifications();
+      if (!mod) return 'undetermined';
+      const { status } = await mod.getPermissionsAsync();
+      return status ?? 'undetermined';
+    } catch {
+      return 'undetermined';
+    }
+  },
+
   async requestPermissions(): Promise<boolean> {
     if (Platform.OS === 'web') return false;
 
     try {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      const mod = getNotifications();
+      if (!mod) return false;
+      const { status: existingStatus } = await mod.getPermissionsAsync();
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync({
+        const { status } = await mod.requestPermissionsAsync({
           ios: {
             allowAlert: true,
             allowBadge: false,
@@ -77,7 +119,9 @@ export const notificationService = {
 
       for (const notif of (notifications ?? [])) {
         if (!notif?.title || !notif?.trigger) continue;
-        await Notifications.scheduleNotificationAsync({
+        const mod = getNotifications();
+        if (!mod) return;
+        await mod.scheduleNotificationAsync({
           content: {
             title: notif.title ?? '',
             body: notif.body ?? '',
@@ -94,6 +138,8 @@ export const notificationService = {
   generateNotifications(config: any): ScheduledNotification[] {
     try {
       if (!config) return [];
+      const mod = getNotifications();
+      if (!mod) return [];
       const notifications: ScheduledNotification[] = [];
 
       const categories: { key: NotificationCategory; label: string; cat: string }[] = [
@@ -118,13 +164,13 @@ export const notificationService = {
           notifications.push({
             id: `${key ?? 'general'}-daily`,
             category: key,
-            title: `Time for ${label ?? key} 🌿`,
+            title: `Time for ${label ?? key}`,
             body: getEncouragement((cat ?? 'general') as any) ?? '',
             trigger: {
-              type: Notifications.SchedulableTriggerInputTypes.DAILY,
+              type: mod.SchedulableTriggerInputTypes.DAILY,
               hour: hours,
               minute: minutes,
-            } as Notifications.DailyTriggerInput,
+            } as NotificationsTypes.DailyTriggerInput,
           });
         } catch (error) {
           console.warn(`Failed to generate notification for ${key}:`, error);
@@ -140,7 +186,9 @@ export const notificationService = {
 
   async cancelAll(): Promise<void> {
     try {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      const mod = getNotifications();
+      if (!mod) return;
+      await mod.cancelAllScheduledNotificationsAsync();
     } catch (error) {
       console.warn('Failed to cancel notifications:', error);
     }
@@ -148,12 +196,14 @@ export const notificationService = {
 
   async cancelCategory(category: NotificationCategory): Promise<void> {
     try {
-      const scheduled = (await Notifications.getAllScheduledNotificationsAsync()) ?? [];
+      const mod = getNotifications();
+      if (!mod) return;
+      const scheduled = (await mod.getAllScheduledNotificationsAsync()) ?? [];
       const toCancel = (scheduled ?? [])
         .filter(n => n?.content?.data?.category === category)
         .map(n => n?.identifier)
         .filter(Boolean);
-      await Promise.all((toCancel ?? []).map(id => Notifications.cancelScheduledNotificationAsync(id)));
+      await Promise.all((toCancel ?? []).map(id => mod.cancelScheduledNotificationAsync(id)));
     } catch (error) {
       console.warn(`Failed to cancel ${category} notifications:`, error);
     }
@@ -168,13 +218,15 @@ export const notificationService = {
       const target = (notifications ?? []).find(n => n?.category === category);
 
       if (target) {
-        await Notifications.scheduleNotificationAsync({
+        const mod = getNotifications();
+        if (!mod) return;
+        await mod.scheduleNotificationAsync({
           content: {
             title: target?.title ?? '',
             body: target?.body ?? '',
             data: { category: target?.category ?? category, test: true },
           },
-          trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5 } as any,
+          trigger: { type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5 } as any,
         });
       }
     } catch (error) {
@@ -184,7 +236,9 @@ export const notificationService = {
 
   async getScheduledCount(): Promise<number> {
     try {
-      const scheduled = (await Notifications.getAllScheduledNotificationsAsync()) ?? [];
+      const mod = getNotifications();
+      if (!mod) return 0;
+      const scheduled = (await mod.getAllScheduledNotificationsAsync()) ?? [];
       return (scheduled ?? []).length ?? 0;
     } catch {
       return 0;
@@ -203,7 +257,7 @@ export function useNotifications() {
 
   const checkPermission = async () => {
     try {
-      const { status } = await Notifications.getPermissionsAsync();
+      const status = await notificationService.getPermissionStatus();
       setPermission(status);
     } catch {
       setPermission('undetermined');

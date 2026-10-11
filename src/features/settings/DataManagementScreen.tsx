@@ -6,22 +6,24 @@ import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'DataManagement'>['navigation'];
 
 const DATA_TYPES = [
-  { key: 'moods', label: 'Mood Entries', icon: 'happy' },
-  { key: 'journals', label: 'Journal Entries', icon: 'book' },
-  { key: 'habits', label: 'Habits', icon: 'checkbox' },
-  { key: 'completions', label: 'Habit Completions', icon: 'checkmark-circle' },
-  { key: 'gratitude', label: 'Gratitude', icon: 'heart' },
-  { key: 'positiveMoments', label: 'Good Things', icon: 'sparkles' },
-  { key: 'calm', label: 'Calm Sessions', icon: 'meditation' },
-  { key: 'breathing', label: 'Breathing Sessions', icon: 'air' },
+  { key: 'moods', label: 'Mood Check-ins', icon: 'happy-outline' },
+  { key: 'journals', label: 'Journal Reflections', icon: 'book-outline' },
+  { key: 'habits', label: 'Habits & Routines', icon: 'checkbox-outline' },
+  { key: 'completions', label: 'Habit Streaks & Logs', icon: 'checkmark-circle-outline' },
+  { key: 'gratitude', label: 'Gratitude Entries', icon: 'heart-outline' },
+  { key: 'positiveMoments', label: 'Good Things & Wins', icon: 'sparkles-outline' },
+  { key: 'calm', label: 'Calm & Grounding Logs', icon: 'flower-outline' },
+  { key: 'breathing', label: 'Breathing Sessions', icon: 'leaf-outline' },
 ];
 
 export function DataManagementScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const colors = useThemeColors();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -29,23 +31,6 @@ export function DataManagementScreen() {
     setExporting(true);
     try {
       const { database } = require('../../database');
-      const { MoodEntry } = require('../../database/models/MoodEntry');
-      const { JournalEntry } = require('../../database/models/JournalEntry');
-      const { Habit } = require('../../database/models/Habit');
-      const { HabitCompletion } = require('../../database/models/HabitCompletion');
-      const { GratitudeEntry } = require('../../database/models/GratitudeEntry');
-      const { PositiveMoment } = require('../../database/models/PositiveMoment');
-      const { CalmSession } = require('../../database/models/CalmSession');
-      const { BreathingSession } = require('../../database/models/BreathingSession');
-      const { MeditationSession } = require('../../database/models/MeditationSession');
-      const { SleepEntry } = require('../../database/models/SleepEntry');
-      const { Reflection } = require('../../database/models/Reflection');
-      const { Affirmation } = require('../../database/models/Affirmation');
-      const { Favorite } = require('../../database/models/Favorite');
-      const { Tag } = require('../../database/models/Tag');
-      const { Routine } = require('../../database/models/Routine');
-      const { RoutineItem } = require('../../database/models/RoutineItem');
-      const { Goal } = require('../../database/models/Goal');
 
       const safeFetch = async (name: string) => {
         try {
@@ -54,6 +39,7 @@ export function DataManagementScreen() {
           return [];
         }
       };
+
       const collections = {
         moods: await safeFetch('mood_entries'),
         journals: await safeFetch('journal_entries'),
@@ -99,75 +85,33 @@ export function DataManagementScreen() {
         },
       };
 
-      const json = JSON.stringify(exportData, null, 2);
-      
       await Share.share({
-        title: 'Calmly Data Export',
-        message: json,
+        title: 'Calmly Encrypted Backup',
+        message: JSON.stringify(exportData, null, 2),
       });
     } catch (error) {
       console.error('Export failed:', error);
-      Alert.alert('Export Failed', 'Could not export data. Please try again.');
+      Alert.alert('Export Failed', 'Could not prepare export file.');
     } finally {
       setExporting(false);
     }
   }, []);
 
-  const handleDeleteAll = useCallback(() => {
+  const handleDeleteType = async (typeKey: string) => {
+    const typeObj = DATA_TYPES.find((t) => t.key === typeKey);
     Alert.alert(
-      'Delete ALL Data?',
-      'This will permanently delete EVERYTHING: mood entries, journals, habits, gratitudes, calm sessions, affirmations, and all settings. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Everything',
-          style: 'destructive',
-          onPress: async () => {
-            setDeleting('all');
-            try {
-              const { database } = require('../../database');
-              await database?.write?.(async () => {
-                const collections = [
-                  'mood_entries', 'journal_entries', 'habits', 'habit_completions',
-                  'gratitude_entries', 'positive_moments', 'calm_sessions', 'breathing_sessions',
-                  'meditation_sessions', 'sleep_entries', 'reflections', 'affirmations',
-                  'favorites', 'tags', 'routines', 'routine_items', 'goals', 'user_settings',
-                ];
-                await Promise.all(
-                  collections.map(name => database?.get?.(name)?.query?.()?.fetch?.().then((items: any[]) => 
-                    Promise.all((items ?? []).map((item: any) => item?.destroyPermanently?.()))
-                  ))
-                );
-              });
-              Alert.alert('Done', 'All data has been deleted. The app will now restart.');
-              navigation.goBack();
-            } catch (error) {
-              console.error('Delete failed:', error);
-              Alert.alert('Error', 'Failed to delete data.');
-            } finally {
-              setDeleting(null);
-            }
-          },
-        },
-      ]
-    );
-  }, [navigation]);
-
-  const handleDeleteType = useCallback((type: string) => {
-    const typeInfo = (DATA_TYPES ?? []).find(t => t?.key === type);
-    Alert.alert(
-      `Delete ${typeInfo?.label ?? 'data'}?`,
-      `This will permanently delete all ${(typeInfo?.label ?? 'data').toLowerCase()}. This cannot be undone.`,
+      `Delete all ${typeObj?.label ?? 'items'}?`,
+      'This cannot be undone. All other data will remain untouched.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            setDeleting(type);
+            setDeleting(typeKey);
             try {
               const { database } = require('../../database');
-              const collectionMap: Record<string, string> = {
+              const tableMap: Record<string, string> = {
                 moods: 'mood_entries',
                 journals: 'journal_entries',
                 habits: 'habits',
@@ -177,16 +121,17 @@ export function DataManagementScreen() {
                 calm: 'calm_sessions',
                 breathing: 'breathing_sessions',
               };
-              const collectionName = (collectionMap ?? {})[type];
-              if (collectionName) {
-                await database?.write?.(async () => {
-                  const items = (await database?.get?.(collectionName)?.query?.()?.fetch?.()) ?? [];
+              const tableName = tableMap[typeKey];
+              if (tableName) {
+                await database.write(async () => {
+                  const collection = database.get(tableName);
+                  const items = await collection.query().fetch();
                   await Promise.all((items ?? []).map((item: any) => item?.destroyPermanently?.()));
                 });
-                Alert.alert('Done', `${typeInfo?.label ?? 'Data'} deleted.`);
               }
-            } catch (error) {
-              console.error('Delete failed:', error);
+              Alert.alert('Deleted', `${typeObj?.label ?? 'Items'} cleared.`);
+            } catch (err) {
+              console.error('Delete failed:', err);
               Alert.alert('Error', 'Failed to delete data.');
             } finally {
               setDeleting(null);
@@ -195,86 +140,132 @@ export function DataManagementScreen() {
         },
       ]
     );
-  }, []);
+  };
+
+  const handleDeleteAll = () => {
+    Alert.alert(
+      'Permanent Reset',
+      'This permanently wipes ALL entries, streaks, journals, and local settings. You will return to a clean slate.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Wipe Everything',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting('all');
+            try {
+              const { database } = require('../../database');
+              const collections = [
+                'mood_entries', 'journal_entries', 'habits', 'habit_completions',
+                'gratitude_entries', 'positive_moments', 'calm_sessions', 'breathing_sessions',
+                'meditation_sessions', 'sleep_entries', 'reflections', 'affirmations',
+                'favorites', 'tags', 'routines', 'routine_items', 'goals', 'user_settings',
+              ];
+              await database.write(async () => {
+                await Promise.all(
+                  (collections ?? []).map((name) =>
+                    database.get(name).query().fetch().then((items: any[]) =>
+                      Promise.all((items ?? []).map((item: any) => item?.destroyPermanently?.()))
+                    )
+                  )
+                );
+              });
+              Alert.alert('Reset Complete', 'All local data was erased.');
+            } catch (err) {
+              console.error('Wipe failed:', err);
+              Alert.alert('Error', 'Failed to erase data.');
+            } finally {
+              setDeleting(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#1E232E" />
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          hitSlop={10}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Data Management</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Data & Backup</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Export Data</Text>
-        <Text style={styles.sectionDesc}>
-          Download a complete backup of all your Calmly data as a JSON file.
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Export Sanctuary</Text>
+        <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
+          Download a complete portable backup of your reflections, habits, and check-ins formatted as JSON.
         </Text>
         <PrimaryButton
           onPress={handleExportAll}
           loading={exporting}
-          title={exporting ? 'Preparing...' : 'Export All Data'}
-          style={styles.exportButton}
-          leftIcon={<Ionicons name="download" size={20} color="white" />}
+          title={exporting ? 'Packaging data...' : 'Export Complete Backup'}
+          leftIcon={<Ionicons name="download-outline" size={20} color="#FFFFFF" />}
+          fullWidth
         />
       </Card>
 
       <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Delete by Category</Text>
-        <Text style={styles.sectionDesc}>
-          Selectively remove specific types of data while keeping the rest.
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Category Management</Text>
+        <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
+          Selectively erase individual categories without affecting the rest of your history.
         </Text>
         <View style={styles.typeList}>
           {(DATA_TYPES ?? []).map((type) => (
             <TouchableOpacity
-              key={type?.key ?? Math.random().toString()}
-              onPress={() => type?.key && handleDeleteType(type.key)}
+              key={type.key}
+              onPress={() => handleDeleteType(type.key)}
               disabled={!!deleting}
               style={[
                 styles.typeItem,
-                deleting === type?.key && styles.typeItemDeleting,
+                { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: colors.borderLight },
               ]}
-              activeOpacity={0.8}
+              activeOpacity={0.75}
             >
-              <View style={[
-                styles.typeIcon,
-                deleting === type?.key && styles.typeIconDeleting,
-              ]}>
-                <Ionicons name={(type?.icon ?? 'help') as any} size={22} color={deleting === type?.key ? 'white' : '#5A955A'} />
+              <View style={[styles.typeIcon, { backgroundColor: colors.accentPrimary + '14' }]}>
+                <Ionicons name={type.icon as any} size={20} color={colors.accentPrimary} />
               </View>
-              <Text style={[
-                styles.typeLabel,
-                deleting === type?.key && styles.typeLabelDeleting,
-              ]}>
-                {type?.label ?? ''}
-              </Text>
-              {deleting === type?.key && (
-                <ActivityIndicator size="small" color="white" />
-              )}
+              <Text style={[styles.typeLabel, { color: colors.textPrimary }]}>{type.label}</Text>
+              <View style={{ marginTop: 2 }}>
+                {deleting === type.key ? (
+                  <ActivityIndicator size="small" color={colors.accentPrimary} />
+                ) : (
+                  <Ionicons name="trash-outline" size={18} color={colors.textTertiary} />
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </View>
       </Card>
 
-      <Card variant="outlined" style={styles.dangerCard}>
+      <Card variant="outlined" style={[styles.dangerCard, { borderColor: (colors.accentRose || '#EB697F') + '60' }]}>
         <View style={styles.dangerContent}>
-          <Ionicons name="warning" size={32} color="#EB697F" />
+          <Ionicons name="warning-outline" size={28} color={colors.accentRose || '#EB697F'} />
           <View style={styles.dangerText}>
-            <Text style={styles.dangerTitle}>Danger Zone</Text>
-            <Text style={styles.dangerDesc}>
-              Irreversible actions. Once deleted, data cannot be recovered.
+            <Text style={[styles.dangerTitle, { color: colors.accentRose || '#EB697F' }]}>Danger Zone</Text>
+            <Text style={[styles.dangerDesc, { color: colors.textSecondary }]}>
+              Permanent deletion. Once erased, your private local records cannot be restored.
             </Text>
           </View>
         </View>
         <PrimaryButton
           onPress={handleDeleteAll}
           loading={deleting === 'all'}
-          title={deleting === 'all' ? 'Deleting...' : 'Delete All Data'}
-          variant="ghost"
-          style={styles.dangerButton}
-          fullWidth={false}
+          title={deleting === 'all' ? 'Erasing...' : 'Wipe All Data Permanently'}
+          variant="outline"
+          style={{ borderColor: colors.accentRose || '#EB697F' }}
+          textStyle={{ color: colors.accentRose || '#EB697F' }}
+          fullWidth
         />
       </Card>
     </ScrollView>
@@ -282,27 +273,40 @@ export function DataManagementScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDFBF7' },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, gap: 16 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: 20, fontWeight: '600', color: '#1E232E', textAlign: 'center' },
-  headerSpacer: { width: 44 },
-  card: { marginBottom: 16, gap: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '600', color: '#1E232E' },
-  sectionDesc: { fontSize: 14, color: '#34415A', lineHeight: 20, marginBottom: 12 },
-  exportButton: { marginTop: 4 },
-  typeList: { gap: 10 },
-  typeItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E4DEBC' },
-  typeItemDeleting: { opacity: 0.7 },
-  typeIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(143, 188, 143, 0.1)' },
-  typeIconDeleting: { backgroundColor: '#EB697F' },
-  typeLabel: { fontSize: 16, fontWeight: '500', color: '#1E232E', flex: 1 },
-  typeLabelDeleting: { color: 'white' },
-  dangerCard: { borderColor: '#EB697F', borderWidth: 1, backgroundColor: 'rgba(235, 105, 127, 0.05)' },
-  dangerContent: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  dangerText: { flex: 1 },
-  dangerTitle: { fontSize: 16, fontWeight: '600', color: '#EB697F' },
-  dangerDesc: { fontSize: 13, color: '#425474', marginTop: 2 },
-  dangerButton: { alignSelf: 'center', borderColor: '#EB697F' },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  card: { padding: 18, borderRadius: 20, gap: 12 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
+  sectionDesc: { fontSize: 14, lineHeight: 20 },
+  typeList: { gap: 10, marginTop: 4 },
+  typeItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  typeIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  typeLabel: { fontSize: 15, fontWeight: '600', flex: 1, lineHeight: 22 },
+  dangerCard: { padding: 18, borderRadius: 20, gap: 14, borderWidth: 1 },
+  dangerContent: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  dangerText: { flex: 1, gap: 2 },
+  dangerTitle: { fontSize: 16, fontWeight: '700' },
+  dangerDesc: { fontSize: 13, lineHeight: 18 },
 });

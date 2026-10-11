@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -9,6 +9,7 @@ import Affirmation from '../../database/models/Affirmation';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '../../theme/ThemeContext';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Affirmations'>['navigation'];
 
@@ -20,7 +21,7 @@ interface AffirmationItem {
 }
 
 const AFFIRMATION_CATEGORIES = [
-  'self-love', 'confidence', 'peace', 'strength', 'healing',
+  'all', 'self-love', 'confidence', 'peace', 'strength', 'healing',
   'abundance', 'gratitude', 'courage', 'clarity', 'joy',
 ];
 
@@ -99,6 +100,7 @@ const STATIC_AFFIRMATIONS: Record<string, string[]> = {
 
 export function AffirmationsScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const colors = useThemeColors();
   const [affirmations, setAffirmations] = useState<AffirmationItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [dailyAffirmation, setDailyAffirmation] = useState<string>('');
@@ -115,12 +117,14 @@ export function AffirmationsScreen() {
         );
       }
       const data = (await query.fetch()) ?? [];
-      setAffirmations((data ?? []).map(a => ({
-        id: a?.id ?? '',
-        text: a?.text ?? '',
-        category: a?.category ?? '',
-        favorite: a?.favorite ?? false,
-      })));
+      setAffirmations(
+        (data ?? []).map((a) => ({
+          id: a?.id ?? '',
+          text: a?.text ?? '',
+          category: a?.category ?? '',
+          favorite: a?.favorite ?? false,
+        }))
+      );
     } catch (error) {
       console.error('Failed to load affirmations:', error);
       setAffirmations((prev) => prev ?? []);
@@ -149,15 +153,12 @@ export function AffirmationsScreen() {
   const handleToggleFavorite = async (id: string, currentFavorite: boolean) => {
     if (!id) return;
     try {
-      let affirmation = null;
-      try {
-        affirmation = await database.get<Affirmation>('affirmations').find(id);
-      } catch {
-        return;
-      }
+      const affirmation = await database.get<Affirmation>('affirmations').find(id);
       if (!affirmation) return;
       await database.write(async () => {
-        await affirmation.update(a => { a.favorite = !currentFavorite; });
+        await affirmation.update((a) => {
+          a.favorite = !currentFavorite;
+        });
       });
       loadAffirmations();
     } catch (error) {
@@ -173,149 +174,204 @@ export function AffirmationsScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Save',
-          onPress: async (text: string) => {
+          onPress: (text?: string) => {
             if (text?.trim()) {
-              await database.write(async () => {
-                await database.get<Affirmation>('affirmations').create(a => {
+              database.write(async () => {
+                await database.get<Affirmation>('affirmations').create((a) => {
                   a.text = text.trim();
                   a.category = 'custom';
                   a.favorite = false;
                   a.createdAt = Date.now();
                 });
-              });
-              loadAffirmations();
+              }).then(() => loadAffirmations());
             }
           },
         },
       ],
       'plain-text',
-      '',
-      { placeholder: 'I am...' }
+      'I am '
     );
   };
 
   const renderItem = ({ item }: { item: AffirmationItem }) => {
     if (!item) return null;
     return (
-    <TouchableOpacity
-      onPress={() => item?.id && navigation.navigate('AffirmationDetail', { id: item.id })}
-      style={styles.affirmationCard}
-      activeOpacity={0.8}
-    >
-      <Text style={styles.affirmationText} numberOfLines={3}>{item?.text ?? ''}</Text>
-      <View style={styles.affirmationFooter}>
-        <Text style={styles.affirmationCategory}>{item?.category ?? ''}</Text>
-        <TouchableOpacity
-          onPress={(e) => { e.stopPropagation(); item?.id && handleToggleFavorite(item.id, item?.favorite ?? false); }}
-          style={styles.favoriteButton}
-        >
-          <Ionicons
-            name={item?.favorite ? 'heart' : 'heart-outline'}
-            size={20}
-            color={item?.favorite ? '#F5A9A9' : '#425474'}
-          />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => item?.id && navigation.navigate('AffirmationDetail', { id: item.id })}
+        style={[styles.affirmationCard, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+        activeOpacity={0.75}
+      >
+        <Text style={[styles.affirmationText, { color: colors.textPrimary }]} numberOfLines={3}>
+          {item?.text ?? ''}
+        </Text>
+        <View style={styles.affirmationFooter}>
+          <Text style={[styles.affirmationCategory, { color: colors.accentPrimary }]}>{item?.category ?? ''}</Text>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              item?.id && handleToggleFavorite(item.id, item?.favorite ?? false);
+            }}
+            style={styles.favoriteButton}
+            hitSlop={8}
+          >
+            <Ionicons
+              name={item?.favorite ? 'heart' : 'heart-outline'}
+              size={20}
+              color={item?.favorite ? (colors.accentPeach || '#EB876D') : colors.textTertiary}
+            />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
     );
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>Affirmations</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Affirmations</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Anchor positive truths in your everyday consciousness</Text>
+        </View>
       </View>
 
       <Card style={styles.dailyCard}>
         <View style={styles.dailyHeader}>
-          <Ionicons name="sunny" size={24} color="#5A955A" />
-          <Text style={styles.dailyLabel}>Today's Affirmation</Text>
+          <Ionicons name="sunny-outline" size={22} color={colors.accentPrimary} />
+          <Text style={[styles.dailyLabel, { color: colors.accentPrimary }]}>Daily Reflection</Text>
         </View>
-        <Text style={styles.dailyText}>{dailyAffirmation ?? ''}</Text>
-        <TouchableOpacity onPress={() => {
-          try {
-            const all = Object.values(STATIC_AFFIRMATIONS ?? {}).flat() ?? [];
-            if ((all ?? []).length > 0) setDailyAffirmation(all[Math.floor(Math.random() * all.length)] ?? '');
-          } catch {}
-        }} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={18} color="#5A955A" />
-          <Text style={styles.refreshText}>New one</Text>
+        <Text style={[styles.dailyText, { color: colors.textPrimary }]}>"{dailyAffirmation ?? ''}"</Text>
+        <TouchableOpacity
+          onPress={() => {
+            try {
+              const all = Object.values(STATIC_AFFIRMATIONS ?? {}).flat() ?? [];
+              if ((all ?? []).length > 0) setDailyAffirmation(all[Math.floor(Math.random() * all.length)] ?? '');
+            } catch {}
+          }}
+          style={styles.refreshButton}
+          hitSlop={8}
+        >
+          <Ionicons name="refresh-outline" size={16} color={colors.accentPrimary} />
+          <Text style={[styles.refreshText, { color: colors.accentPrimary }]}>New affirmation</Text>
         </TouchableOpacity>
       </Card>
 
-      <View style={styles.categoryScroll}>
-        {['all', ...(AFFIRMATION_CATEGORIES ?? [])].map((cat) => (
-          <TouchableOpacity
-            key={cat ?? Math.random().toString()}
-            onPress={() => cat && setSelectedCategory(cat)}
-            style={[
-              styles.categoryChip,
-              selectedCategory === cat && styles.categoryChipSelected,
-            ]}
-          >
-            <Text style={[
-              styles.categoryChipText,
-              selectedCategory === cat && styles.categoryChipTextSelected,
-            ]}>{cat === 'all' ? 'All' : ((cat ?? '').charAt(0).toUpperCase() + (cat ?? '').slice(1))}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+        {AFFIRMATION_CATEGORIES.map((cat) => {
+          const isSelected = selectedCategory === cat;
+          return (
+            <TouchableOpacity
+              key={cat}
+              onPress={() => setSelectedCategory(cat)}
+              style={[
+                styles.categoryChip,
+                { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                isSelected && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                  isSelected && { fontWeight: '700' },
+                ]}
+              >
+                {cat.replace('-', ' ')}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       {loading ? (
         <View style={styles.loading}>
-          <Text>Loading affirmations...</Text>
+          <Text style={{ color: colors.textTertiary, fontSize: 14 }}>Loading mindful affirmations...</Text>
         </View>
       ) : (affirmations ?? []).length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="sparkles" size={48} color="#425474" />
-          <Text style={styles.emptyTitle}>No affirmations yet</Text>
-          <Text style={styles.emptyText}>Add your own or browse the library</Text>
+          <Ionicons name="sparkles-outline" size={48} color={colors.textTertiary} />
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No affirmations yet</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Add your own personal truths or browse categories above</Text>
           <PrimaryButton onPress={handleAddCustom} title="Add Affirmation" style={styles.emptyButton} />
         </View>
       ) : (
-        <FlatList
-          data={affirmations ?? []}
-          keyExtractor={(item, idx) => item?.id ?? String(idx)}
-          renderItem={renderItem}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-        />
+        <View style={{ gap: 12 }}>
+          {(affirmations ?? []).map((item, idx) => (
+            <React.Fragment key={item?.id ?? String(idx)}>
+              {renderItem({ item })}
+            </React.Fragment>
+          ))}
+        </View>
       )}
 
-      <TouchableOpacity onPress={handleAddCustom} style={styles.addButton}>
-        <Ionicons name="add" size={20} color="#5A955A" />
-        <Text style={styles.addButtonText}>Add Custom Affirmation</Text>
+      <TouchableOpacity
+        onPress={handleAddCustom}
+        style={[styles.addButton, { borderColor: colors.accentPrimary, backgroundColor: colors.bgCard }]}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={20} color={colors.accentPrimary} />
+        <Text style={[styles.addButtonText, { color: colors.accentPrimary }]}>Add Custom Affirmation</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDFBF7' },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100, gap: 20 },
-  header: { marginBottom: 8 },
-  title: { fontSize: 28, fontWeight: '700', color: '#1E232E' },
-  dailyCard: { gap: 12 },
-  dailyHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  dailyLabel: { fontSize: 14, fontWeight: '600', color: '#34415A', textTransform: 'uppercase', letterSpacing: 0.5 },
-  dailyText: { fontSize: 18, fontWeight: '500', color: '#1E232E', lineHeight: 26, fontStyle: 'italic' },
-  refreshButton: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingVertical: 8, alignSelf: 'flex-start' },
-  refreshText: { fontSize: 14, fontWeight: '500', color: '#5A955A' },
-  categoryScroll: { gap: 8, marginTop: 4 },
-  categoryChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DEBC' },
-  categoryChipSelected: { backgroundColor: '#5A955A', borderColor: '#5A955A' },
-  categoryChipText: { fontSize: 13, fontWeight: '500', color: '#1E232E' },
-  categoryChipTextSelected: { color: 'white' },
-  affirmationCard: { padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E4DEBC', gap: 10 },
-  affirmationText: { fontSize: 16, color: '#1E232E', lineHeight: 24 },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 18 },
+  header: { marginBottom: 2 },
+  title: { fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, marginTop: 4 },
+  dailyCard: {
+    padding: 18,
+    borderRadius: 20,
+    gap: 10,
+  },
+  dailyHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dailyLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  dailyText: { fontSize: 18, fontWeight: '500', lineHeight: 26, fontStyle: 'italic' },
+  refreshButton: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, alignSelf: 'flex-start' },
+  refreshText: { fontSize: 13, fontWeight: '600' },
+  categoryScroll: { gap: 8, paddingVertical: 2 },
+  categoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  categoryChipText: { fontSize: 13, fontWeight: '500', textTransform: 'capitalize' },
+  affirmationCard: {
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  affirmationText: { fontSize: 16, lineHeight: 24, fontWeight: '500' },
   affirmationFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  affirmationCategory: { fontSize: 12, fontWeight: '500', color: '#5A955A', textTransform: 'capitalize' },
+  affirmationCategory: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
   favoriteButton: { padding: 4 },
-  emptyState: { alignItems: 'center', paddingVertical: 60, gap: 12 },
-  emptyTitle: { fontSize: 20, fontWeight: '600', color: '#1E232E' },
-  emptyText: { fontSize: 16, color: '#34415A', textAlign: 'center', paddingHorizontal: 20 },
+  emptyState: { alignItems: 'center', paddingVertical: 48, gap: 12 },
+  emptyTitle: { fontSize: 20, fontWeight: '700' },
+  emptyText: { fontSize: 15, textAlign: 'center', paddingHorizontal: 20, lineHeight: 22 },
   emptyButton: { marginTop: 8, minWidth: 200 },
-  addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 16, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#5A955A' },
-  addButtonText: { fontSize: 16, fontWeight: '600', color: '#5A955A' },
-  loading: { alignItems: 'center', paddingVertical: 40 },
-  separator: { height: 1, backgroundColor: '#E4DEBC' },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  addButtonText: { fontSize: 15, fontWeight: '600' },
+  loading: { alignItems: 'center', paddingVertical: 30 },
 });
