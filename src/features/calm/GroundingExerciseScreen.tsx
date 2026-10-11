@@ -6,6 +6,7 @@ import type { AppIconName } from '../../components';
 import { RootStackParamList, GroundingType } from '../../types/navigation';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { calmRepository } from '../../database/repositories/calmRepository';
 
 const groundingSteps: Record<GroundingType, { label: string; instruction: string; icon: AppIconName }[]> = {
   '5-4-3-2-1': [
@@ -85,6 +86,12 @@ export function GroundingExerciseScreen() {
       setCurrentStep(currentStep + 1);
     } else {
       setIsComplete(true);
+      calmRepository.logSession({
+        type: 'grounding',
+        preset: safeType,
+        duration: 180,
+        completed: true,
+      }).catch(() => {});
     }
   };
 

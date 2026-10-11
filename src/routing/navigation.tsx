@@ -33,6 +33,11 @@ import { JournalEntryScreen } from '../features/journal/JournalEntryScreen';
 import { MoodCheckInScreen } from '../features/mood/MoodCheckInScreen';
 import { BreathingSessionScreen } from '../features/calm/BreathingSessionScreen';
 import { GroundingExerciseScreen } from '../features/calm/GroundingExerciseScreen';
+import { BreathworkStudioScreen } from '../features/calm/BreathworkStudioScreen';
+import { SoundscapesScreen } from '../features/calm/SoundscapesScreen';
+import { SensoryGroundingScreen } from '../features/calm/SensoryGroundingScreen';
+import { BodyScanScreen } from '../features/calm/BodyScanScreen';
+import { PanicAnchorScreen } from '../features/calm/PanicAnchorScreen';
 import { MoodCalendarScreen } from '../features/insights/MoodCalendarScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -287,6 +292,11 @@ export function RootNavigator() {
       <RootStack.Screen name="MoodCheckIn" component={MoodCheckInScreen} />
       <RootStack.Screen name="BreathingSession" component={BreathingSessionScreen} />
       <RootStack.Screen name="GroundingExercise" component={GroundingExerciseScreen} />
+      <RootStack.Screen name="BreathworkStudio" component={BreathworkStudioScreen} />
+      <RootStack.Screen name="Soundscapes" component={SoundscapesScreen} />
+      <RootStack.Screen name="SensoryGrounding" component={SensoryGroundingScreen} />
+      <RootStack.Screen name="BodyScan" component={BodyScanScreen} />
+      <RootStack.Screen name="PanicAnchor" component={PanicAnchorScreen} />
       <RootStack.Screen name="MoodCalendar" component={MoodCalendarScreen} />
     </RootStack.Navigator>
   );

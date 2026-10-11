@@ -24,7 +24,7 @@ export const SOUND_TRACKS: SoundTrack[] = [
     url: 'https://raw.githubusercontent.com/bradtraversy/ambient-sound-mixer/main/audio/ocean.mp3',
   },
   {
-    id: 'forest',
+    id: 'birds',
     title: 'Forest Breeze',
     subtitle: 'Woodland calm',
     icon: 'i-leaf',
@@ -39,11 +39,15 @@ export const SOUND_TRACKS: SoundTrack[] = [
   },
 ];
 
+type SoundStateListener = (state: { activeTrack: string | null }) => void;
+
 class SoundService {
   private currentPlayer: AudioPlayer | null = null;
   private currentTrackId: string | null = null;
   private sleepTimerTimeout: any = null;
   private isConfigured: boolean = false;
+  private volume: number = 0.85;
+  private listeners: Set<SoundStateListener> = new Set();
 
   private async ensureAudioMode() {
     if (this.isConfigured) return;
@@ -59,6 +63,25 @@ class SoundService {
     }
   }
 
+  private notify() {
+    const state = { activeTrack: this.currentTrackId };
+    this.listeners.forEach((listener) => {
+      try {
+        listener(state);
+      } catch (err) {
+        console.warn('[SoundService] listener error:', err);
+      }
+    });
+  }
+
+  public addListener(listener: SoundStateListener): () => void {
+    this.listeners.add(listener);
+    listener({ activeTrack: this.currentTrackId });
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
   public async playTrack(trackId: string): Promise<boolean> {
     const track = SOUND_TRACKS.find((t) => t.id === trackId);
     if (!track) return false;
@@ -72,7 +95,6 @@ class SoundService {
     }
 
     try {
-      // Clean up previous player
       if (this.currentPlayer) {
         try {
           this.currentPlayer.pause();
@@ -83,21 +105,37 @@ class SoundService {
 
       const player = createAudioPlayer({ uri: track.url });
       player.loop = true;
-      player.volume = 0.85;
+      player.volume = this.volume;
       player.play();
 
       this.currentPlayer = player;
       this.currentTrackId = trackId;
+      this.notify();
       return true;
     } catch (error) {
       console.warn('[SoundService] Could not play track natively:', error);
-      // Still retain state for UI visualizer
       this.currentTrackId = trackId;
+      this.notify();
       return true;
     }
   }
 
-  public async stop() {
+  public async play(trackId: string): Promise<boolean> {
+    return this.playTrack(trackId);
+  }
+
+  public async setVolume(vol: number): Promise<void> {
+    this.volume = Math.max(0, Math.min(1, vol));
+    if (this.currentPlayer) {
+      try {
+        this.currentPlayer.volume = this.volume;
+      } catch (e) {
+        console.warn('[SoundService] could not set volume:', e);
+      }
+    }
+  }
+
+  public async stop(): Promise<void> {
     if (this.sleepTimerTimeout) {
       clearTimeout(this.sleepTimerTimeout);
       this.sleepTimerTimeout = null;
@@ -111,6 +149,7 @@ class SoundService {
       this.currentPlayer = null;
     }
     this.currentTrackId = null;
+    this.notify();
   }
 
   public getCurrentTrackId(): string | null {
@@ -129,6 +168,10 @@ class SoundService {
       await this.stop();
       if (onTimerEnd) onTimerEnd();
     }, minutes * 60 * 1000);
+  }
+
+  public setTimer(minutes: number, onTimerEnd?: () => void) {
+    this.setSleepTimer(minutes, onTimerEnd);
   }
 }
 

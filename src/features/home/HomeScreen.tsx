@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration } from '../../components';
 import type { AppIconName } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
+import { journalRepository } from '../../database/repositories/journalRepository';
+import { moodRepository } from '../../database/repositories/moodRepository';
 import Habit from '../../database/models/Habit';
 import { getIconName } from '../../utils/iconMap';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,6 +38,8 @@ export function HomeScreen() {
 
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
+  const [recentJournals, setRecentJournals] = useState<any[]>([]);
+  const [latestMood, setLatestMood] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const renderLoggedRef = useRef(false);
@@ -44,19 +48,25 @@ export function HomeScreen() {
     bootLog('home-render');
   }
 
-  const loadHabits = useCallback(async () => {
+  const loadHomeData = useCallback(async () => {
     setLoading(true);
     try {
-      const [allHabits, completions] = await Promise.all([
+      const [allHabits, completions, journals, mood] = await Promise.all([
         habitRepository.getAll(false),
         habitRepository.getTodayCompletions(),
+        journalRepository.getAll(),
+        moodRepository.getLatest(),
       ]);
       setHabits(allHabits ?? []);
       setTodayCompletions(completions ?? {});
+      setRecentJournals((journals ?? []).slice(0, 3));
+      setLatestMood(mood ?? null);
     } catch (error) {
-      console.error('Failed to load habits:', error);
+      console.error('Failed to load home data:', error);
       setHabits([]);
       setTodayCompletions({});
+      setRecentJournals([]);
+      setLatestMood(null);
     } finally {
       setLoading(false);
     }
@@ -64,8 +74,14 @@ export function HomeScreen() {
 
   useEffect(() => {
     bootLog('home-mounted');
-    loadHabits();
-  }, [loadHabits]);
+    loadHomeData();
+  }, [loadHomeData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHomeData();
+    }, [loadHomeData])
+  );
 
   const handleMoodCheckIn = () => navigation?.navigate?.('MoodCheckIn', { fromHome: true });
   const handleCalmDown = () => navigation?.navigate?.('Calm');
@@ -196,15 +212,28 @@ export function HomeScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.3 }}>
-                Peaceful & Grounded
+                {latestMood?.mood ? `${latestMood.mood.charAt(0).toUpperCase()}${latestMood.mood.slice(1)} & Present` : 'Peaceful & Grounded'}
               </Text>
               <Text style={{ fontSize: 13, color: colors.textTertiary, lineHeight: 18 }}>
-                7/10 serenity · low stress today. Take a mindful breath.
+                {latestMood
+                  ? `${latestMood.intensity ?? 7}/10 intensity · stress ${latestMood.stress ?? 2}/10. Keep going.`
+                  : '7/10 serenity · low stress today. Take a mindful breath.'}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                <ProgressRing progress={0.7} size={34} strokeWidth={3.8} showPercentage={false} />
+                <ProgressRing
+                  progress={latestMood ? Math.min(Math.max((latestMood.intensity ?? 7) / 10, 0.1), 1) : 0.7}
+                  size={34}
+                  strokeWidth={3.8}
+                  showPercentage={false}
+                />
                 <Text style={{ fontSize: 12, fontWeight: '600', color: colors.accentPrimary }}>
-                  Serenity in harmony
+                  {latestMood
+                    ? (latestMood.intensity ?? 7) >= 7
+                      ? 'Serenity in harmony'
+                      : (latestMood.intensity ?? 7) >= 4
+                      ? 'Mindful awareness'
+                      : 'Gentle self-compassion'
+                    : 'Serenity in harmony'}
                 </Text>
               </View>
             </View>
@@ -340,9 +369,10 @@ export function HomeScreen() {
                   onPress={() => habit && handleHabitPress(habit)}
                   style={{
                     flexDirection: 'row',
-                    alignItems: 'flex-start',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: 16,
+                    paddingHorizontal: 18,
+                    paddingVertical: 14,
                     backgroundColor: colors.bgCard,
                     borderRadius: 20,
                     borderWidth: 1,
@@ -351,7 +381,7 @@ export function HomeScreen() {
                   }}
                   activeOpacity={0.8}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <View
                       style={{
                         width: 42,
@@ -442,29 +472,66 @@ export function HomeScreen() {
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.accentPrimary }}>View all</Text>
             </Pressable>
           </View>
-          <EmptyState
-            icon="l-book"
-            title="A fresh blank page"
-            subtitle="Write down your thoughts, a moment of gratitude, or release what weighs on you."
-            actionLabel="Start writing"
-            onAction={() => navigation?.navigate?.('JournalEntry', { type: 'free' })}
-            colors={colors}
-          />
+          {(recentJournals ?? []).length === 0 ? (
+            <EmptyState
+              icon="l-book"
+              title="A fresh blank page"
+              subtitle="Write down your thoughts, a moment of gratitude, or release what weighs on you."
+              actionLabel="Start writing"
+              onAction={() => navigation?.navigate?.('JournalEntry', { type: 'free' })}
+              colors={colors}
+            />
+          ) : (
+            <View style={{ gap: 10 }}>
+              {(recentJournals ?? []).slice(0, 2).map((entry) => (
+                <TouchableOpacity
+                  key={entry.id}
+                  onPress={() => navigation?.navigate?.('JournalEntry', { id: entry.id, type: entry.type })}
+                  style={{
+                    padding: 14,
+                    backgroundColor: colors.bgCard,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: colors.borderLight,
+                    gap: 6,
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary, flex: 1, marginRight: 8 }} numberOfLines={1}>
+                      {entry.title || (entry.type ? String(entry.type).replace('_', ' ') : 'Reflection')}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: colors.textTertiary }}>
+                      {entry.createdAt ? format(new Date(entry.createdAt), 'MMM d') : ''}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18 }} numberOfLines={2}>
+                    {entry.body}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </CardContent>
       </Card>
 
       {/* Weekly Insights */}
-      <Card variant="outlined">
-        <CardContent>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>
-            Weekly Insights
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <StatPill label="Avg Mood" value="7.2/10" trend="up" trendValue="+0.3" accentColor={colors?.success ?? '#3E7B52'} />
-            <StatPill label="Journaling" value="4/7 days" trend="neutral" accentColor={colors?.info ?? '#2563EB'} />
-          </View>
-        </CardContent>
-      </Card>
+      <Pressable onPress={() => navigation?.navigate?.('Insights')}>
+        <Card variant="outlined">
+          <CardContent>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
+                Weekly Insights
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accentPrimary }}>Open →</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <StatPill label="Avg Mood" value={latestMood?.intensity ? `${latestMood.intensity}/10` : '7.2/10'} trend="up" trendValue="+0.3" accentColor={colors?.success ?? '#3E7B52'} />
+              <StatPill label="Journaling" value={`${Math.max(recentJournals.length, 1)} entries`} trend="neutral" accentColor={colors?.info ?? '#2563EB'} />
+            </View>
+          </CardContent>
+        </Card>
+      </Pressable>
     </ScrollView>
   );
 }

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TextInput, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, AppIcon } from '../../components';
+import { Card, CardContent, PrimaryButton, AppIcon, JournalReflectionIllustration } from '../../components';
 import type { AppIconName } from '../../components';
 import { RootStackParamList, JournalType } from '../../types/navigation';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { journalRepository } from '../../database/repositories/journalRepository';
 import { Ionicons } from '@expo/vector-icons';
 
 const journalTypeLabels: Record<JournalType, string> = {
@@ -43,6 +44,8 @@ export function JournalEntryScreen() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   let themeColors: ReturnType<typeof useThemeColors> | undefined;
   try {
@@ -63,14 +66,101 @@ export function JournalEntryScreen() {
     isDark: false,
   } as any;
 
+  // Load entry if editing
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    const loadEntry = async () => {
+      setLoading(true);
+      try {
+        const entry = await journalRepository.getById(id);
+        if (entry && isMounted) {
+          setTitle(entry.title || '');
+          setContent(entry.body || '');
+          setIsFavorite(!!entry.favorite);
+        }
+      } catch (err) {
+        console.error('Failed to load entry:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    loadEntry();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  const handleSave = async () => {
+    const trimmedTitle = (title || '').trim();
+    const trimmedContent = (content || '').trim();
+
+    if (!trimmedContent && !trimmedTitle) {
+      Alert.alert('Empty reflection', 'Please share your thoughts before saving.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (isEditing && id) {
+        await journalRepository.update(id, {
+          title: trimmedTitle,
+          body: trimmedContent,
+          favorite: isFavorite,
+        });
+      } else {
+        await journalRepository.create({
+          type,
+          title: trimmedTitle,
+          body: trimmedContent,
+          favorite: isFavorite,
+        });
+      }
+      navigation.goBack();
+    } catch (err) {
+      console.error('Failed to save reflection:', err);
+      Alert.alert('Save Error', 'Could not save your reflection. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (!id) return;
+    Alert.alert(
+      'Delete reflection?',
+      'This entry will be permanently removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              await journalRepository.delete(id);
+              navigation.goBack();
+            } catch (err) {
+              console.error('Failed to delete entry:', err);
+              Alert.alert('Error', 'Could not delete entry.');
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bgPrimary }}
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 }}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
-      {/* Header Bar */}
-      <View style={{ marginBottom: 20 }}>
+      {/* Top Bar */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
         <Pressable
           onPress={() => navigation?.goBack?.()}
           style={({ pressed }) => [
@@ -86,159 +176,154 @@ export function JournalEntryScreen() {
             {isEditing ? 'Edit Reflection' : 'New Reflection'}
           </Text>
         </Pressable>
+
+        {isEditing && (
+          <Pressable
+            onPress={handleDelete}
+            hitSlop={8}
+            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, padding: 4 }]}
+          >
+            <Ionicons name="trash-outline" size={22} color="#EB697F" />
+          </Pressable>
+        )}
       </View>
 
-      <Card variant="elevated" style={{ marginBottom: 20 }}>
-        <CardContent style={{ padding: 20 }}>
-          {/* Type Badge Header */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: colors.accentBg,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: colors.accentBorder,
-              }}
-            >
-              <AppIcon name={typeIcon} size={22} color={colors.accentPrimary} />
-            </View>
-            <View style={{ marginLeft: 12 }}>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary }}>
-                {typeLabel}
-              </Text>
-              <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 2 }}>
-                {isEditing ? 'Editing existing entry' : 'Write freely in your calm space'}
-              </Text>
-            </View>
-          </View>
+      {/* Visual Zen Header Card */}
+      <View
+        style={{
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 12,
+          marginBottom: 16,
+        }}
+      >
+        <JournalReflectionIllustration width={150} height={120} />
+      </View>
 
-          {/* Title input */}
-          <TextInput
-            placeholder="Title (optional)"
-            placeholderTextColor={colors.textTertiary}
-            value={title}
-            onChangeText={setTitle}
-            style={{
-              fontSize: 20,
-              fontWeight: '700',
-              color: colors.textPrimary,
-              borderBottomWidth: 1,
-              borderBottomColor: colors.borderLight,
-              paddingBottom: 12,
-              marginBottom: 16,
-            }}
-          />
-
-          {/* Content input */}
-          <TextInput
-            multiline
-            numberOfLines={12}
-            placeholder="What thoughts or feelings are present for you right now?"
-            placeholderTextColor={colors.textTertiary}
-            value={content}
-            onChangeText={setContent}
-            style={{
-              fontSize: 16,
-              lineHeight: 24,
-              color: colors.textPrimary,
-              minHeight: 200,
-              textAlignVertical: 'top',
-              paddingTop: 4,
-            }}
-          />
-
-          {/* Bottom Actions Row */}
-          <View
-            style={{
-              marginTop: 20,
-              paddingTop: 16,
-              borderTopWidth: 1,
-              borderTopColor: colors.borderLight,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Pressable
-                style={({ pressed }) => [
-                  {
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    borderRadius: 9999,
-                    backgroundColor: colors.accentBg,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-              >
-                <Ionicons name="pricetag-outline" size={15} color={colors.accentPrimary} style={{ marginRight: 4 }} />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.accentPrimary }}>Tag</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [
-                  {
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    borderRadius: 9999,
-                    backgroundColor: colors.accentBg,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-              >
-                <Ionicons name="camera-outline" size={15} color={colors.accentPrimary} style={{ marginRight: 4 }} />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.accentPrimary }}>Photo</Text>
-              </Pressable>
-            </View>
-
-            <Pressable
-              onPress={() => setIsFavorite(!isFavorite)}
-              style={({ pressed }) => [
-                {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderRadius: 9999,
-                  backgroundColor: isFavorite ? '#FDF1F4' : colors.accentBg,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <Ionicons
-                name={isFavorite ? 'heart' : 'heart-outline'}
-                size={16}
-                color={isFavorite ? '#DB3A60' : colors.textTertiary}
-                style={{ marginRight: 4 }}
-              />
-              <Text
+      {loading ? (
+        <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+          <ActivityIndicator size="small" color={colors.accentPrimary} />
+          <Text style={{ marginTop: 12, color: colors.textTertiary, fontSize: 14 }}>Loading reflection...</Text>
+        </View>
+      ) : (
+        <Card variant="elevated" style={{ marginBottom: 20 }}>
+          <CardContent style={{ padding: 20 }}>
+            {/* Type Header Pill */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <View
                 style={{
-                  fontSize: 12,
-                  fontWeight: '600',
-                  color: isFavorite ? '#DB3A60' : colors.textTertiary,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: colors.accentBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.accentBorder,
                 }}
               >
-                {isFavorite ? 'Favorited' : 'Favorite'}
-              </Text>
-            </Pressable>
-          </View>
-        </CardContent>
-      </Card>
+                <AppIcon name={typeIcon} size={20} color={colors.accentPrimary} />
+              </View>
+              <View style={{ marginLeft: 12 }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>
+                  {typeLabel}
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.textTertiary }}>
+                  {isEditing ? 'Tap below to modify' : 'Safe & private offline notes'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Title input */}
+            <TextInput
+              placeholder="Title (optional)"
+              placeholderTextColor={colors.textTertiary}
+              value={title}
+              onChangeText={setTitle}
+              style={{
+                fontSize: 18,
+                fontWeight: '700',
+                color: colors.textPrimary,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.borderLight,
+                paddingBottom: 10,
+                marginBottom: 14,
+              }}
+            />
+
+            {/* Content input */}
+            <TextInput
+              multiline
+              numberOfLines={10}
+              placeholder="What thoughts or feelings are present for you right now?"
+              placeholderTextColor={colors.textTertiary}
+              value={content}
+              onChangeText={setContent}
+              style={{
+                fontSize: 16,
+                lineHeight: 24,
+                color: colors.textPrimary,
+                minHeight: 180,
+                textAlignVertical: 'top',
+                paddingTop: 4,
+              }}
+            />
+
+            {/* Bottom Actions Row */}
+            <View
+              style={{
+                marginTop: 16,
+                paddingTop: 14,
+                borderTopWidth: 1,
+                borderTopColor: colors.borderLight,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <Pressable
+                onPress={() => setIsFavorite(!isFavorite)}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 9999,
+                    backgroundColor: isFavorite ? '#FDF1F4' : colors.accentBg,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={isFavorite ? 'heart' : 'heart-outline'}
+                  size={16}
+                  color={isFavorite ? '#DB3A60' : colors.textTertiary}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '600',
+                    color: isFavorite ? '#DB3A60' : colors.textTertiary,
+                  }}
+                >
+                  {isFavorite ? 'Favorited' : 'Favorite'}
+                </Text>
+              </Pressable>
+            </View>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Buttons */}
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <PrimaryButton
-          title="Save Reflection"
+          title={saving ? 'Saving...' : 'Save Reflection'}
           variant="primary"
           size="lg"
-          onPress={() => navigation?.goBack?.()}
+          onPress={handleSave}
+          disabled={saving || loading}
           style={{ flex: 2 }}
           fullWidth={false}
         />
@@ -247,6 +332,7 @@ export function JournalEntryScreen() {
           variant="outline"
           size="lg"
           onPress={() => navigation?.goBack?.()}
+          disabled={saving}
           style={{ flex: 1 }}
           fullWidth={false}
         />

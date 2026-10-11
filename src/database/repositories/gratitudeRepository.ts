@@ -47,7 +47,9 @@ export const gratitudeRepository = {
       await entry.update((e) => {
         if (data.text !== undefined) e.text = data.text;
         if (data.mood !== undefined) e.mood = data.mood;
-        if (data.tags !== undefined) e.tags = JSON.stringify(data.tags);
+        if (data.tags !== undefined) {
+          e.tags = typeof data.tags === 'string' ? data.tags : JSON.stringify(data.tags);
+        }
         if (data.imageUri !== undefined) e.imageUri = data.imageUri;
         if (data.favorite !== undefined) e.favorite = data.favorite;
         e.updatedAt = Date.now();

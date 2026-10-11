@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { View, Pressable, ViewStyle, StyleProp } from 'react-native';
+import { View, Pressable, ViewStyle, StyleProp, StyleSheet } from 'react-native';
 import { useThemeColors } from '../theme/ThemeContext';
 
 interface CardProps {
@@ -27,10 +27,10 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
     const isDark = !!colors?.isDark;
 
     const baseCardStyle: ViewStyle = {
-      backgroundColor: colors?.bgCard ?? '#FFFFFF',
+      backgroundColor: colors?.bgCard ?? (isDark ? '#182130' : '#FFFFFF'),
       borderRadius: variant === 'elevated' ? 24 : 20,
       borderWidth: 1,
-      borderColor: colors?.borderLight ?? '#E6E0D4',
+      borderColor: colors?.borderLight ?? (isDark ? '#263346' : '#E6E0D4'),
       overflow: 'hidden',
     };
 
@@ -38,16 +38,16 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
       default: {
         shadowColor: colors?.textPrimary ?? '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isDark ? 0.25 : 0.04,
+        shadowOpacity: isDark ? 0.3 : 0.05,
         shadowRadius: 8,
         elevation: 2,
       },
       elevated: {
         shadowColor: colors?.textPrimary ?? '#000000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: isDark ? 0.35 : 0.07,
+        shadowOpacity: isDark ? 0.4 : 0.08,
         shadowRadius: 14,
-        elevation: 3.5,
+        elevation: 4,
       },
       outlined: {
         shadowOpacity: 0,
@@ -55,16 +55,15 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
       },
     };
 
-    const combinedStyle = [baseCardStyle, variantStyles[variant], style];
+    const flatCombinedStyle = StyleSheet.flatten([baseCardStyle, variantStyles[variant], style]);
 
     if (onPress) {
       return (
         <Pressable
           ref={ref}
-          className={className}
           style={({ pressed }) => [
-            combinedStyle,
-            pressed && { opacity: 0.92, transform: [{ scale: 0.992 }] },
+            flatCombinedStyle,
+            pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
           ]}
           onPress={onPress}
           {...props}
@@ -77,8 +76,7 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
     return (
       <View
         ref={ref}
-        className={className}
-        style={combinedStyle}
+        style={flatCombinedStyle}
         {...props}
       >
         {children}

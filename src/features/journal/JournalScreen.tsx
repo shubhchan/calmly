@@ -1,29 +1,35 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, AppIcon, JournalReflectionIllustration } from '../../components';
-import type { AppIconName } from '../../components';
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, Pressable, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Card, CardContent, PrimaryButton, JournalReflectionIllustration } from '../../components';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { journalRepository } from '../../database/repositories/journalRepository';
-import { JournalEntry } from '../../database/models';
 import { format } from 'date-fns';
 
-const journalTypes: { id: string; label: string; desc: string; icon: AppIconName; color: string }[] = [
-  { id: 'free', label: 'Free Writing', desc: 'Unstructured flow of consciousness', icon: 'l-write', color: '#3E7B52' },
-  { id: 'daily_reflection', label: 'Daily Review', desc: 'Reflect upon today’s events', icon: 'i-sun', color: '#6C5CE7' },
-  { id: 'gratitude', label: 'Gratitude', desc: 'Counting subtle blessings', icon: 'l-gift', color: '#D96547' },
-  { id: 'stress', label: 'Stress Release', desc: 'Release mental baggage', icon: 'l-pulse', color: '#DB3A60' },
-  { id: 'sleep', label: 'Sleep & Dreams', desc: 'Nighttime closure & rest', icon: 'i-moon', color: '#0E7490' },
-  { id: 'morning', label: 'Morning Pages', desc: 'Awaken with mindful clarity', icon: 'i-sun', color: '#2563EB' },
-  { id: 'brain_dump', label: 'Brain Dump', desc: 'Declutter racing thoughts', icon: 'i-bulb', color: '#3E7B52' },
+interface JournalTemplate {
+  id: string;
+  label: string;
+  desc: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+}
+
+const journalTypes: JournalTemplate[] = [
+  { id: 'free', label: 'Free Writing', desc: 'Unstructured flow of thoughts', icon: 'create-outline', color: '#5EBE7B' },
+  { id: 'daily_reflection', label: 'Daily Review', desc: 'Reflect upon today’s events', icon: 'sunny-outline', color: '#F59E0B' },
+  { id: 'gratitude', label: 'Gratitude', desc: 'Counting subtle blessings', icon: 'heart-outline', color: '#F43F5E' },
+  { id: 'stress', label: 'Stress Release', desc: 'Release mental tension', icon: 'leaf-outline', color: '#10B981' },
+  { id: 'sleep', label: 'Sleep & Dreams', desc: 'Nighttime closure & rest', icon: 'moon-outline', color: '#6366F1' },
+  { id: 'morning', label: 'Morning Pages', desc: 'Mindful dawn clarity', icon: 'cafe-outline', color: '#0EA5E9' },
+  { id: 'brain_dump', label: 'Brain Dump', desc: 'Declutter racing thoughts', icon: 'sparkles-outline', color: '#8B5CF6' },
 ];
 
 export function JournalScreen() {
   const navigation = useNavigation<any>();
   const colors = useThemeColors();
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
@@ -38,11 +44,14 @@ export function JournalScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadEntries();
-  }, [loadEntries]);
+  // Reload every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadEntries();
+    }, [loadEntries])
+  );
 
-  const handleToggleFavorite = async (entry: JournalEntry) => {
+  const handleToggleFavorite = async (entry: any) => {
     try {
       await journalRepository.toggleFavorite(entry.id);
       loadEntries();
@@ -51,34 +60,41 @@ export function JournalScreen() {
     }
   };
 
-  const renderJournalType = (item: typeof journalTypes[0]) => (
+  const renderJournalType = (item: JournalTemplate) => (
     <Pressable
       key={item.id}
       onPress={() => navigation?.navigate?.('JournalEntry', { type: item.id as any })}
       style={({ pressed }) => [
-        styles.templateCard,
+        styles.templateButton,
         {
-          backgroundColor: colors.bgCard,
-          borderColor: colors.borderLight,
-          opacity: pressed ? 0.85 : 1,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
+          backgroundColor: colors.isDark ? '#1C2636' : colors.bgSecondary,
+          borderColor: colors.isDark ? '#2E3D52' : colors.borderMedium,
+          opacity: pressed ? 0.82 : 1,
+          transform: [{ scale: pressed ? 0.97 : 1 }],
         },
       ]}
     >
-      <View
-        style={[
-          styles.templateIconOrb,
-          { backgroundColor: item.color + '18' },
-        ]}
-      >
-        <AppIcon name={item.icon} size={24} color={item.color} />
+      <View style={styles.iconOrbContainer}>
+        <View
+          style={[
+            styles.templateIconOrb,
+            {
+              backgroundColor: item.color + '1A',
+              borderColor: item.color + '38',
+            },
+          ]}
+        >
+          <Ionicons name={item.icon} size={22} color={item.color} style={{ textAlign: 'center' }} />
+        </View>
       </View>
-      <Text style={[styles.templateTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-        {item.label}
-      </Text>
-      <Text style={[styles.templateDesc, { color: colors.textTertiary }]} numberOfLines={2}>
-        {item.desc}
-      </Text>
+      <View style={styles.templateTextContainer}>
+        <Text style={[styles.templateTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+          {item.label}
+        </Text>
+        <Text style={[styles.templateDesc, { color: colors.textTertiary }]} numberOfLines={2}>
+          {item.desc}
+        </Text>
+      </View>
     </Pressable>
   );
 
@@ -87,30 +103,41 @@ export function JournalScreen() {
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={loading} onRefresh={loadEntries} tintColor={colors.accentPrimary} />
+      }
     >
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>My Journal</Text>
         <Text style={[styles.subtitle, { color: colors.textTertiary }]}>
-          {entries.length} reflections recorded · Choose a template or free write
+          {entries.length} reflection{entries.length === 1 ? '' : 's'} recorded · Choose a template or free write
         </Text>
       </View>
 
-      {/* Prompts & Templates Carousel */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            Prompts & Templates
-          </Text>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.templatesScroll}
-        >
-          {journalTypes.map(renderJournalType)}
-        </ScrollView>
-      </View>
+      {/* Prompts & Templates Card Container */}
+      <Card variant="outlined" style={styles.templatesSectionCard}>
+        <CardContent style={styles.templatesCardContent}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              Prompts & Templates
+            </Text>
+            <View style={[styles.cardTag, { backgroundColor: colors.accentBg }]}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.accentPrimary }}>
+                Guided
+              </Text>
+            </View>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.templatesScrollView}
+            contentContainerStyle={styles.templatesScroll}
+          >
+            {journalTypes.map(renderJournalType)}
+          </ScrollView>
+        </CardContent>
+      </Card>
 
       {/* Recent Reflections Feed */}
       <View style={styles.section}>
@@ -142,52 +169,48 @@ export function JournalScreen() {
                     styles.entryCard,
                     {
                       backgroundColor: colors.bgCard,
-                      borderColor: colors.borderLight,
+                      borderColor: colors.isDark ? '#2E3D52' : colors.borderLight,
                       opacity: pressed ? 0.85 : 1,
                       transform: [{ scale: pressed ? 0.99 : 1 }],
                     },
                   ]}
                 >
                   <View style={styles.entryRow}>
-                    {/* Top-aligned Mood / Type Orb */}
                     <View
                       style={[
                         styles.entryIconOrb,
-                        { backgroundColor: colors.accentBg },
+                        { backgroundColor: typeConfig.color + '20' },
                       ]}
                     >
-                      <AppIcon name={entry.mood ? `m-${entry.mood}` : typeConfig.icon} size={22} loop={false} />
+                      <Ionicons name={typeConfig.icon} size={20} color={typeConfig.color} />
                     </View>
 
-                    {/* Left-aligned Multi-line Content Column */}
-                    <View style={styles.entryTextCol}>
-                      <Text
-                        style={[styles.entryTitle, { color: colors.textPrimary }]}
-                        numberOfLines={2}
-                      >
-                        {entry.title || 'Untitled Entry'}
-                      </Text>
-                      {entry.body ? (
-                        <Text
-                          style={[styles.entrySnippet, { color: colors.textSecondary }]}
-                          numberOfLines={2}
-                        >
-                          {entry.body}
+                    <View style={styles.entryBody}>
+                      <View style={styles.entryMeta}>
+                        <Text style={[styles.entryDate, { color: colors.textTertiary }]}>
+                          {formattedDate}
                         </Text>
-                      ) : null}
-                      <View style={styles.entryMetaRow}>
-                        <View style={[styles.entryTypeTag, { backgroundColor: typeConfig.color + '15' }]}>
-                          <Text style={[styles.entryTypeText, { color: typeConfig.color }]}>
+                        <View style={[styles.typeBadge, { backgroundColor: typeConfig.color + '15' }]}>
+                          <Text style={[styles.typeBadgeText, { color: typeConfig.color }]}>
                             {typeConfig.label}
                           </Text>
                         </View>
-                        <Text style={[styles.entryDateText, { color: colors.textTertiary }]}>
-                          {formattedDate}
-                        </Text>
                       </View>
+
+                      {entry.title ? (
+                        <Text style={[styles.entryTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                          {entry.title}
+                        </Text>
+                      ) : null}
+
+                      <Text
+                        style={[styles.entrySnippet, { color: colors.textSecondary }]}
+                        numberOfLines={2}
+                      >
+                        {entry.body || 'No written reflection text'}
+                      </Text>
                     </View>
 
-                    {/* Top-aligned Favorite Heart */}
                     <TouchableOpacity
                       onPress={(e) => {
                         e.stopPropagation();
@@ -278,38 +301,71 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  templatesScroll: {
-    gap: 12,
-    paddingRight: 4,
+  templatesSectionCard: {
+    borderRadius: 24,
+    borderWidth: 1.2,
   },
-  templateCard: {
-    width: 148,
-    height: 140,
+  templatesCardContent: {
     padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    justifyContent: 'space-between',
-    elevation: 1,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    gap: 12,
   },
-  templateIconOrb: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  cardTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 9999,
+  },
+  templatesScrollView: {
+    marginHorizontal: -16,
+  },
+  templatesScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+    gap: 10,
+  },
+  templateButton: {
+    width: 124,
+    minHeight: 140,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    borderWidth: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+  },
+  iconOrbContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 6,
+  },
+  templateIconOrb: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  templateTextContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    gap: 3,
   },
   templateTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    marginTop: 4,
+    lineHeight: 17,
+    textAlign: 'center',
+    letterSpacing: -0.2,
   },
   templateDesc: {
     fontSize: 11,
-    lineHeight: 15,
+    lineHeight: 14,
+    textAlign: 'center',
+    paddingHorizontal: 2,
   },
   entriesList: {
     gap: 12,
@@ -317,12 +373,7 @@ const styles = StyleSheet.create({
   entryCard: {
     padding: 16,
     borderRadius: 20,
-    borderWidth: 1,
-    elevation: 1.5,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    borderWidth: 1.2,
   },
   entryRow: {
     flexDirection: 'row',
@@ -330,81 +381,70 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   entryIconOrb: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
-  entryTextCol: {
+  entryBody: {
     flex: 1,
     gap: 4,
+  },
+  entryMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  entryDate: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999,
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   entryTitle: {
     fontSize: 16,
     fontWeight: '700',
-    lineHeight: 22,
-    textAlign: 'left',
+    marginTop: 2,
   },
   entrySnippet: {
     fontSize: 13,
     lineHeight: 19,
-    textAlign: 'left',
-  },
-  entryMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  entryTypeTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  entryTypeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  entryDateText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  favoriteButton: {
-    padding: 6,
     marginTop: 2,
   },
+  favoriteButton: {
+    padding: 4,
+  },
   emptyCard: {
-    borderRadius: 22,
+    borderRadius: 24,
   },
   emptyContent: {
     alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 24,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    paddingVertical: 28,
+    paddingHorizontal: 16,
   },
   emptyTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 12,
   },
   emptySubtitle: {
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',
-    maxWidth: 280,
+    marginTop: 6,
+    maxWidth: 260,
   },
   emptyButton: {
-    marginTop: 12,
-    minWidth: 160,
+    marginTop: 18,
   },
 });

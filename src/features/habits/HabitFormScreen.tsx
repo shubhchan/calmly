@@ -7,6 +7,7 @@ import { habitRepository } from '../../database/repositories/habitRepository';
 import { getIconName } from '../../utils/iconMap';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { HabitPlantingIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 
@@ -240,6 +241,13 @@ export function HabitFormScreen() {
         onTouchStart={() => Keyboard.dismiss()}
         showsVerticalScrollIndicator={false}
       >
+        <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginBottom: 4 }}>
+          <HabitPlantingIllustration width={140} height={110} />
+          <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 8 }}>
+            {isEditing ? 'Adjust your daily practice' : 'Plant a tiny mindful habit for daily growth'}
+          </Text>
+        </View>
+
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Habit Name</Text>
           <TextInput
@@ -487,17 +495,22 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110, gap: 16 },
-  section: { gap: 10 },
+  section: {
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    gap: 14,
+  },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   input: {
     fontSize: 17,
     fontWeight: '500',
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
   },
   iconColorRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
@@ -518,9 +531,10 @@ const styles = StyleSheet.create({
   iconPreviewLabel: { fontSize: 13, fontWeight: '500' },
   frequencyOption: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 1,
     marginTop: 6,
@@ -543,8 +557,9 @@ const styles = StyleSheet.create({
   dayButtonText: { fontSize: 14, fontWeight: '600' },
   reminderButton: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 14,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 1,
     gap: 12,
@@ -564,12 +579,12 @@ const styles = StyleSheet.create({
   goalValue: { fontSize: 20, fontWeight: '700' },
   goalLabel: { fontSize: 14 },
   textArea: {
-    fontSize: 14,
-    lineHeight: 20,
-    padding: 12,
-    borderRadius: 12,
+    fontSize: 15,
+    lineHeight: 22,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    minHeight: 80,
+    minHeight: 90,
     textAlignVertical: 'top',
   },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 4 },

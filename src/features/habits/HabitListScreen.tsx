@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { habitRepository } from '../../database/repositories/habitRepository';
@@ -86,6 +86,12 @@ export function HabitListScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const toggleHabit = async (habit: Habit, completed: boolean) => {
     if (!habit?.id) return;
@@ -406,9 +412,10 @@ const styles = StyleSheet.create({
   },
   habitCard: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
     borderRadius: 20,
     borderWidth: 1,
     shadowColor: '#000000',
@@ -420,7 +427,7 @@ const styles = StyleSheet.create({
   },
   habitLeft: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 14,
     flex: 1,
   },

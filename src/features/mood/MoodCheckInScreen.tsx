@@ -9,6 +9,7 @@ import type { AppIconName } from '../../components';
 import { RootStackParamList, MoodType } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { moodRepository } from '../../database/repositories/moodRepository';
 
 const moods: { id: MoodType; label: string; icon: AppIconName; color: string }[] = [
   { id: 'happy', label: 'Happy', icon: 'm-happy', color: '#5A955A' },
@@ -64,7 +65,7 @@ export function MoodCheckInScreen() {
     }
   };
 
-  const goNext = () => {
+  const goNext = async () => {
     if (step === 'mood' && selectedMood) {
       setStep('intensity');
     } else if (step === 'intensity') {
@@ -74,6 +75,20 @@ export function MoodCheckInScreen() {
     } else if (step === 'energy') {
       setStep('context');
     } else if (step === 'context') {
+      if (selectedMood) {
+        try {
+          await moodRepository.create({
+            mood: selectedMood,
+            intensity,
+            stress,
+            energy,
+            context: context.trim(),
+            needs: needs.trim(),
+          });
+        } catch (err) {
+          console.error('Failed to save mood check-in:', err);
+        }
+      }
       setStep('complete');
       setTimeout(() => {
         navigation?.goBack?.();

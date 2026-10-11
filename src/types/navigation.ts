@@ -7,6 +7,11 @@ export type RootStackParamList = {
   JournalEntry?: { id?: string; type?: JournalType };
   Calm: undefined;
   CalmMain: undefined;
+  BreathworkStudio: undefined;
+  Soundscapes: undefined;
+  SensoryGrounding: undefined;
+  BodyScan: undefined;
+  PanicAnchor: undefined;
   BreathingSession?: { preset?: BreathingPreset; duration?: number };
   GroundingExercise?: { type: GroundingType };
   Insights: undefined;

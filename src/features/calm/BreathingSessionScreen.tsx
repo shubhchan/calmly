@@ -7,6 +7,7 @@ import Svg, { Circle } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { calmRepository } from '../../database/repositories/calmRepository';
 
 const presetPatterns: Record<BreathingPreset, { inhale: number; hold: number; exhale: number; holdExhale: number }> = {
   box: { inhale: 4, hold: 4, exhale: 4, holdExhale: 4 },
@@ -123,6 +124,17 @@ export function BreathingSessionScreen() {
         if (next >= totalCycles) {
           setIsComplete(true);
           setIsRunning(false);
+          calmRepository.logSession({
+            type: 'breathing',
+            preset: safePreset,
+            duration: safeDuration * 60,
+            completed: true,
+          }).catch(() => {});
+          calmRepository.logBreathing({
+            preset: safePreset,
+            duration: safeDuration * 60,
+            cyclesCompleted: totalCycles,
+          }).catch(() => {});
           return prev;
         }
         return next;
