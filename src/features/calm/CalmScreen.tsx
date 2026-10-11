@@ -86,12 +86,7 @@ const PRESETS: Record<string, PresetInfo> = {
   },
 };
 
-const SOUNDSCAPES = [
-  { id: 'rain', title: 'Rain on Leaves', icon: 'i-water', subtitle: '432 Hz frequency' },
-  { id: 'ocean', title: 'Ocean Waves', icon: 'i-cloud', subtitle: 'Rhythmic tide' },
-  { id: 'forest', title: 'Forest Breeze', icon: 'i-leaf', subtitle: 'Earthy calm' },
-  { id: 'night', title: 'Deep Night', icon: 'i-moon', subtitle: 'Binaural sleep' },
-];
+import { soundService, SOUND_TRACKS } from '../../services/soundService';
 
 const BODY_ZONES = [
   {
@@ -139,9 +134,33 @@ export function CalmScreen() {
   const [pacingPhase, setPacingPhase] = useState<'Inhale' | 'Hold' | 'Exhale' | 'Rest'>('Inhale');
   const [secondsRemaining, setSecondsRemaining] = useState(4);
 
-  // Soundscape State
+  // Soundscape State & Playback
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [soundTimer, setSoundTimer] = useState<string>('15m');
+
+  const handleToggleSound = async (soundId: string) => {
+    if (activeSound === soundId) {
+      setActiveSound(null);
+      await soundService.stop();
+    } else {
+      setActiveSound(soundId);
+      await soundService.playTrack(soundId);
+    }
+  };
+
+  const handleSelectTimer = (timer: string) => {
+    setSoundTimer(timer === 'Off' ? '' : timer);
+    const minutes = timer === '15m' ? 15 : timer === '30m' ? 30 : timer === '60m' ? 60 : 0;
+    soundService.setSleepTimer(minutes, () => {
+      setActiveSound(null);
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      soundService.stop();
+    };
+  }, []);
 
   // Body Zone State
   const [selectedZone, setSelectedZone] = useState<string>('jaw');
@@ -409,7 +428,7 @@ export function CalmScreen() {
                 Nature Soundscapes
               </Text>
               <Text style={[styles.soundSectionSubtitle, { color: colors.textTertiary }]}>
-                {activeSound ? `Now Playing · ${SOUNDSCAPES.find(s => s.id === activeSound)?.title}` : 'Ambient acoustic immersion for restoration'}
+                {activeSound ? `Now Playing · ${SOUND_TRACKS.find(s => s.id === activeSound)?.title}` : 'Ambient acoustic immersion for restoration'}
               </Text>
             </View>
 
@@ -425,45 +444,58 @@ export function CalmScreen() {
           {/* Symmetrical 2x2 Soundscape Grid */}
           <View style={styles.soundGrid}>
             <View style={styles.soundGridRow}>
-              {SOUNDSCAPES.slice(0, 2).map((sound) => {
+              {SOUND_TRACKS.slice(0, 2).map((sound) => {
                 const isPlaying = activeSound === sound.id;
+                const tileBg = isPlaying
+                  ? (colors.isDark ? 'rgba(94, 190, 123, 0.16)' : '#EEF6F0')
+                  : (colors.isDark ? '#202B3E' : '#F6F2EA');
+                const tileBorder = isPlaying
+                  ? colors.accentPrimary
+                  : (colors.isDark ? '#2D3E56' : '#E5DED2');
+                const orbBg = isPlaying
+                  ? colors.accentPrimary
+                  : (colors.isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF');
+                const iconColor = isPlaying
+                  ? '#FFFFFF'
+                  : (colors.isDark ? '#F9FAFB' : colors.textPrimary);
+
                 return (
                   <Pressable
                     key={sound.id}
-                    onPress={() => setActiveSound(isPlaying ? null : sound.id)}
+                    onPress={() => handleToggleSound(sound.id)}
                     style={({ pressed }) => [
-                      styles.soundCardItem,
+                      styles.soundTile,
                       {
-                        backgroundColor: isPlaying
-                          ? (colors.accentBg || colors.accentPrimary + '15')
-                          : (colors.bgSecondary ?? '#F4EFE6'),
-                        borderColor: isPlaying ? colors.accentPrimary : colors.borderLight,
-                        opacity: pressed ? 0.8 : 1,
+                        backgroundColor: tileBg,
+                        borderColor: tileBorder,
+                        opacity: pressed ? 0.85 : 1,
                         transform: [{ scale: pressed ? 0.98 : 1 }],
                       },
                     ]}
                   >
-                    <View
-                      style={[
-                        styles.soundIconOrb,
-                        {
-                          backgroundColor: isPlaying ? colors.accentPrimary : colors.bgCard,
-                        },
-                      ]}
-                    >
-                      <AppIcon
-                        name={sound.icon}
-                        size={18}
-                        color={isPlaying ? '#FFFFFF' : colors.textPrimary}
-                        animated={!isPlaying}
-                      />
+                    <View style={styles.soundTileTopRow}>
+                      <View style={[styles.soundIconOrb, { backgroundColor: orbBg }]}>
+                        <AppIcon
+                          name={sound.icon}
+                          size={20}
+                          color={iconColor}
+                          animated={!isPlaying}
+                        />
+                      </View>
+                      {isPlaying ? (
+                        <View style={[styles.soundLiveBadge, { backgroundColor: colors.accentPrimary + '20' }]}>
+                          <Ionicons name="volume-medium" size={16} color={colors.accentPrimary} />
+                        </View>
+                      ) : (
+                        <Ionicons name="play-circle-outline" size={22} color={colors.textTertiary} />
+                      )}
                     </View>
-                    <View style={styles.soundTextCol}>
+
+                    <View style={styles.soundTileBottomCol}>
                       <Text
                         style={[
                           styles.soundItemTitle,
-                          { color: colors.textPrimary },
-                          isPlaying && { fontWeight: '700', color: colors.accentPrimary },
+                          { color: isPlaying ? colors.accentPrimary : colors.textPrimary },
                         ]}
                         numberOfLines={1}
                       >
@@ -479,53 +511,64 @@ export function CalmScreen() {
                         {sound.subtitle}
                       </Text>
                     </View>
-                    {isPlaying && (
-                      <View style={[styles.soundPlayingDot, { backgroundColor: colors.accentPrimary }]} />
-                    )}
                   </Pressable>
                 );
               })}
             </View>
+
             <View style={styles.soundGridRow}>
-              {SOUNDSCAPES.slice(2, 4).map((sound) => {
+              {SOUND_TRACKS.slice(2, 4).map((sound) => {
                 const isPlaying = activeSound === sound.id;
+                const tileBg = isPlaying
+                  ? (colors.isDark ? 'rgba(94, 190, 123, 0.16)' : '#EEF6F0')
+                  : (colors.isDark ? '#202B3E' : '#F6F2EA');
+                const tileBorder = isPlaying
+                  ? colors.accentPrimary
+                  : (colors.isDark ? '#2D3E56' : '#E5DED2');
+                const orbBg = isPlaying
+                  ? colors.accentPrimary
+                  : (colors.isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF');
+                const iconColor = isPlaying
+                  ? '#FFFFFF'
+                  : (colors.isDark ? '#F9FAFB' : colors.textPrimary);
+
                 return (
                   <Pressable
                     key={sound.id}
-                    onPress={() => setActiveSound(isPlaying ? null : sound.id)}
+                    onPress={() => handleToggleSound(sound.id)}
                     style={({ pressed }) => [
-                      styles.soundCardItem,
+                      styles.soundTile,
                       {
-                        backgroundColor: isPlaying
-                          ? (colors.accentBg || colors.accentPrimary + '15')
-                          : (colors.bgSecondary ?? '#F4EFE6'),
-                        borderColor: isPlaying ? colors.accentPrimary : colors.borderLight,
-                        opacity: pressed ? 0.8 : 1,
+                        backgroundColor: tileBg,
+                        borderColor: tileBorder,
+                        opacity: pressed ? 0.85 : 1,
                         transform: [{ scale: pressed ? 0.98 : 1 }],
                       },
                     ]}
                   >
-                    <View
-                      style={[
-                        styles.soundIconOrb,
-                        {
-                          backgroundColor: isPlaying ? colors.accentPrimary : colors.bgCard,
-                        },
-                      ]}
-                    >
-                      <AppIcon
-                        name={sound.icon}
-                        size={18}
-                        color={isPlaying ? '#FFFFFF' : colors.textPrimary}
-                        animated={!isPlaying}
-                      />
+                    <View style={styles.soundTileTopRow}>
+                      <View style={[styles.soundIconOrb, { backgroundColor: orbBg }]}>
+                        <AppIcon
+                          name={sound.icon}
+                          size={20}
+                          color={iconColor}
+                          animated={!isPlaying}
+                        />
+                      </View>
+                      {isPlaying ? (
+                        <View style={[styles.soundLiveBadge, { backgroundColor: colors.accentPrimary + '20' }]}>
+                          <Ionicons name="volume-medium" size={16} color={colors.accentPrimary} />
+                        </View>
+                      ) : (
+                        <Ionicons name="play-circle-outline" size={22} color={colors.textTertiary} />
+                      )}
                     </View>
-                    <View style={styles.soundTextCol}>
+
+                    <View style={styles.soundTileBottomCol}>
                       <Text
                         style={[
                           styles.soundItemTitle,
-                          { color: colors.textPrimary },
-                          isPlaying && { fontWeight: '700', color: colors.accentPrimary },
+                          { color: isPlaying ? colors.accentPrimary : colors.textPrimary },
                         ]}
                         numberOfLines={1}
                       >
@@ -541,9 +584,6 @@ export function CalmScreen() {
                         {sound.subtitle}
                       </Text>
                     </View>
-                    {isPlaying && (
-                      <View style={[styles.soundPlayingDot, { backgroundColor: colors.accentPrimary }]} />
-                    )}
                   </Pressable>
                 );
               })}
@@ -551,10 +591,10 @@ export function CalmScreen() {
           </View>
 
           {/* Sleep Timer & Ambient Controls Footer */}
-          <View style={[styles.soundFooterRow, { borderTopColor: colors.borderLight }]}>
+          <View style={[styles.soundFooterRow, { borderTopColor: colors.isDark ? '#2D3E56' : colors.borderLight }]}>
             <View style={styles.timerLabelGroup}>
               <Ionicons name="timer-outline" size={15} color={colors.textTertiary} />
-              <Text style={[styles.timerLabel, { color: colors.textTertiary }]}>
+              <Text style={[styles.timerLabel, { color: colors.textSecondary }]}>
                 Sleep Timer:
               </Text>
             </View>
@@ -564,12 +604,16 @@ export function CalmScreen() {
                 return (
                   <Pressable
                     key={timer}
-                    onPress={() => setSoundTimer(timer === 'Off' ? '' : timer)}
+                    onPress={() => handleSelectTimer(timer)}
                     style={[
                       styles.timerChip,
                       {
-                        backgroundColor: isTimerActive ? colors.accentPrimary : (colors.bgSecondary ?? '#F4EFE6'),
-                        borderColor: isTimerActive ? colors.accentPrimary : colors.borderLight,
+                        backgroundColor: isTimerActive
+                          ? colors.accentPrimary
+                          : (colors.isDark ? '#202B3E' : (colors.bgSecondary ?? '#F4EFE6')),
+                        borderColor: isTimerActive
+                          ? colors.accentPrimary
+                          : (colors.isDark ? '#2D3E56' : colors.borderLight),
                       },
                     ]}
                   >
@@ -1085,47 +1129,55 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   soundGrid: {
-    gap: 10,
+    width: '100%',
+    gap: 12,
   },
   soundGridRow: {
+    width: '100%',
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
-  soundCardItem: {
+  soundTile: {
     flex: 1,
+    minHeight: 110,
+    padding: 13,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    justifyContent: 'space-between',
+  },
+  soundTileTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1,
+    justifyContent: 'space-between',
+    width: '100%',
   },
   soundIconOrb: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  soundTextCol: {
-    flex: 1,
+  soundLiveBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+  },
+  soundTileBottomCol: {
+    width: '100%',
+    gap: 3,
+    marginTop: 10,
   },
   soundItemTitle: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '700',
     letterSpacing: -0.2,
   },
   soundItemSubtitle: {
     fontSize: 11,
     fontWeight: '500',
-  },
-  soundPlayingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
   },
   soundFooterRow: {
     flexDirection: 'row',
