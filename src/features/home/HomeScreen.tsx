@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon } from '../../components';
+import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration } from '../../components';
 import type { AppIconName } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
@@ -158,10 +158,10 @@ export function HomeScreen() {
         </View>
       </View>
 
-      {/* Hero Mood Card */}
-      <Card variant="elevated" style={{ marginBottom: 20, borderRadius: 20 }}>
+      {/* Hero Mindful Sanctuary Card */}
+      <Card variant="elevated" style={{ marginBottom: 20, borderRadius: 22, overflow: 'hidden' }}>
         <CardContent style={{ padding: 18 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View
                 style={{
@@ -193,30 +193,22 @@ export function HomeScreen() {
               <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accentPrimary }}>Check in</Text>
             </Pressable>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              <View
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 20,
-                  backgroundColor: colors.accentBg,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <AppIcon name="m-peaceful" size={28} color={colors.accentPrimary} />
-              </View>
-              <View style={{ marginLeft: 14, flex: 1 }}>
-                <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary }}>
-                  Peaceful & Grounded
-                </Text>
-                <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 2 }}>
-                  7/10 serenity · low stress today
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.3 }}>
+                Peaceful & Grounded
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.textTertiary, lineHeight: 18 }}>
+                7/10 serenity · low stress today. Take a mindful breath.
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <ProgressRing progress={0.7} size={34} strokeWidth={3.8} showPercentage={false} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.accentPrimary }}>
+                  Serenity in harmony
                 </Text>
               </View>
             </View>
-            <ProgressRing progress={0.7} size={46} strokeWidth={4.5} showPercentage={false} />
+            <MeditationHeroIllustration width={125} height={110} />
           </View>
         </CardContent>
       </Card>
@@ -321,8 +313,8 @@ export function HomeScreen() {
         ) : (dueHabits ?? []).length === 0 ? (
           <Card variant="outlined" style={{ borderRadius: 20 }}>
             <CardContent style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 }}>
-              <AppIcon name="l-walk" size={44} loop />
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginTop: 8 }}>
+              <HabitPlantingIllustration width={130} height={105} style={{ marginBottom: 6 }} />
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginTop: 4 }}>
                 No habits scheduled today
               </Text>
               <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: 'center', marginTop: 4, lineHeight: 18 }}>
@@ -478,7 +470,7 @@ export function HomeScreen() {
 }
 
 interface EmptyStateProps {
-  icon: AppIconName;
+  icon?: AppIconName;
   title: string;
   subtitle: string;
   actionLabel?: string;
@@ -486,11 +478,11 @@ interface EmptyStateProps {
   colors: any;
 }
 
-function EmptyState({ icon, title, subtitle, actionLabel, onAction, colors }: EmptyStateProps) {
+function EmptyState({ title, subtitle, actionLabel, onAction, colors }: EmptyStateProps) {
   return (
     <View style={{ alignItems: 'center', paddingVertical: 20, paddingHorizontal: 16 }}>
-      <AppIcon name={icon ?? 'l-book'} size={44} />
-      <Text style={{ fontSize: 16, fontWeight: '700', marginTop: 10, textAlign: 'center', color: colors.textPrimary }}>
+      <JournalReflectionIllustration width={130} height={105} style={{ marginBottom: 6 }} />
+      <Text style={{ fontSize: 16, fontWeight: '700', marginTop: 4, textAlign: 'center', color: colors.textPrimary }}>
         {title ?? 'Nothing here yet'}
       </Text>
       <Text style={{ fontSize: 13, marginTop: 4, textAlign: 'center', color: colors.textTertiary, lineHeight: 18 }}>

@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, AppIcon } from '../../components';
+import {
+  Card,
+  CardContent,
+  PrimaryButton,
+  AppIcon,
+  BreathworkIllustration,
+  SensoryGroundingIllustration,
+  BodyScanIllustration,
+  PanicAnchorIllustration,
+} from '../../components';
 import { RootStackParamList, BreathingPreset, GroundingType } from '../../types/navigation';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -667,13 +676,16 @@ export function CalmScreen() {
       {/* 5. TAB VIEW: Breathwork Library */}
       {activeTab === 'breathwork' && (
         <View style={styles.tabContentContainer}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
-              Respiratory Techniques
-            </Text>
-            <Text style={[styles.sectionSubheading, { color: colors.textTertiary }]}>
-              Clinically formulated breath patterns
-            </Text>
+          <View style={[styles.sectionTitleRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
+                Respiratory Techniques
+              </Text>
+              <Text style={[styles.sectionSubheading, { color: colors.textTertiary }]}>
+                Clinically formulated breath patterns
+              </Text>
+            </View>
+            <BreathworkIllustration width={76} height={62} />
           </View>
 
           <View style={styles.techniquesList}>
@@ -748,9 +760,7 @@ export function CalmScreen() {
           <Card variant="elevated" style={styles.groundingHeroCard}>
             <CardContent style={styles.groundingHeroContent}>
               <View style={styles.groundingHeroTop}>
-                <View style={[styles.heroGroundingIcon, { backgroundColor: colors.accentBg }]}>
-                  <AppIcon name="l-eye" size={38} loop />
-                </View>
+                <SensoryGroundingIllustration width={88} height={78} />
                 <View style={styles.groundingHeroMeta}>
                   <Text style={[styles.groundingHeroTitle, { color: colors.textPrimary }]}>
                     5-4-3-2-1 Senses Deck
@@ -802,12 +812,17 @@ export function CalmScreen() {
         <View style={styles.tabContentContainer}>
           <Card variant="elevated" style={styles.bodyScanCard}>
             <CardContent style={styles.bodyScanContent}>
-              <Text style={[styles.bodyScanTitle, { color: colors.textPrimary }]}>
-                Interactive Muscle Tension Reliever
-              </Text>
-              <Text style={[styles.bodyScanSubtitle, { color: colors.textTertiary }]}>
-                Tap any anatomy zone to release held stress
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={[styles.bodyScanTitle, { color: colors.textPrimary }]}>
+                    Muscle Tension Reliever
+                  </Text>
+                  <Text style={[styles.bodyScanSubtitle, { color: colors.textTertiary, marginTop: 4 }]}>
+                    Tap any anatomy zone to release held stress
+                  </Text>
+                </View>
+                <BodyScanIllustration width={88} height={78} />
+              </View>
 
               {/* Anatomy Zones Row */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.zonesScroll}>
@@ -876,9 +891,7 @@ export function CalmScreen() {
           <Card variant="elevated" style={[styles.panicCard, { borderColor: (colors.accentRose || '#EB697F') + '60' }]}>
             <CardContent style={styles.panicContent}>
               <View style={styles.panicHeaderRow}>
-                <View style={[styles.panicIconOrb, { backgroundColor: (colors.accentRose || '#EB697F') + '20' }]}>
-                  <Ionicons name="shield-checkmark" size={32} color={colors.accentRose || '#EB697F'} />
-                </View>
+                <PanicAnchorIllustration width={88} height={78} />
                 <View style={styles.panicTitleContainer}>
                   <Text style={[styles.panicTitle, { color: colors.textPrimary }]}>
                     Acute Stress & Panic Anchor

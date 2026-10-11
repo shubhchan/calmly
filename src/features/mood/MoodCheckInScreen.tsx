@@ -4,7 +4,7 @@ import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navig
 import { Card, CardContent } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressRing } from '../../components/ProgressRing';
-import { AppIcon, moodIcon } from '../../components';
+import { AppIcon, moodIcon, MoodAuraIllustration } from '../../components';
 import type { AppIconName } from '../../components';
 import { RootStackParamList, MoodType } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -83,6 +83,7 @@ export function MoodCheckInScreen() {
 
   const renderMoodSelector = () => (
     <View style={styles.stepContainer}>
+      <MoodAuraIllustration width={120} height={95} style={{ alignSelf: 'center', marginBottom: 2 }} />
       <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>How are you feeling right now?</Text>
       <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>Select the emotion closest to your inner state</Text>
       <View style={styles.moodGrid}>
@@ -259,11 +260,12 @@ export function MoodCheckInScreen() {
   );
 
   const renderCompleteStep = () => (
-    <View style={[styles.stepContainer, { alignItems: 'center', paddingTop: 40 }]}>
-      <View style={[styles.completeIconCircle, { backgroundColor: colors.accentPrimary + '20' }]}>
-        <Ionicons name="checkmark-circle" size={54} color={colors.accentPrimary} />
+    <View style={[styles.stepContainer, { alignItems: 'center', paddingTop: 30 }]}>
+      <MoodAuraIllustration width={150} height={125} style={{ marginBottom: 12 }} />
+      <View style={[styles.completeIconCircle, { backgroundColor: colors.accentPrimary + '20', width: 64, height: 64, borderRadius: 32 }]}>
+        <Ionicons name="checkmark-circle" size={42} color={colors.accentPrimary} />
       </View>
-      <Text style={[styles.stepTitle, { color: colors.textPrimary, marginTop: 18 }]}>Check-in Complete!</Text>
+      <Text style={[styles.stepTitle, { color: colors.textPrimary, marginTop: 14 }]}>Check-in Complete!</Text>
       <Text style={[styles.stepSubtitle, { color: colors.textSecondary, textAlign: 'center', marginTop: 8 }]}>
         Thank you for honoring how you feel right now.
       </Text>

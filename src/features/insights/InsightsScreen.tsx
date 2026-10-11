@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository, WeeklyStats, Insight, HabitStats } from '../../database/repositories/insightsRepository';
-import { Card, CardContent, PrimaryButton, AppIcon } from '../../components';
+import { Card, CardContent, PrimaryButton, AppIcon, MoodLandscapeIllustration, HabitPlantingIllustration, MoodAuraIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useThemeColors } from '../../theme/ThemeContext';
@@ -400,7 +400,7 @@ export function InsightsScreen() {
             </View>
           ) : (
             <View style={styles.emptyChartBox}>
-              <AppIcon name="l-chart" size={38} loop />
+              <MoodLandscapeIllustration width={190} height={125} style={{ marginBottom: 6 }} />
               <Text style={[styles.emptyChartTitle, { color: colors.textPrimary }]}>
                 No data points yet
               </Text>
@@ -424,7 +424,7 @@ export function InsightsScreen() {
 
           {(habitStats ?? []).length === 0 ? (
             <View style={styles.emptyInlineBox}>
-              <AppIcon name="l-walk" size={32} loop />
+              <HabitPlantingIllustration width={120} height={100} style={{ marginBottom: 4 }} />
               <Text style={[styles.emptyInlineText, { color: colors.textTertiary }]}>
                 No habits tracked yet this week.
               </Text>
@@ -487,7 +487,7 @@ export function InsightsScreen() {
 
           {(insights ?? []).length === 0 ? (
             <View style={styles.emptyInlineBox}>
-              <AppIcon name="l-star" size={32} loop />
+              <MoodAuraIllustration width={120} height={100} style={{ marginBottom: 4 }} />
               <Text style={[styles.emptyInlineText, { color: colors.textTertiary }]}>
                 Keep tracking daily to unlock mindful personal reflections.
               </Text>

@@ -10,6 +10,7 @@ import PositiveMoment from '../../database/models/PositiveMoment';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { AppIcon } from '../../components/AppIcon';
 import type { AppIconName } from '../../components/AppIcon';
+import { GratitudeBloomIllustration, SelfCompassionIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 
@@ -122,9 +123,11 @@ export function GratitudeScreen() {
 
       {(entries ?? []).length === 0 ? (
         <View style={styles.emptyState}>
-          <View style={[styles.emptyIconWrap, { backgroundColor: colors.accentPrimary + '14' }]}>
-            <AppIcon name={emptyIcon} size={48} />
-          </View>
+          {type === 'gratitude' ? (
+            <GratitudeBloomIllustration width={160} height={135} style={{ marginBottom: 6 }} />
+          ) : (
+            <SelfCompassionIllustration width={160} height={135} style={{ marginBottom: 6 }} />
+          )}
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{emptyTitle}</Text>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{emptySubtitle}</Text>
           <PrimaryButton onPress={handleAdd} title={type === 'gratitude' ? 'Record Gratitude' : 'Save Good Thing'} style={styles.emptyButton} />

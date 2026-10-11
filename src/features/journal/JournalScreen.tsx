@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, AppIcon } from '../../components';
+import { Card, CardContent, PrimaryButton, AppIcon, JournalReflectionIllustration } from '../../components';
 import type { AppIconName } from '../../components';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -210,9 +210,7 @@ export function JournalScreen() {
         ) : (
           <Card variant="outlined" style={styles.emptyCard}>
             <CardContent style={styles.emptyContent}>
-              <View style={[styles.emptyIconCircle, { backgroundColor: colors.accentBg }]}>
-                <AppIcon name="l-book" size={42} loop />
-              </View>
+              <JournalReflectionIllustration width={150} height={125} style={{ marginBottom: 4 }} />
               <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
                 A fresh blank canvas
               </Text>

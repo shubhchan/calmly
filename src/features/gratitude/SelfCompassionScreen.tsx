@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 
 import { useNavigation } from '@react-navigation/native';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { SelfCompassionIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { getCalmEncouragement } from '../../utils/encouragement';
 import { useThemeColors } from '../../theme/ThemeContext';
@@ -79,9 +80,7 @@ export function SelfCompassionScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Card style={styles.completeCard}>
-          <View style={[styles.completeIconWrap, { backgroundColor: (colors.accentRose || '#EB697F') + '20' }]}>
-            <Ionicons name="heart" size={48} color={colors.accentRose || '#EB697F'} />
-          </View>
+          <SelfCompassionIllustration width={160} height={135} style={{ marginBottom: 10 }} />
           <Text style={[styles.completeTitle, { color: colors.textPrimary }]}>Practice Complete</Text>
           <Text style={[styles.completeText, { color: colors.textSecondary }]}>
             {(() => {

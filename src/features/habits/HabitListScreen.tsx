@@ -8,6 +8,7 @@ import Habit from '../../database/models/Habit';
 import { getHabitEncouragement } from '../../utils/encouragement';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { StatPill } from '../../components/StatPill';
+import { HabitPlantingIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 
@@ -212,9 +213,7 @@ export function HabitListScreen() {
 
       {showEmptyState ? (
         <View style={styles.emptyState}>
-          <View style={[styles.emptyIconWrap, { backgroundColor: colors.accentPrimary + '16' }]}>
-            <Ionicons name="leaf-outline" size={48} color={colors.accentPrimary} />
-          </View>
+          <HabitPlantingIllustration width={160} height={135} style={{ marginBottom: 6 }} />
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No habits yet</Text>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{getHabitEncouragement('empty')}</Text>
           <PrimaryButton onPress={handleAddHabit} title="Create Your First Habit" style={styles.emptyButton} />
