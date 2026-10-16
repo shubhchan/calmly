@@ -46,19 +46,31 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
+      # Build release APK targeting physical device ARM ABIs (arm64-v8a, armeabi-v7a).
+      # Omitting desktop x86/x86_64 emulator binaries reduces APK size from ~54MB to ~30MB,
+      # ensuring it stays well under Telegram's 50MB bot upload limit.
       - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g"
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g"
 
-      - name: Rename APK with version info
+      - name: Rename APK and check file size
         run: |
           APK_SRC=$(ls android/app/build/outputs/apk/release/*.apk | head -n 1)
           echo "Built: $APK_SRC"
-          ls -lh android/app/build/outputs/apk/release/
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
           APK_DST="calmly-${SHORT_SHA}.apk"
           cp "$APK_SRC" "$APK_DST"
+          ls -lh "$APK_DST"
+          APK_BYTES=$(stat -c%s "$APK_DST")
+          echo "APK Size: $APK_BYTES bytes"
           echo "APK_PATH=$APK_DST" >> "$GITHUB_ENV"
+          echo "APK_BYTES=$APK_BYTES" >> "$GITHUB_ENV"
+          # Telegram Bot API has a strict 50 MB (52,428,800 bytes) limit for bot uploads
+          if [ "$APK_BYTES" -lt 50000000 ]; then
+            echo "DIRECT_TG_UPLOAD=true" >> "$GITHUB_ENV"
+          else
+            echo "DIRECT_TG_UPLOAD=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
@@ -73,7 +85,9 @@ jobs:
           echo "::warning::Telegram secrets not set. APK is saved as a workflow artifact, but was NOT sent to Telegram. Add TELEGRAM_TOKEN (or TELEGRAM_BOT_TOKEN) and TELEGRAM_TO (or TELEGRAM_CHAT_ID) under GitHub repo Settings > Secrets and variables > Actions."
 
       - name: Send APK to Telegram Channel
-        if: ${{ env.TELEGRAM_TOKEN != '' && env.TELEGRAM_TO != '' }}
+        id: send_apk
+        if: ${{ env.TELEGRAM_TOKEN != '' && env.TELEGRAM_TO != '' && env.DIRECT_TG_UPLOAD == 'true' }}
+        continue-on-error: true
         uses: appleboy/telegram-action@master
         with:
           to: ${{ env.TELEGRAM_TO }}
@@ -89,3 +103,21 @@ jobs:
             *Pushed By:* ${{ github.actor }}
 
             The release APK has been attached below.
+
+      - name: Send Fallback Message to Telegram (if file was too large or direct upload failed)
+        if: ${{ env.TELEGRAM_TOKEN != '' && env.TELEGRAM_TO != '' && (env.DIRECT_TG_UPLOAD != 'true' || steps.send_apk.outcome == 'failure') }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ env.TELEGRAM_TO }}
+          token: ${{ env.TELEGRAM_TOKEN }}
+          format: markdown
+          message: |
+            🚀 *New Calmly APK Build Successful!*
+
+            *Repository:* ${{ github.repository }}
+            *Branch:* ${{ github.ref_name }}
+            *Commit:* ${{ github.sha }}
+            *Pushed By:* ${{ github.actor }}
+
+            📦 *Download APK:*
+            [Download Workflow Artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})

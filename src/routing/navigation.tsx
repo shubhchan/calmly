@@ -446,9 +446,9 @@ const tabBarStyles = StyleSheet.create({
     borderRadius: 15,
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: fontFamilies.sans.semiBold,
-    letterSpacing: 0.1,
+    letterSpacing: 0.15,
     textAlign: 'center',
     marginTop: 2,
     width: '100%',

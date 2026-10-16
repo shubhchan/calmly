@@ -17,21 +17,8 @@ import {
   bootLog,
   getBootTrail,
 } from './src/components/ErrorBoundary';
-import {
-  useFonts,
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
-  PlusJakartaSans_800ExtraBold,
-} from '@expo-google-fonts/plus-jakarta-sans';
-import {
-  Newsreader_400Regular,
-  Newsreader_500Medium,
-  Newsreader_600SemiBold,
-  Newsreader_700Bold,
-  Newsreader_400Regular_Italic,
-} from '@expo-google-fonts/newsreader';
+import './src/theme/fontPatcher';
+import { useFonts } from 'expo-font';
 
 const NAV_READY_TIMEOUT_MS = 12000;
 
@@ -323,18 +310,26 @@ function AppShell({
   );
 }
 
+const calmingFontAsset = require('./assets/fonts/OddlyCalming.ttf');
+
 export default function App() {
   const [fontsLoaded] = useFonts({
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold,
-    Newsreader_400Regular,
-    Newsreader_500Medium,
-    Newsreader_600SemiBold,
-    Newsreader_700Bold,
-    Newsreader_400Regular_Italic,
+    OddlyCalming: calmingFontAsset,
+    'OddlyCalming-Regular': calmingFontAsset,
+    'OddlyCalming-Bold': calmingFontAsset,
+    'OddlyCalming-Medium': calmingFontAsset,
+    'OddlyCalming-SemiBold': calmingFontAsset,
+    PatrickHand_400Regular: calmingFontAsset,
+    PlusJakartaSans_400Regular: calmingFontAsset,
+    PlusJakartaSans_500Medium: calmingFontAsset,
+    PlusJakartaSans_600SemiBold: calmingFontAsset,
+    PlusJakartaSans_700Bold: calmingFontAsset,
+    PlusJakartaSans_800ExtraBold: calmingFontAsset,
+    Newsreader_400Regular: calmingFontAsset,
+    Newsreader_500Medium: calmingFontAsset,
+    Newsreader_600SemiBold: calmingFontAsset,
+    Newsreader_700Bold: calmingFontAsset,
+    Newsreader_400Regular_Italic: calmingFontAsset,
   });
 
   const [navReady, setNavReady] = useState(false);

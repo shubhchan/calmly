@@ -297,10 +297,9 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   title: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    fontFamily: fontFamilies.calming.bold,
+    fontSize: 32,
+    letterSpacing: 0.2,
   },
   subtitle: {
     fontFamily: fontFamilies.sans.medium,
@@ -317,10 +316,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   sectionTitle: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontFamily: fontFamilies.calming.bold,
+    fontSize: 20,
+    letterSpacing: 0.1,
   },
   newActionLink: {
     flexDirection: 'row',

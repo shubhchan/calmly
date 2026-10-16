@@ -5,6 +5,11 @@ module.exports = {
   presets: [require('nativewind/preset')],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['OddlyCalming', 'PatrickHand_400Regular', 'sans-serif'],
+        serif: ['OddlyCalming', 'PatrickHand_400Regular', 'serif'],
+        calming: ['OddlyCalming', 'PatrickHand_400Regular', 'casual'],
+      },
       fontSize: {
         'display-sm': ['28px', { lineHeight: '34px' }],
         'headline-md': ['18px', { lineHeight: '24px' }],

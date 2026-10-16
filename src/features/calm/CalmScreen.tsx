@@ -457,10 +457,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   mainTitle: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    fontFamily: fontFamilies.calming.bold,
+    fontSize: 32,
+    letterSpacing: 0.2,
   },
   mainSubtitle: {
     fontFamily: fontFamilies.sans.medium,
@@ -534,10 +533,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   sectionHeading: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 23,
+    fontFamily: fontFamilies.calming.bold,
+    fontSize: 20,
+    lineHeight: 26,
+    letterSpacing: 0.1,
   },
   sectionSub: {
     fontFamily: fontFamilies.sans.regular,

@@ -155,11 +155,10 @@ export function HomeScreen() {
           <View>
             <Text
               style={{
-                fontSize: 30,
-                fontFamily: fontFamilies.serif.bold,
-                fontWeight: '800',
+                fontSize: 34,
+                fontFamily: fontFamilies.calming.regular,
                 color: colors.textPrimary,
-                letterSpacing: -0.6,
+                letterSpacing: 0.3,
               }}
             >
               {greeting}

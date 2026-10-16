@@ -11,31 +11,31 @@
  * these exact hex values. If you change a color here, change it there too.
  */
 :root {
-  --color-bg-primary: #FBF9F5;
-  --color-bg-secondary: #F4EFE6;
-  --color-bg-tertiary: #ECE5D8;
+  --color-bg-primary: #FAF8F5;
+  --color-bg-secondary: #F3ECE2;
+  --color-bg-tertiary: #E9DFC4;
   --color-bg-card: #FFFFFF;
-  --color-bg-card-hover: #F8F4EC;
+  --color-bg-card-hover: #F7F2E9;
 
-  --color-text-primary: #1A212D;
-  --color-text-secondary: #384455;
-  --color-text-tertiary: #607085;
-  --color-text-inverse: #FBF9F5;
+  --color-text-primary: #1F242E;
+  --color-text-secondary: #475467;
+  --color-text-tertiary: #667085;
+  --color-text-inverse: #FAF8F5;
 
-  --color-border-light: #E6E0D4;
-  --color-border-medium: #D5CCC0;
+  --color-border-light: #EBE3D5;
+  --color-border-medium: #D8CEBD;
 
-  --color-accent-sage: #3E7B52;
-  --color-accent-lavender: #6C5CE7;
-  --color-accent-sky: #2563EB;
-  --color-accent-peach: #D96547;
-  --color-accent-rose: #DB3A60;
-  --color-accent-ocean: #0E7490;
+  --color-accent-sage: #447C54;
+  --color-accent-lavender: #705FCF;
+  --color-accent-sky: #3478D8;
+  --color-accent-peach: #D76949;
+  --color-accent-rose: #D44766;
+  --color-accent-ocean: #177B8D;
 
-  --color-success: #3E7B52;
-  --color-warning: #D96547;
-  --color-error: #DB3A60;
-  --color-info: #2563EB;
+  --color-success: #447C54;
+  --color-warning: #D76949;
+  --color-error: #D44766;
+  --color-info: #3478D8;
 
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-soft-lg: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.08);

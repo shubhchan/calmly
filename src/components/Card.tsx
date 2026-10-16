@@ -29,26 +29,26 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
     const isDark = !!colors?.isDark;
 
     const baseCardStyle: ViewStyle = {
-      backgroundColor: colors?.bgCard ?? (isDark ? '#182130' : '#FFFFFF'),
-      borderRadius: variant === 'elevated' ? 24 : 20,
+      backgroundColor: colors?.bgCard ?? (isDark ? '#192332' : '#FFFFFF'),
+      borderRadius: variant === 'elevated' ? 28 : 24,
       borderWidth: 1,
-      borderColor: colors?.borderLight ?? (isDark ? '#263346' : '#E6E0D4'),
+      borderColor: colors?.borderLight ?? (isDark ? '#243245' : '#EBE3D5'),
     };
 
     const variantStyles: Record<string, ViewStyle> = {
       default: {
         shadowColor: colors?.textPrimary ?? '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isDark ? 0.35 : 0.06,
-        shadowRadius: 8,
+        shadowOpacity: isDark ? 0.35 : 0.04,
+        shadowRadius: 10,
         elevation: 2,
       },
       elevated: {
         shadowColor: colors?.textPrimary ?? '#000000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: isDark ? 0.45 : 0.09,
-        shadowRadius: 14,
-        elevation: 4,
+        shadowOpacity: isDark ? 0.45 : 0.07,
+        shadowRadius: 16,
+        elevation: 3,
       },
       outlined: {
         shadowOpacity: 0,
