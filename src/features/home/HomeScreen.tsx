@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration } from '../../components';
+import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration, TactilePressable, StaggeredEntry, CelebratoryCheckbox, SkeletonCard } from '../../components';
 import type { AppIconName } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { bootLog } from '../../components/ErrorBoundary';
 import { format } from 'date-fns';
+import { hapticFeedback } from '../../utils/haptics';
+import { fontFamilies } from '../../theme/typography';
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -47,9 +49,10 @@ export function HomeScreen() {
     renderLoggedRef.current = true;
     bootLog('home-render');
   }
+  const hasLoadedRef = useRef(false);
 
   const loadHomeData = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const [allHabits, completions, journals, mood] = await Promise.all([
         habitRepository.getAll(false),
@@ -68,14 +71,14 @@ export function HomeScreen() {
       setRecentJournals([]);
       setLatestMood(null);
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     bootLog('home-mounted');
-    loadHomeData();
-  }, [loadHomeData]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -150,10 +153,26 @@ export function HomeScreen() {
       <View style={{ marginBottom: 22, marginTop: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View>
-            <Text style={{ fontSize: 28, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5 }}>
+            <Text
+              style={{
+                fontSize: 30,
+                fontFamily: fontFamilies.serif.bold,
+                fontWeight: '800',
+                color: colors.textPrimary,
+                letterSpacing: -0.6,
+              }}
+            >
               {greeting}
             </Text>
-            <Text style={{ fontSize: 15, fontWeight: '500', color: colors.textTertiary, marginTop: 2 }}>
+            <Text
+              style={{
+                fontSize: 14,
+                fontFamily: fontFamilies.sans.medium,
+                fontWeight: '500',
+                color: colors.textTertiary,
+                marginTop: 2,
+              }}
+            >
               {dateLabel}
             </Text>
           </View>
@@ -188,12 +207,15 @@ export function HomeScreen() {
                   marginRight: 8,
                 }}
               />
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>
+              <Text style={{ fontSize: 16, fontFamily: fontFamilies.sans.bold, fontWeight: '700', color: colors.textPrimary }}>
                 Daily Mindset
               </Text>
             </View>
             <Pressable
-              onPress={handleMoodCheckIn}
+              onPress={() => {
+                hapticFeedback.light();
+                handleMoodCheckIn();
+              }}
               style={({ pressed }) => [
                 {
                   paddingVertical: 6,
@@ -203,10 +225,11 @@ export function HomeScreen() {
                   borderWidth: 1,
                   borderColor: colors.accentBorder,
                   opacity: pressed ? 0.75 : 1,
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
                 },
               ]}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accentPrimary }}>Check in</Text>
+              <Text style={{ fontSize: 13, fontFamily: fontFamilies.sans.bold, fontWeight: '700', color: colors.accentPrimary }}>Check in</Text>
             </Pressable>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -244,24 +267,22 @@ export function HomeScreen() {
 
       {/* Quick Mindful Actions */}
       <View style={{ marginBottom: 22 }}>
-        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>
+        <Text style={{ fontSize: 20, fontFamily: fontFamilies.serif.semiBold, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>
           Quick Practices
         </Text>
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Pressable
+          <TactilePressable
             onPress={handleCalmDown}
-            style={({ pressed }) => [
-              {
-                flex: 1,
-                padding: 16,
-                borderRadius: 20,
-                backgroundColor: colors.accentBg,
-                borderWidth: 1,
-                borderColor: colors.accentBorder,
-                opacity: pressed ? 0.85 : 1,
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-              },
-            ]}
+            scaleDownTo={0.97}
+            hapticStyle="light"
+            style={{
+              flex: 1,
+              padding: 16,
+              borderRadius: 20,
+              backgroundColor: colors.accentBg,
+              borderWidth: 1,
+              borderColor: colors.accentBorder,
+            }}
           >
             <View
               style={{
@@ -282,22 +303,20 @@ export function HomeScreen() {
             <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 2, lineHeight: 16 }}>
               Breathing & grounding
             </Text>
-          </Pressable>
+          </TactilePressable>
 
-          <Pressable
+          <TactilePressable
             onPress={() => navigation?.navigate?.('Journal')}
-            style={({ pressed }) => [
-              {
-                flex: 1,
-                padding: 16,
-                borderRadius: 20,
-                backgroundColor: colors.bgCard,
-                borderWidth: 1,
-                borderColor: colors.borderLight,
-                opacity: pressed ? 0.85 : 1,
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-              },
-            ]}
+            scaleDownTo={0.97}
+            hapticStyle="light"
+            style={{
+              flex: 1,
+              padding: 16,
+              borderRadius: 20,
+              backgroundColor: colors.bgCard,
+              borderWidth: 1,
+              borderColor: colors.borderLight,
+            }}
           >
             <View
               style={{
@@ -318,25 +337,25 @@ export function HomeScreen() {
             <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 2, lineHeight: 16 }}>
               Reflect & write
             </Text>
-          </Pressable>
+          </TactilePressable>
         </View>
       </View>
 
       {/* Today's Habits */}
       <View style={{ marginBottom: 22 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
+          <Text style={{ fontSize: 20, fontFamily: fontFamilies.serif.semiBold, fontWeight: '700', color: colors.textPrimary }}>
             Today&apos;s Habits
           </Text>
-          <Pressable onPress={() => navigation?.navigate?.('Habits')}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.accentPrimary }}>View all</Text>
+          <Pressable onPress={() => { hapticFeedback.light(); navigation?.navigate?.('Habits'); }}>
+            <Text style={{ fontSize: 14, fontFamily: fontFamilies.sans.semiBold, fontWeight: '600', color: colors.accentPrimary }}>View all</Text>
           </Pressable>
         </View>
 
         {loading ? (
           <View style={{ gap: 10 }}>
             {[1, 2, 3].map((i) => (
-              <View key={i} style={{ height: 60, borderRadius: 18, backgroundColor: colors.borderLight }} />
+              <SkeletonCard key={i} rows={2} />
             ))}
           </View>
         ) : (dueHabits ?? []).length === 0 ? (
@@ -361,83 +380,67 @@ export function HomeScreen() {
           </Card>
         ) : (
           <View style={{ gap: 10 }}>
-            {(dueHabits ?? []).slice(0, 3).map((habit) => {
+            {(dueHabits ?? []).slice(0, 3).map((habit, index) => {
               const isCompleted = !!(todayCompletions ?? {})?.[(habit as any)?.id];
               return (
-                <TouchableOpacity
-                  key={habit?.id ?? Math.random().toString()}
-                  onPress={() => habit && handleHabitPress(habit)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 18,
-                    paddingVertical: 14,
-                    backgroundColor: colors.bgCard,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: isCompleted ? colors.accentBorder : colors.borderLight,
-                    gap: 12,
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <View
-                      style={{
-                        width: 42,
-                        height: 42,
-                        borderRadius: 14,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: (habit as any)?.color || colors.accentPrimary,
-                        marginTop: 2,
-                      }}
-                    >
-                      <Ionicons name={getIconName((habit as any)?.icon) as any} size={20} color="white" />
-                    </View>
-                    <View style={{ flex: 1, gap: 3 }}>
-                      <Text
+                <StaggeredEntry key={habit?.id ?? Math.random().toString()} index={index}>
+                  <TactilePressable
+                    onPress={() => habit && handleHabitPress(habit)}
+                    scaleDownTo={0.98}
+                    hapticStyle="none"
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingHorizontal: 18,
+                      paddingVertical: 14,
+                      backgroundColor: colors.bgCard,
+                      borderRadius: 20,
+                      borderWidth: 1.2,
+                      borderColor: isCompleted ? colors.accentBorder : colors.borderLight,
+                      gap: 12,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <View
                         style={{
-                          fontSize: 16,
-                          fontWeight: '700',
-                          lineHeight: 22,
-                          color: colors.textPrimary,
-                          textDecorationLine: isCompleted ? 'line-through' : 'none',
-                          opacity: isCompleted ? 0.7 : 1,
+                          width: 42,
+                          height: 42,
+                          borderRadius: 14,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: (habit as any)?.color || colors.accentPrimary,
+                          marginTop: 2,
                         }}
                       >
-                        {(habit as any)?.name ?? 'Untitled'}
-                      </Text>
-                      <Text style={{ fontSize: 12, lineHeight: 16, color: isCompleted ? colors.accentPrimary : colors.textTertiary }}>
-                        {isCompleted ? 'Completed today ✓' : 'Tap circle to mark done'}
-                      </Text>
+                        <Ionicons name={getIconName((habit as any)?.icon) as any} size={20} color="white" />
+                      </View>
+                      <View style={{ flex: 1, gap: 3 }}>
+                        <Text
+                          style={{
+                            fontSize: 16,
+                            fontWeight: '700',
+                            lineHeight: 22,
+                            color: colors.textPrimary,
+                            textDecorationLine: isCompleted ? 'line-through' : 'none',
+                            opacity: isCompleted ? 0.7 : 1,
+                          }}
+                        >
+                          {(habit as any)?.name ?? 'Untitled'}
+                        </Text>
+                        <Text style={{ fontSize: 12, lineHeight: 16, color: isCompleted ? colors.accentPrimary : colors.textTertiary }}>
+                          {isCompleted ? 'Completed today ✓' : 'Tap to mark done'}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <TouchableOpacity
-                    onPress={(e) => {
-                      e?.stopPropagation?.();
-                      toggleHabit(habit, isCompleted);
-                    }}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      borderWidth: 2,
-                      borderColor: colors.accentPrimary,
-                      backgroundColor: isCompleted ? colors.accentPrimary : 'transparent',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginTop: 2,
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={isCompleted ? 'checkmark' : 'checkmark-outline'}
-                      size={20}
-                      color={isCompleted ? 'white' : colors.accentPrimary}
+                    <CelebratoryCheckbox
+                      checked={isCompleted}
+                      onToggle={() => toggleHabit(habit, isCompleted)}
+                      activeColor={colors.accentPrimary}
+                      borderColor={colors.accentBorder || colors.accentPrimary}
                     />
-                  </TouchableOpacity>
-                </TouchableOpacity>
+                  </TactilePressable>
+                </StaggeredEntry>
               );
             })}
             {(dueHabits ?? []).length > 3 && (
@@ -484,18 +487,21 @@ export function HomeScreen() {
           ) : (
             <View style={{ gap: 10 }}>
               {(recentJournals ?? []).slice(0, 2).map((entry) => (
-                <TouchableOpacity
+                <Pressable
                   key={entry.id}
                   onPress={() => navigation?.navigate?.('JournalEntry', { id: entry.id, type: entry.type })}
-                  style={{
-                    padding: 14,
-                    backgroundColor: colors.bgCard,
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: colors.borderLight,
-                    gap: 6,
-                  }}
-                  activeOpacity={0.8}
+                  style={({ pressed }) => [
+                    {
+                      padding: 14,
+                      backgroundColor: colors.bgCard,
+                      borderRadius: 16,
+                      borderWidth: 1.2,
+                      borderColor: colors.borderLight,
+                      gap: 6,
+                      opacity: pressed ? 0.9 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    },
+                  ]}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary, flex: 1, marginRight: 8 }} numberOfLines={1}>
@@ -508,7 +514,7 @@ export function HomeScreen() {
                   <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18 }} numberOfLines={2}>
                     {entry.body}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </View>
           )}

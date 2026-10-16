@@ -1,11 +1,13 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, JournalReflectionIllustration } from '../../components';
+import { Card, CardContent, PrimaryButton, JournalReflectionIllustration, StaggeredEntry, TactilePressable } from '../../components';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { format } from 'date-fns';
+import { hapticFeedback } from '../../utils/haptics';
+import { fontFamilies } from '../../theme/typography';
 
 interface JournalTemplate {
   id: string;
@@ -30,9 +32,10 @@ export function JournalScreen() {
   const colors = useThemeColors();
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasLoadedRef = useRef(false);
 
-  const loadEntries = useCallback(async () => {
-    setLoading(true);
+  const loadEntries = useCallback(async (showSpinner: boolean = false) => {
+    if (showSpinner || !hasLoadedRef.current) setLoading(true);
     try {
       const all = await journalRepository.getAll();
       setEntries(all ?? []);
@@ -40,6 +43,7 @@ export function JournalScreen() {
       console.error('Failed to load journals:', e);
       setEntries([]);
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, []);
@@ -52,6 +56,7 @@ export function JournalScreen() {
   );
 
   const handleToggleFavorite = async (entry: any) => {
+    hapticFeedback.medium();
     try {
       await journalRepository.toggleFavorite(entry.id);
       loadEntries();
@@ -60,20 +65,24 @@ export function JournalScreen() {
     }
   };
 
-  const renderJournalType = (item: JournalTemplate) => (
-    <Pressable
-      key={item.id}
-      onPress={() => navigation?.navigate?.('JournalEntry', { type: item.id as any })}
-      style={({ pressed }) => [
-        styles.templateButton,
-        {
-          backgroundColor: colors.isDark ? '#1C2636' : colors.bgSecondary,
-          borderColor: colors.isDark ? '#2E3D52' : colors.borderMedium,
-          opacity: pressed ? 0.82 : 1,
-          transform: [{ scale: pressed ? 0.97 : 1 }],
-        },
-      ]}
-    >
+  const renderJournalType = (item: JournalTemplate, index: number) => (
+    <StaggeredEntry index={index} delayStep={28} baseDelay={60} key={item.id}>
+      <TactilePressable
+        onPress={() => {
+          navigation?.navigate?.('JournalEntry', { type: item.id as any });
+        }}
+        scaleDownTo={0.95}
+        hapticStyle="light"
+        accessibilityRole="button"
+        accessibilityLabel={`${item.label}. ${item.desc}`}
+        style={[
+          styles.templateButton,
+          {
+            backgroundColor: colors.isDark ? '#1C2636' : colors.bgSecondary,
+            borderColor: colors.isDark ? '#2E3D52' : colors.borderMedium,
+          },
+        ]}
+      >
       <View style={styles.iconOrbContainer}>
         <View
           style={[
@@ -95,7 +104,8 @@ export function JournalScreen() {
           {item.desc}
         </Text>
       </View>
-    </Pressable>
+      </TactilePressable>
+    </StaggeredEntry>
   );
 
   return (
@@ -104,7 +114,7 @@ export function JournalScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={loadEntries} tintColor={colors.accentPrimary} />
+        <RefreshControl refreshing={loading} onRefresh={() => loadEntries(true)} tintColor={colors.accentPrimary} />
       }
     >
       {/* Header */}
@@ -134,7 +144,7 @@ export function JournalScreen() {
             style={styles.templatesScrollView}
             contentContainerStyle={styles.templatesScroll}
           >
-            {journalTypes.map(renderJournalType)}
+            {journalTypes.map((item, index) => renderJournalType(item, index))}
           </ScrollView>
         </CardContent>
       </Card>
@@ -145,33 +155,43 @@ export function JournalScreen() {
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             Recent Reflections
           </Text>
-          <Pressable
-            onPress={() => navigation.navigate('JournalEntry', { type: 'free' })}
+          <TactilePressable
+            onPress={() => {
+              navigation.navigate('JournalEntry', { type: 'free' });
+            }}
+            scaleDownTo={0.96}
+            hapticStyle="light"
+            accessibilityRole="button"
+            accessibilityLabel="New journal entry"
             style={styles.newActionLink}
           >
             <Ionicons name="add" size={16} color={colors.accentPrimary} />
             <Text style={[styles.newActionText, { color: colors.accentPrimary }]}>New entry</Text>
-          </Pressable>
+          </TactilePressable>
         </View>
 
         {entries.length > 0 ? (
           <View style={styles.entriesList}>
-            {entries.map((entry) => {
+            {entries.map((entry, idx) => {
               const rawDate = entry.createdAt ? new Date(entry.createdAt) : new Date();
               const formattedDate = format(rawDate, 'MMM d, yyyy');
               const typeConfig = journalTypes.find((t) => t.id === entry.type) || journalTypes[0];
 
               return (
-                <Pressable
-                  key={entry.id}
-                  onPress={() => navigation.navigate('JournalEntry', { id: entry.id })}
-                  style={({ pressed }) => [
+                <StaggeredEntry key={entry.id} index={Math.min(idx, 8)} delayStep={26} baseDelay={70}>
+                <TactilePressable
+                  onPress={() => {
+                    navigation.navigate('JournalEntry', { id: entry.id });
+                  }}
+                  scaleDownTo={0.985}
+                  hapticStyle="light"
+                  accessibilityRole="button"
+                  accessibilityLabel={`${typeConfig.label} entry from ${formattedDate}`}
+                  style={[
                     styles.entryCard,
                     {
-                      backgroundColor: colors.bgCard,
-                      borderColor: colors.isDark ? '#2E3D52' : colors.borderLight,
-                      opacity: pressed ? 0.85 : 1,
-                      transform: [{ scale: pressed ? 0.99 : 1 }],
+                      backgroundColor: colors.isDark ? '#1E293B' : (colors.bgSecondary || '#F4EFE6'),
+                      borderColor: colors.isDark ? '#354760' : (colors.borderMedium || '#D5CCC0'),
                     },
                   ]}
                 >
@@ -179,7 +199,10 @@ export function JournalScreen() {
                     <View
                       style={[
                         styles.entryIconOrb,
-                        { backgroundColor: typeConfig.color + '20' },
+                        {
+                          backgroundColor: typeConfig.color + '1A',
+                          borderColor: typeConfig.color + '38',
+                        },
                       ]}
                     >
                       <Ionicons name={typeConfig.icon} size={20} color={typeConfig.color} />
@@ -190,7 +213,7 @@ export function JournalScreen() {
                         <Text style={[styles.entryDate, { color: colors.textTertiary }]}>
                           {formattedDate}
                         </Text>
-                        <View style={[styles.typeBadge, { backgroundColor: typeConfig.color + '15' }]}>
+                        <View style={[styles.typeBadge, { backgroundColor: typeConfig.color + '18' }]}>
                           <Text style={[styles.typeBadgeText, { color: typeConfig.color }]}>
                             {typeConfig.label}
                           </Text>
@@ -211,22 +234,26 @@ export function JournalScreen() {
                       </Text>
                     </View>
 
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
+                    <TactilePressable
+                      onPress={() => {
                         handleToggleFavorite(entry);
                       }}
+                      scaleDownTo={0.8}
+                      hapticStyle="selection"
                       style={styles.favoriteButton}
                       hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={entry.favorite ? 'Remove from favorites' : 'Add to favorites'}
                     >
                       <Ionicons
                         name={entry.favorite ? 'heart' : 'heart-outline'}
                         size={20}
                         color={entry.favorite ? '#DB3A60' : colors.textTertiary}
                       />
-                    </TouchableOpacity>
+                    </TactilePressable>
                   </View>
-                </Pressable>
+                </TactilePressable>
+                </StaggeredEntry>
               );
             })}
           </View>
@@ -270,11 +297,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   title: {
+    fontFamily: fontFamilies.serif.bold,
     fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.5,
   },
   subtitle: {
+    fontFamily: fontFamilies.sans.medium,
     fontSize: 14,
     marginTop: 4,
     lineHeight: 20,
@@ -288,6 +317,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   sectionTitle: {
+    fontFamily: fontFamilies.serif.bold,
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: -0.3,
@@ -298,6 +328,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   newActionText: {
+    fontFamily: fontFamilies.sans.semiBold,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -355,6 +386,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   templateTitle: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 17,
@@ -362,6 +394,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   templateDesc: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 11,
     lineHeight: 14,
     textAlign: 'center',
@@ -374,6 +407,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 20,
     borderWidth: 1.2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   entryRow: {
     flexDirection: 'row',
@@ -398,6 +436,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   entryDate: {
+    fontFamily: fontFamilies.sans.medium,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -407,15 +446,18 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   typeBadgeText: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 11,
     fontWeight: '700',
   },
   entryTitle: {
+    fontFamily: fontFamilies.serif.semiBold,
     fontSize: 16,
     fontWeight: '700',
     marginTop: 2,
   },
   entrySnippet: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 13,
     lineHeight: 19,
     marginTop: 2,
@@ -433,11 +475,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   emptyTitle: {
+    fontFamily: fontFamilies.serif.bold,
     fontSize: 18,
     fontWeight: '700',
     marginTop: 12,
   },
   emptySubtitle: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',

@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Platform } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
-import { Card, PrimaryButton, ProgressRing, AppIcon } from '../../components';
+import { Card, PrimaryButton, ProgressRing, AppIcon, TactilePressable } from '../../components';
 import type { AppIconName } from '../../components';
 import { RootStackParamList, GroundingType } from '../../types/navigation';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { calmRepository } from '../../database/repositories/calmRepository';
+import { hapticFeedback } from '../../utils/haptics';
+import Animated, { FadeIn, FadeInRight, useReducedMotion } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 
 const groundingSteps: Record<GroundingType, { label: string; instruction: string; icon: AppIconName }[]> = {
   '5-4-3-2-1': [
@@ -76,6 +79,7 @@ export function GroundingExerciseScreen() {
     isDark: false,
   } as any;
 
+  const reducedMotion = useReducedMotion();
   const safeCurrentStep = Math.max(0, Math.min(currentStep, Math.max(0, safeSteps.length - 1)));
   const current = safeSteps[safeCurrentStep] ?? safeSteps[0];
   const progress = safeSteps.length > 0 ? (safeCurrentStep + 1) / safeSteps.length : 0;
@@ -83,8 +87,10 @@ export function GroundingExerciseScreen() {
 
   const handleNext = () => {
     if (currentStep < safeSteps.length - 1) {
+      hapticFeedback.selection();
       setCurrentStep(currentStep + 1);
     } else {
+      hapticFeedback.success();
       setIsComplete(true);
       calmRepository.logSession({
         type: 'grounding',
@@ -97,41 +103,45 @@ export function GroundingExerciseScreen() {
 
   const handlePrevious = () => {
     if (currentStep > 0) {
+      hapticFeedback.selection();
       setCurrentStep(currentStep - 1);
     }
   };
+
+  const isDark = !!colors.isDark;
+  const androidBarFallback = isDark ? 'rgba(24, 33, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       {/* Top Bar */}
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Pressable
+        <TactilePressable
           onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            {
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: colors.bgCard,
-              borderWidth: 1,
-              borderColor: colors.borderLight,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
+          scaleDownTo={0.9}
+          hapticStyle="light"
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            backgroundColor: colors.bgCard,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          accessibilityLabel="Go back"
         >
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </Pressable>
+        </TactilePressable>
         <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary }}>
           {safeTitle}
         </Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 42 }} />
       </View>
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 120, alignItems: 'center' }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 130, alignItems: 'center' }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ marginBottom: 16, alignItems: 'center' }}>
@@ -162,8 +172,12 @@ export function GroundingExerciseScreen() {
           ))}
         </View>
 
-        {/* Exercise Card */}
-        <View style={{ width: '100%', marginBottom: 24 }}>
+        {/* Exercise Card with animated step transition */}
+        <Animated.View
+          key={safeCurrentStep}
+          entering={reducedMotion ? FadeIn.duration(150) : FadeInRight.duration(260)}
+          style={{ width: '100%', marginBottom: 24 }}
+        >
           <Card variant="elevated">
             <View style={{ padding: 22 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
@@ -196,10 +210,10 @@ export function GroundingExerciseScreen() {
               </Text>
             </View>
           </Card>
-        </View>
+        </Animated.View>
       </ScrollView>
 
-      {/* Bottom Floating Bar */}
+      {/* Liquid Glass Bottom Floating Bar */}
       <View
         style={{
           position: 'absolute',
@@ -209,13 +223,27 @@ export function GroundingExerciseScreen() {
           paddingHorizontal: 20,
           paddingTop: 12,
           paddingBottom: 28,
-          backgroundColor: colors.bgCard,
           borderTopWidth: 1,
-          borderTopColor: colors.borderLight,
+          borderTopColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.borderLight,
+          overflow: 'hidden',
           flexDirection: 'row',
           gap: 12,
         }}
       >
+        <BlurView
+          intensity={isDark ? 65 : 85}
+          tint={isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: Platform.OS === 'android' ? androidBarFallback : 'transparent',
+            },
+          ]}
+        />
         {!isComplete ? (
           <>
             <PrimaryButton

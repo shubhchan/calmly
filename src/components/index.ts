@@ -5,4 +5,8 @@ export { PrimaryButton, SecondaryButton } from './PrimaryButton';
 export { ProgressRing, MiniProgressRing } from './ProgressRing';
 export { StatPill, MoodStatPill } from './StatPill';
 export { BottomNav } from './BottomNav';
+export { TactilePressable } from './interactive/TactilePressable';
+export { StaggeredEntry } from './interactive/StaggeredEntry';
+export { CelebratoryCheckbox } from './interactive/CelebratoryCheckbox';
+export { Skeleton, SkeletonText, SkeletonCard } from './interactive/Skeleton';
 export * from './illustrations';

@@ -1,6 +1,8 @@
 import React, { forwardRef } from 'react';
 import { View, Pressable, ViewStyle, StyleProp, StyleSheet } from 'react-native';
 import { useThemeColors } from '../theme/ThemeContext';
+import { hapticFeedback } from '../utils/haptics';
+import { TactilePressable } from './interactive/TactilePressable';
 
 interface CardProps {
   children: React.ReactNode;
@@ -31,21 +33,20 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
       borderRadius: variant === 'elevated' ? 24 : 20,
       borderWidth: 1,
       borderColor: colors?.borderLight ?? (isDark ? '#263346' : '#E6E0D4'),
-      overflow: 'hidden',
     };
 
     const variantStyles: Record<string, ViewStyle> = {
       default: {
         shadowColor: colors?.textPrimary ?? '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isDark ? 0.3 : 0.05,
+        shadowOpacity: isDark ? 0.35 : 0.06,
         shadowRadius: 8,
         elevation: 2,
       },
       elevated: {
         shadowColor: colors?.textPrimary ?? '#000000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: isDark ? 0.4 : 0.08,
+        shadowOpacity: isDark ? 0.45 : 0.09,
         shadowRadius: 14,
         elevation: 4,
       },
@@ -59,17 +60,17 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
 
     if (onPress) {
       return (
-        <Pressable
-          ref={ref}
-          style={({ pressed }) => [
-            flatCombinedStyle,
-            pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
-          ]}
+        <TactilePressable
+          ref={ref as any}
+          style={flatCombinedStyle}
+          scaleDownTo={0.985}
+          hapticStyle="light"
           onPress={onPress}
+          className={className}
           {...props}
         >
           {children}
-        </Pressable>
+        </TactilePressable>
       );
     }
 

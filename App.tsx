@@ -17,6 +17,21 @@ import {
   bootLog,
   getBootTrail,
 } from './src/components/ErrorBoundary';
+import {
+  useFonts,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import {
+  Newsreader_400Regular,
+  Newsreader_500Medium,
+  Newsreader_600SemiBold,
+  Newsreader_700Bold,
+  Newsreader_400Regular_Italic,
+} from '@expo-google-fonts/newsreader';
 
 const NAV_READY_TIMEOUT_MS = 12000;
 
@@ -233,6 +248,7 @@ function NavChildrenProbe({ children }: { children: React.ReactNode }) {
 
 function AppShell({
   navReady,
+  fontsLoaded,
   navStalled,
   navKey,
   copied,
@@ -243,6 +259,7 @@ function AppShell({
   setNavStalled,
 }: {
   navReady: boolean;
+  fontsLoaded: boolean;
   navStalled: boolean;
   navKey: number;
   copied: boolean;
@@ -282,7 +299,7 @@ function AppShell({
         translucent={true}
       />
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      {!navReady && <BootSplash />}
+      {(!navReady || !fontsLoaded) && <BootSplash />}
       <Suspense fallback={<SuspenseFallbackProbe />}>
         <NavigationContainer
           key={`nav-${navKey}`}
@@ -307,6 +324,19 @@ function AppShell({
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+    Newsreader_400Regular,
+    Newsreader_500Medium,
+    Newsreader_600SemiBold,
+    Newsreader_700Bold,
+    Newsreader_400Regular_Italic,
+  });
+
   const [navReady, setNavReady] = useState(false);
   const [navStalled, setNavStalled] = useState(false);
   const [navKey, setNavKey] = useState(0);
@@ -386,6 +416,7 @@ export default function App() {
             <SafeAreaProvider>
               <AppShell
                 navReady={navReady}
+                fontsLoaded={fontsLoaded}
                 navStalled={navStalled}
                 navKey={navKey}
                 copied={copied}

@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, Share } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository, WeeklyStats, Insight, HabitStats } from '../../database/repositories/insightsRepository';
-import { Card, CardContent, PrimaryButton, AppIcon, MoodLandscapeIllustration, HabitPlantingIllustration, MoodAuraIllustration } from '../../components';
+import { Card, CardContent, PrimaryButton, AppIcon, MoodLandscapeIllustration, HabitPlantingIllustration, MoodAuraIllustration, Skeleton, SkeletonCard, StaggeredEntry } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { hapticFeedback } from '../../utils/haptics';
+import { fontFamilies } from '../../theme/typography';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Insights'>['navigation'];
 
@@ -26,9 +28,10 @@ export function InsightsScreen() {
   const [moodTrend, setMoodTrend] = useState<MoodTrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'week' | 'month'>('week');
+  const hasLoadedRef = useRef(false);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const [s, h, i, m] = await Promise.all([
         insightsRepository.getWeeklyStats(),
@@ -47,6 +50,7 @@ export function InsightsScreen() {
       setInsights([]);
       setMoodTrend([]);
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, [timeRange]);
@@ -91,10 +95,6 @@ export function InsightsScreen() {
       return [];
     }
   };
-
-  useEffect(() => {
-    loadData();
-  }, [loadData, timeRange]);
 
   useFocusEffect(
     useCallback(() => {
@@ -143,6 +143,7 @@ export function InsightsScreen() {
   };
 
   const handleDeleteAll = () => {
+    hapticFeedback.warning();
     Alert.alert(
       'Delete All Data?',
       'This will permanently delete all your mood entries, journals, habits, gratitudes, and calm sessions. This cannot be undone.',
@@ -181,8 +182,18 @@ export function InsightsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: colors.bgPrimary }]}>
-        <ActivityIndicator size="large" color={colors.accentPrimary} />
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, paddingHorizontal: 20, paddingTop: 16 }]}>
+        <View style={{ gap: 8, marginBottom: 20 }}>
+          <Skeleton width={140} height={30} radius={10} />
+          <Skeleton width={260} height={14} radius={7} />
+        </View>
+        <Skeleton width="100%" height={48} radius={16} style={{ marginBottom: 20 }} />
+        <Skeleton width="100%" height={150} radius={24} style={{ marginBottom: 16 }} />
+        <View style={{ gap: 12 }}>
+          {[0, 1, 2].map((i) => (
+            <SkeletonCard key={i} rows={2} showAvatar={false} />
+          ))}
+        </View>
       </View>
     );
   }
@@ -212,10 +223,14 @@ export function InsightsScreen() {
       {/* Segmented Time Range Picker */}
       <View style={[styles.segmentedControl, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
         <Pressable
-          onPress={() => setTimeRange('week')}
-          style={[
+          onPress={() => {
+            hapticFeedback.selection();
+            setTimeRange('week');
+          }}
+          style={({ pressed }) => [
             styles.segmentButton,
             timeRange === 'week' && [styles.segmentButtonActive, { backgroundColor: colors.accentPrimary }],
+            { transform: [{ scale: pressed ? 0.97 : 1 }], opacity: pressed ? 0.9 : 1 },
           ]}
         >
           <Text
@@ -229,10 +244,14 @@ export function InsightsScreen() {
           </Text>
         </Pressable>
         <Pressable
-          onPress={() => setTimeRange('month')}
-          style={[
+          onPress={() => {
+            hapticFeedback.selection();
+            setTimeRange('month');
+          }}
+          style={({ pressed }) => [
             styles.segmentButton,
             timeRange === 'month' && [styles.segmentButtonActive, { backgroundColor: colors.accentPrimary }],
+            { transform: [{ scale: pressed ? 0.97 : 1 }], opacity: pressed ? 0.9 : 1 },
           ]}
         >
           <Text
@@ -354,7 +373,15 @@ export function InsightsScreen() {
             </View>
             <Pressable
               onPress={() => navigation.navigate('MoodCalendar')}
-              style={[styles.calendarLink, { backgroundColor: colors.accentBg }]}
+              style={({ pressed }) => [
+                styles.calendarLink,
+                {
+                  backgroundColor: colors.accentBg,
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+              hitSlop={8}
             >
               <Ionicons name="calendar-outline" size={14} color={colors.accentPrimary} />
               <Text style={[styles.calendarLinkText, { color: colors.accentPrimary }]}>Calendar</Text>
@@ -437,15 +464,15 @@ export function InsightsScreen() {
             </View>
           ) : (
             <View style={styles.habitList}>
-              {(habitStats ?? []).slice(0, 5).map((h) => {
+              {(habitStats ?? []).slice(0, 5).map((h, index) => {
                 const completed = h?.completedThisWeek ?? 0;
                 const total = h?.totalThisWeek ?? 0;
                 const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
                 const habitColor = h?.color || colors.accentPrimary;
 
                 return (
+                  <StaggeredEntry key={h?.id ?? Math.random().toString()} index={Math.min(index, 7)} delayStep={28}>
                   <View
-                    key={h?.id ?? Math.random().toString()}
                     style={[styles.habitRowCard, { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: colors.borderLight }]}
                   >
                     <View style={styles.habitRowHeader}>
@@ -474,6 +501,7 @@ export function InsightsScreen() {
                       />
                     </View>
                   </View>
+                  </StaggeredEntry>
                 );
               })}
             </View>
@@ -500,9 +528,9 @@ export function InsightsScreen() {
             </View>
           ) : (
             <View style={styles.insightsList}>
-              {(insights ?? []).map((insight) => (
+              {(insights ?? []).map((insight, index) => (
+                <StaggeredEntry key={insight?.id ?? Math.random().toString()} index={Math.min(index, 7)} delayStep={28}>
                 <View
-                  key={insight?.id ?? Math.random().toString()}
                   style={[
                     styles.insightCard,
                     {
@@ -530,6 +558,7 @@ export function InsightsScreen() {
                     {insight?.text ?? ''}
                   </Text>
                 </View>
+                </StaggeredEntry>
               ))}
             </View>
           )}
@@ -564,7 +593,16 @@ export function InsightsScreen() {
               />
             </View>
           </View>
-          <Pressable onPress={handleDeleteAll} style={styles.deleteLink}>
+          <Pressable
+            onPress={handleDeleteAll}
+            style={({ pressed }) => [
+              styles.deleteLink,
+              {
+                transform: [{ scale: pressed ? 0.96 : 1 }],
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
+          >
             <Ionicons name="trash-outline" size={15} color={colors.accentRose || '#EB697F'} />
             <Text style={[styles.deleteLinkText, { color: colors.accentRose || '#EB697F' }]}>
               Clear all app records
@@ -601,6 +639,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
+    fontFamily: fontFamilies.serif.bold,
     fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.5,
@@ -615,10 +654,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   headerBadgeText: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 12,
     fontWeight: '700',
   },
   subtitle: {
+    fontFamily: fontFamilies.sans.medium,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -644,10 +685,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   segmentText: {
+    fontFamily: fontFamilies.sans.semiBold,
     fontSize: 13,
     fontWeight: '600',
   },
   segmentTextActive: {
+    fontFamily: fontFamilies.sans.bold,
     color: '#FFFFFF',
     fontWeight: '700',
   },
@@ -682,15 +725,18 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   trendBadgeText: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 11,
     fontWeight: '700',
   },
   metricValue: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.4,
   },
   metricLabel: {
+    fontFamily: fontFamilies.sans.medium,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -707,11 +753,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
+    fontFamily: fontFamilies.serif.bold,
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: -0.3,
   },
   sectionSubtitle: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 12,
     marginTop: 2,
   },
@@ -724,6 +772,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   calendarLinkText: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -768,6 +817,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   chartDayLabel: {
+    fontFamily: fontFamilies.sans.semiBold,
     fontSize: 10,
     fontWeight: '600',
   },
@@ -788,6 +838,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   legendLabel: {
+    fontFamily: fontFamilies.sans.semiBold,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -798,10 +849,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyChartTitle: {
+    fontFamily: fontFamilies.serif.bold,
     fontSize: 15,
     fontWeight: '700',
   },
   emptyChartSub: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 13,
     textAlign: 'center',
     maxWidth: 240,
@@ -814,6 +867,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyInlineText: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 13,
   },
   habitList: {
@@ -842,6 +896,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   habitName: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 14,
     fontWeight: '700',
     flex: 1,
@@ -852,6 +907,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   habitRateText: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -879,6 +935,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   insightText: {
+    fontFamily: fontFamilies.sans.regular,
     flex: 1,
     fontSize: 13,
     lineHeight: 20,
@@ -897,6 +954,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   deleteLinkText: {
+    fontFamily: fontFamilies.sans.semiBold,
     fontSize: 12,
     fontWeight: '600',
   },

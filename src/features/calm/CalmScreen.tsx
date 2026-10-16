@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, BreathingPreset } from '../../types/navigation';
@@ -15,6 +15,8 @@ import {
 } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
+import { hapticFeedback } from '../../utils/haptics';
+import { fontFamilies } from '../../theme/typography';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -27,12 +29,12 @@ interface QuickSound {
 
 const SOUND_ROWS: [QuickSound, QuickSound][] = [
   [
-    { id: 'rain', label: 'Rainfall', icon: 'rainy-outline', atmosphere: 'Soft & steady' },
-    { id: 'ocean', label: 'Ocean Waves', icon: 'water-outline', atmosphere: 'Deep tide' },
+    { id: 'rain', label: 'Rainfall', icon: 'rainy-outline', atmosphere: 'Soft drizzle' },
+    { id: 'ocean', label: 'Ocean Waves', icon: 'water-outline', atmosphere: 'Deep tides' },
   ],
   [
     { id: 'birds', label: 'Forest Birds', icon: 'leaf-outline', atmosphere: 'Morning woods' },
-    { id: 'night', label: 'Night Breeze', icon: 'moon-outline', atmosphere: 'Gentle stream' },
+    { id: 'night', label: 'Night Breeze', icon: 'moon-outline', atmosphere: 'Quiet stream' },
   ],
 ];
 
@@ -63,6 +65,7 @@ export function CalmScreen() {
   }, []);
 
   const handleToggleSound = async (soundId: 'rain' | 'ocean' | 'birds' | 'night') => {
+    hapticFeedback.light();
     if (activeSound === soundId) {
       await soundService.stop();
     } else {
@@ -71,6 +74,7 @@ export function CalmScreen() {
   };
 
   const handleStartBreathSession = (preset: BreathingPreset, duration: number) => {
+    hapticFeedback.medium();
     navigation.navigate('BreathingSession', { preset, duration });
   };
 
@@ -85,15 +89,18 @@ export function CalmScreen() {
               Tactile mindful tools & somatic rest
             </Text>
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={() => navigation.navigate('Soundscapes')}
-            style={[
+            style={({ pressed }) => [
               styles.soundStatusBadge,
               {
                 backgroundColor: activeSound ? colors.accentBg : colors.bgCard,
                 borderColor: activeSound ? colors.accentPrimary : colors.borderLight,
+                transform: [{ scale: pressed ? 0.92 : 1 }],
+                opacity: pressed ? 0.85 : 1,
               },
             ]}
+            hitSlop={8}
           >
             <Ionicons
               name={activeSound ? 'volume-medium' : 'headset-outline'}
@@ -101,14 +108,21 @@ export function CalmScreen() {
               color={activeSound ? colors.accentPrimary : colors.textTertiary}
             />
             {activeSound && <View style={[styles.pulseDot, { backgroundColor: colors.accentPrimary }]} />}
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Live Audio Mini-Player Bar (When Sound is Active) */}
         {activeSound && (
           <Pressable
             onPress={() => navigation.navigate('Soundscapes')}
-            style={[styles.miniPlayerBar, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}
+            style={({ pressed }) => [
+              styles.miniPlayerBar,
+              {
+                backgroundColor: colors.accentBg,
+                borderColor: colors.accentBorder,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
               <Ionicons name="musical-notes" size={16} color={colors.accentPrimary} />
@@ -116,16 +130,19 @@ export function CalmScreen() {
                 Playing: {activeSound.toUpperCase()} Ambient Soundscape
               </Text>
             </View>
-            <TouchableOpacity
+            <Pressable
               onPress={(e) => {
                 e.stopPropagation();
                 soundService.stop();
               }}
-              style={styles.miniPlayerStop}
+              style={({ pressed }) => [
+                styles.miniPlayerStop,
+                { transform: [{ scale: pressed ? 0.88 : 1 }] },
+              ]}
               hitSlop={8}
             >
               <Ionicons name="pause" size={14} color={colors.accentPrimary} />
-            </TouchableOpacity>
+            </Pressable>
           </Pressable>
         )}
       </View>
@@ -154,69 +171,93 @@ export function CalmScreen() {
               <NatureSoundscapeIllustration width={110} height={85} />
             </View>
 
-            {/* Direct Symmetrical 2x2 Sound Grid */}
+            {/* Symmetrical 2x2 Ambient Sound Grid */}
             <View style={styles.soundGrid}>
               {SOUND_ROWS.map((row, rowIdx) => (
                 <View key={rowIdx} style={styles.soundRow}>
                   {row.map((snd) => {
                     const isPlaying = activeSound === snd.id;
                     return (
-                      <TouchableOpacity
+                      <Pressable
                         key={snd.id}
                         onPress={() => handleToggleSound(snd.id)}
-                        style={[
+                        style={({ pressed }) => [
                           styles.soundTile,
                           {
-                            backgroundColor: isPlaying ? colors.accentBg : (colors.bgSecondary || '#F4EFE6'),
-                            borderColor: isPlaying ? colors.accentPrimary : colors.borderLight,
+                            backgroundColor: isPlaying
+                              ? (colors.isDark ? '#163022' : '#EDF5EF')
+                              : (colors.isDark ? '#1E293B' : (colors.bgSecondary || '#F4EFE6')),
+                            borderColor: isPlaying
+                              ? colors.accentPrimary
+                              : (colors.isDark ? '#354760' : (colors.borderMedium || '#D5CCC0')),
+                            transform: [{ scale: pressed ? 0.96 : 1 }],
+                            opacity: pressed ? 0.92 : 1,
                           },
                           isPlaying && styles.soundTileActive,
                         ]}
-                        activeOpacity={0.7}
                       >
-                        <View style={styles.soundTileTop}>
-                          <View
-                            style={[
-                              styles.soundIconOrb,
-                              {
-                                backgroundColor: isPlaying ? colors.accentPrimary : colors.bgCard,
-                              },
-                            ]}
-                          >
-                            <Ionicons
-                              name={isPlaying ? 'pause' : snd.icon}
-                              size={17}
-                              color={isPlaying ? '#FFFFFF' : colors.textPrimary}
-                            />
-                          </View>
+                        <View
+                          style={[
+                            styles.soundIconOrb,
+                            {
+                              backgroundColor: isPlaying
+                                ? colors.accentPrimary
+                                : (colors.isDark ? '#26344A' : colors.bgCard),
+                              borderColor: isPlaying
+                                ? colors.accentPrimary
+                                : (colors.isDark ? '#3D526E' : (colors.borderLight || '#E6E0D4')),
+                            },
+                          ]}
+                        >
                           <Ionicons
-                            name={isPlaying ? 'volume-high' : 'play'}
-                            size={14}
-                            color={isPlaying ? colors.accentPrimary : colors.textTertiary}
+                            name={isPlaying ? 'pause' : snd.icon}
+                            size={20}
+                            color={isPlaying ? '#FFFFFF' : colors.accentPrimary}
                           />
                         </View>
-                        <Text style={[styles.soundTileTitle, { color: colors.textPrimary }]}>
+
+                        <Text
+                          style={[
+                            styles.soundTileTitle,
+                            { color: isPlaying ? colors.accentPrimary : colors.textPrimary },
+                          ]}
+                          numberOfLines={1}
+                        >
                           {snd.label}
                         </Text>
-                        <Text style={[styles.soundTileSub, { color: colors.textTertiary }]}>
-                          {snd.atmosphere}
+
+                        <Text
+                          style={[
+                            styles.soundTileSub,
+                            { color: isPlaying ? colors.accentPrimary : colors.textTertiary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {isPlaying ? 'Playing ♪' : snd.atmosphere}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     );
                   })}
                 </View>
               ))}
             </View>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => navigation.navigate('Soundscapes')}
-              style={[styles.fullPageLink, { borderTopColor: colors.borderLight }]}
+              style={({ pressed }) => [
+                styles.fullPageLink,
+                {
+                  borderTopColor: colors.borderLight,
+                  opacity: pressed ? 0.75 : 1,
+                  transform: [{ scale: pressed ? 0.99 : 1 }],
+                },
+              ]}
             >
               <Text style={[styles.fullPageLinkText, { color: colors.accentPrimary }]}>
                 Full Soundscapes Player & Sleep Timer
               </Text>
               <Ionicons name="arrow-forward" size={15} color={colors.accentPrimary} />
-            </TouchableOpacity>
+            </Pressable>
           </CardContent>
         </Card>
 
@@ -264,27 +305,40 @@ export function CalmScreen() {
                       {preset.benefit}
                     </Text>
                   </View>
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => handleStartBreathSession(preset.id, preset.duration)}
-                    style={[styles.presetStartButton, { backgroundColor: colors.accentPrimary }]}
-                    activeOpacity={0.8}
+                    style={({ pressed }) => [
+                      styles.presetStartButton,
+                      {
+                        backgroundColor: colors.accentPrimary,
+                        transform: [{ scale: pressed ? 0.94 : 1 }],
+                        opacity: pressed ? 0.88 : 1,
+                      },
+                    ]}
                   >
                     <Ionicons name="play" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
                     <Text style={styles.presetStartText}>Start</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               ))}
             </View>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => navigation.navigate('BreathworkStudio')}
-              style={[styles.fullPageLink, { borderTopColor: colors.borderLight }]}
+              style={({ pressed }) => [
+                styles.fullPageLink,
+                {
+                  borderTopColor: colors.borderLight,
+                  opacity: pressed ? 0.75 : 1,
+                  transform: [{ scale: pressed ? 0.99 : 1 }],
+                },
+              ]}
             >
               <Text style={[styles.fullPageLinkText, { color: colors.accentPrimary }]}>
                 Explore Custom Durations & Audio in Studio
               </Text>
               <Ionicons name="arrow-forward" size={15} color={colors.accentPrimary} />
-            </TouchableOpacity>
+            </Pressable>
           </CardContent>
         </Card>
 
@@ -403,11 +457,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   mainTitle: {
+    fontFamily: fontFamilies.serif.bold,
     fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.5,
   },
   mainSubtitle: {
+    fontFamily: fontFamilies.sans.medium,
     fontSize: 13,
     marginTop: 2,
   },
@@ -438,6 +494,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   miniPlayerText: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -471,16 +528,19 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   badgePillText: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
   sectionHeading: {
+    fontFamily: fontFamilies.serif.bold,
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 23,
   },
   sectionSub: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 12,
     lineHeight: 17,
     marginTop: 3,
@@ -494,33 +554,38 @@ const styles = StyleSheet.create({
   },
   soundTile: {
     flex: 1,
-    padding: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 108,
     gap: 4,
   },
   soundTileActive: {
-    borderWidth: 1.5,
-  },
-  soundTileTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+    borderWidth: 1.6,
   },
   soundIconOrb: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 4,
   },
   soundTileTitle: {
-    fontSize: 14,
+    fontFamily: fontFamilies.sans.bold,
+    fontSize: 13,
     fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: -0.2,
   },
   soundTileSub: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 11,
+    textAlign: 'center',
   },
   fullPageLink: {
     flexDirection: 'row',
@@ -531,6 +596,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   fullPageLinkText: {
+    fontFamily: fontFamilies.sans.semiBold,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -548,14 +614,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   presetTitle: {
+    fontFamily: fontFamilies.serif.semiBold,
     fontSize: 14,
     fontWeight: '700',
   },
   presetCadence: {
+    fontFamily: fontFamilies.sans.semiBold,
     fontSize: 12,
     fontWeight: '600',
   },
   presetBenefit: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 11,
   },
   presetStartButton: {
@@ -566,6 +635,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   presetStartText: {
+    fontFamily: fontFamilies.sans.bold,
     fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',

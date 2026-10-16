@@ -1,6 +1,15 @@
-import React, { Suspense, useEffect, useRef } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React, { Suspense, useEffect, useRef, useCallback } from 'react';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { BlurView } from 'expo-blur';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  interpolate,
+  Easing,
+} from 'react-native-reanimated';
 import { createNativeStackNavigator, NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { TabParamList, RootStackParamList } from '../types/navigation';
@@ -39,11 +48,44 @@ import { SensoryGroundingScreen } from '../features/calm/SensoryGroundingScreen'
 import { BodyScanScreen } from '../features/calm/BodyScanScreen';
 import { PanicAnchorScreen } from '../features/calm/PanicAnchorScreen';
 import { MoodCalendarScreen } from '../features/insights/MoodCalendarScreen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticFeedback } from '../utils/haptics';
+import { fontFamilies } from '../theme/typography';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
-const screenOptions: NativeStackNavigationOptions = { headerShown: false };
+/**
+ * Standard pushed sub-pages: 100% native platform transition (UINavigationController / Fragment).
+ * Driven directly by the GPU/render thread with subpixel gesture parallax and zero dropped frames.
+ */
+const defaultStackOptions: NativeStackNavigationOptions = {
+  headerShown: false,
+  animation: 'default',
+  gestureEnabled: true,
+};
+
+/**
+ * Introspective modals (Journal Entry, Mood Check-In, Forms):
+ * Clean native bottom sheet presentation.
+ */
+const modalOptions: NativeStackNavigationOptions = {
+  headerShown: false,
+  animation: 'slide_from_bottom',
+  presentation: 'modal',
+  gestureEnabled: true,
+};
+
+/**
+ * Immersive somatic focus & relief (Breathing Sessions, Acute Panic SOS):
+ * Tranquil hardware-accelerated fade.
+ */
+const fullScreenFocusOptions: NativeStackNavigationOptions = {
+  headerShown: false,
+  animation: 'fade',
+  presentation: 'fullScreenModal',
+  gestureEnabled: true,
+};
 
 /**
  * Logs the first render attempt of a navigator (body runs even if the commit
@@ -193,60 +235,240 @@ function tabIcon(routeName: keyof TabParamList, focused: boolean): TabIconName {
   }
 }
 
-export function AppNavigator() {
-  useRenderLog('app-navigator-render');
-  useEffect(() => {
-    bootLog('app-navigator-mounted');
-  }, []);
+interface AnimatedTabItemProps {
+  route: any;
+  isFocused: boolean;
+  navigation: BottomTabBarProps['navigation'];
+  colors: any;
+  isDark: boolean;
+}
 
+/**
+ * Tab item with a spring-animated focus pill, icon swell and press physics —
+ * all on the UI thread. Mirrors the iOS 18 tab bar convention while staying
+ * fully themed for Android.
+ */
+const AnimatedTabItem = React.memo(function AnimatedTabItem({
+  route,
+  isFocused,
+  navigation,
+  colors,
+  isDark,
+}: AnimatedTabItemProps) {
+  const scale = useSharedValue(1);
+  const focus = useSharedValue(isFocused ? 1 : 0);
+
+  useEffect(() => {
+    focus.value = withSpring(isFocused ? 1 : 0, { mass: 0.5, damping: 18, stiffness: 240 });
+  }, [isFocused, focus]);
+
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: focus.value,
+    transform: [{ scale: interpolate(focus.value, [0, 1], [0.55, 1]) }],
+  }));
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(focus.value, [0, 1], [1, 1.08]) }],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withTiming(0.88, { duration: 90, easing: Easing.out(Easing.quad) });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { mass: 0.5, damping: 15, stiffness: 260 });
+  };
+
+  const handlePress = useCallback(() => {
+    hapticFeedback.selection();
+    const event = navigation.emit({
+      type: 'tabPress',
+      target: route.key,
+      canPreventDefault: true,
+    });
+
+    if (!isFocused && !event.defaultPrevented) {
+      navigation.navigate(route.name);
+    }
+  }, [navigation, route.key, route.name, isFocused]);
+
+  const iconName = tabIcon(route.name as keyof TabParamList, isFocused);
+  const tintColor = isFocused ? colors.accentPrimary : colors.textTertiary;
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={tabBarStyles.tabItemPressable}
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={route.name}
+    >
+      <Animated.View style={[tabBarStyles.tabItemInner, pressStyle]}>
+        <View style={tabBarStyles.tabIconWrapper}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              tabBarStyles.tabFocusPill,
+              { backgroundColor: colors.accentBg ?? (isDark ? '#172E1E' : '#EDF5EF') },
+              pillStyle,
+            ]}
+          />
+          <Animated.View style={iconStyle}>
+            <Ionicons name={iconName} size={23} color={tintColor} />
+          </Animated.View>
+        </View>
+        <Text
+          style={[
+            tabBarStyles.tabLabel,
+            {
+              color: tintColor,
+              fontWeight: isFocused ? '700' : '500',
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {route.name}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+});
+
+/**
+ * Floating "Liquid Glass" tab bar. On iOS the BlurView samples live scroll
+ * content behind the bar (systemChromeMaterial). On Android — where realtime
+ * background blur costs a RenderNode sample per frame — it degrades gracefully
+ * to a near-opaque translucent material rather than dropping frames.
+ */
+function CustomTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   let themeColors: ReturnType<typeof useThemeColors> | undefined;
   try {
     themeColors = useThemeColors();
   } catch {
     themeColors = undefined;
   }
-  const colors = themeColors ?? {
+  const colors = themeColors ?? ({
     accentPrimary: '#3E7B52',
+    accentBg: '#EDF5EF',
     textTertiary: '#607085',
     textPrimary: '#1A212D',
     bgCard: '#FFFFFF',
     borderLight: '#E6E0D4',
     isDark: false,
-  } as any;
+  } as any);
+
+  const isDark = !!colors.isDark;
+  const bottomInset = insets?.bottom ?? 0;
+  const barHeight = 58 + (bottomInset > 0 ? bottomInset : 10);
+  const androidFallback = isDark ? 'rgba(24, 33, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)';
+
+  return (
+    <View
+      style={[
+        tabBarStyles.tabBarShell,
+        {
+          height: barHeight,
+          paddingBottom: bottomInset > 0 ? bottomInset : 10,
+          borderTopColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.borderLight,
+          shadowColor: colors.textPrimary ?? '#000000',
+          shadowOpacity: isDark ? 0.4 : 0.07,
+        },
+      ]}
+    >
+      <BlurView
+        pointerEvents="none"
+        intensity={isDark ? 70 : 90}
+        tint={isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: Platform.OS === 'android' ? androidFallback : 'transparent' },
+        ]}
+      />
+
+      {state.routes.map((route, index) => (
+        <AnimatedTabItem
+          key={route.key}
+          route={route}
+          isFocused={state.index === index}
+          navigation={navigation}
+          colors={colors}
+          isDark={isDark}
+        />
+      ))}
+    </View>
+  );
+}
+
+const tabBarStyles = StyleSheet.create({
+  tabBarShell: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+    elevation: 16,
+    shadowOffset: { width: 0, height: -3 },
+    shadowRadius: 14,
+  },
+  tabItemPressable: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingVertical: 2,
+  },
+  tabItemInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  tabIconWrapper: {
+    width: 52,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabFocusPill: {
+    position: 'absolute',
+    width: 52,
+    height: 30,
+    borderRadius: 15,
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontFamily: fontFamilies.sans.semiBold,
+    letterSpacing: 0.1,
+    textAlign: 'center',
+    marginTop: 2,
+    width: '100%',
+  },
+});
+
+export function AppNavigator() {
+  useRenderLog('app-navigator-render');
+  useEffect(() => {
+    bootLog('app-navigator-mounted');
+  }, []);
 
   return (
     <Tab.Navigator
       initialRouteName="Home"
-      screenOptions={({ route }) => ({
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accentPrimary,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          letterSpacing: 0.1,
-          marginTop: -2,
-          marginBottom: 4,
-        },
-        tabBarStyle: {
-          backgroundColor: colors.bgCard,
-          borderTopColor: colors.borderLight,
-          borderTopWidth: 1,
-          height: 60,
-          paddingTop: 6,
-          paddingBottom: 4,
-          elevation: 4,
-          shadowColor: colors.textPrimary ?? '#000000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: colors.isDark ? 0.3 : 0.04,
-          shadowRadius: 8,
-        },
-        tabBarIcon: ({ color, focused }) => (
-          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name={tabIcon(route.name, focused)} size={22} color={color} />
-          </View>
-        ),
-      })}
+        animation: 'fade',
+      }}
     >
       <Tab.Screen name="Home" component={GuardedHomeStack} />
       <Tab.Screen name="Journal" component={GuardedJournalStack} />
@@ -265,39 +487,42 @@ export function RootNavigator() {
   }, []);
 
   return (
-    <RootStack.Navigator initialRouteName="App" screenOptions={screenOptions}>
+    <RootStack.Navigator initialRouteName="App" screenOptions={defaultStackOptions}>
       <RootStack.Screen name="App" component={AppNavigator} />
-      {/* Each root route renders its leaf screen directly (not a nested stack),
-          so navigate('HabitDetail', { id }) lands on the detail screen instead
-          of a re-mounted stack stuck on its initial list route. */}
-      <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
-      <RootStack.Screen name="AppLock" component={AppLockScreen} />
-      <RootStack.Screen name="Habits" component={HabitListScreen} />
-      <RootStack.Screen name="HabitDetail" component={HabitDetailScreen} />
-      <RootStack.Screen name="HabitForm" component={HabitFormScreen} />
-      <RootStack.Screen name="Routines" component={RoutinesScreen} />
-      <RootStack.Screen name="RoutineDetail" component={RoutineDetailScreen} />
-      <RootStack.Screen name="Gratitude" component={GratitudeScreen} />
-      <RootStack.Screen name="GratitudeForm" component={GratitudeFormScreen} />
-      <RootStack.Screen name="Affirmations" component={AffirmationsScreen} />
-      <RootStack.Screen name="AffirmationDetail" component={AffirmationDetailScreen} />
-      <RootStack.Screen name="SelfCompassion" component={SelfCompassionScreen} />
-      <RootStack.Screen name="WhatCanIControl" component={WhatCanIControlScreen} />
-      <RootStack.Screen name="ThoughtReframing" component={ThoughtReframingScreen} />
-      <RootStack.Screen name="Notifications" component={NotificationsScreen} />
-      <RootStack.Screen name="AppLockSettings" component={AppLockSettingsScreen} />
-      <RootStack.Screen name="SetPin" component={SetPinScreen} />
-      <RootStack.Screen name="DataManagement" component={DataManagementScreen} />
-      <RootStack.Screen name="JournalEntry" component={JournalEntryScreen} />
-      <RootStack.Screen name="MoodCheckIn" component={MoodCheckInScreen} />
-      <RootStack.Screen name="BreathingSession" component={BreathingSessionScreen} />
-      <RootStack.Screen name="GroundingExercise" component={GroundingExerciseScreen} />
-      <RootStack.Screen name="BreathworkStudio" component={BreathworkStudioScreen} />
-      <RootStack.Screen name="Soundscapes" component={SoundscapesScreen} />
-      <RootStack.Screen name="SensoryGrounding" component={SensoryGroundingScreen} />
-      <RootStack.Screen name="BodyScan" component={BodyScanScreen} />
-      <RootStack.Screen name="PanicAnchor" component={PanicAnchorScreen} />
-      <RootStack.Screen name="MoodCalendar" component={MoodCalendarScreen} />
+
+      {/* Introspective Modals & Sheet Flows */}
+      <RootStack.Screen name="JournalEntry" component={JournalEntryScreen} options={modalOptions} />
+      <RootStack.Screen name="MoodCheckIn" component={MoodCheckInScreen} options={modalOptions} />
+      <RootStack.Screen name="HabitForm" component={HabitFormScreen} options={modalOptions} />
+      <RootStack.Screen name="GratitudeForm" component={GratitudeFormScreen} options={modalOptions} />
+      <RootStack.Screen name="SetPin" component={SetPinScreen} options={modalOptions} />
+
+      {/* Immersive Somatic Focus Modes (Fade from bottom) */}
+      <RootStack.Screen name="BreathingSession" component={BreathingSessionScreen} options={fullScreenFocusOptions} />
+      <RootStack.Screen name="PanicAnchor" component={PanicAnchorScreen} options={fullScreenFocusOptions} />
+      <RootStack.Screen name="GroundingExercise" component={GroundingExerciseScreen} options={fullScreenFocusOptions} />
+
+      {/* Sleek Horizontal Slide Pushed Sanctuaries */}
+      <RootStack.Screen name="Onboarding" component={OnboardingScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="AppLock" component={AppLockScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="Habits" component={HabitListScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="HabitDetail" component={HabitDetailScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="Routines" component={RoutinesScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="Gratitude" component={GratitudeScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="Affirmations" component={AffirmationsScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="AffirmationDetail" component={AffirmationDetailScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="SelfCompassion" component={SelfCompassionScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="WhatCanIControl" component={WhatCanIControlScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="ThoughtReframing" component={ThoughtReframingScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="Notifications" component={NotificationsScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="AppLockSettings" component={AppLockSettingsScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="DataManagement" component={DataManagementScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="BreathworkStudio" component={BreathworkStudioScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="Soundscapes" component={SoundscapesScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="SensoryGrounding" component={SensoryGroundingScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="BodyScan" component={BodyScanScreen} options={defaultStackOptions} />
+      <RootStack.Screen name="MoodCalendar" component={MoodCalendarScreen} options={defaultStackOptions} />
     </RootStack.Navigator>
   );
 }

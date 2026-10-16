@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Keyboard } from 'react-native';
+import { View, Text, TextInput, ScrollView, StyleSheet, Alert, Keyboard } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -8,6 +8,7 @@ import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { TactilePressable, StaggeredEntry } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 
@@ -136,13 +137,16 @@ export function RoutineDetailScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
       <View style={styles.topNav}>
-        <TouchableOpacity
+        <TactilePressable
           onPress={() => navigation.goBack()}
+          scaleDownTo={0.9}
+          hapticStyle="light"
           style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
           hitSlop={10}
+          accessibilityLabel="Go back"
         >
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        </TactilePressable>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
           {isEditing ? 'Edit Routine' : `New ${config.label} Routine`}
         </Text>
@@ -191,44 +195,46 @@ export function RoutineDetailScreen() {
             </View>
           ) : (
             <View style={styles.habitList}>
-              {habits.map((item) => {
+              {habits.map((item, index) => {
                 const isSelected = selectedHabitIds.includes(item.id);
                 const order = selectedHabitIds.indexOf(item.id) + 1;
                 return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[
-                      styles.habitSelectItem,
-                      { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: isSelected ? colors.accentPrimary : colors.borderLight },
-                      isSelected && { backgroundColor: colors.accentPrimary + '15', borderWidth: 2 },
-                    ]}
-                    onPress={() => toggleHabit(item.id)}
-                    activeOpacity={0.75}
-                  >
-                    <View style={styles.habitSelectLeft}>
-                      <View style={[styles.habitSelectIcon, { backgroundColor: item.color || config.color }]}>
-                        <Ionicons name={getIconName(item.icon)} size={20} color="#FFFFFF" />
-                      </View>
-                      <View style={styles.habitSelectInfo}>
-                        <Text style={[styles.habitSelectName, { color: colors.textPrimary }]}>{item.name}</Text>
-                        <Text style={[styles.habitSelectFrequency, { color: colors.textTertiary }]}>
-                          {FREQUENCY_LABELS[item.frequency] || item.frequency}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.habitSelectRight}>
-                      {isSelected && (
-                        <View style={[styles.orderBadge, { backgroundColor: colors.accentPrimary }]}>
-                          <Text style={styles.orderBadgeText}>{order}</Text>
+                  <StaggeredEntry key={item.id} index={index} delayStep={30}>
+                    <TactilePressable
+                      style={[
+                        styles.habitSelectItem,
+                        { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: isSelected ? colors.accentPrimary : colors.borderLight },
+                        isSelected && { backgroundColor: colors.accentPrimary + '15', borderWidth: 2 },
+                      ]}
+                      onPress={() => toggleHabit(item.id)}
+                      scaleDownTo={0.98}
+                      hapticStyle="selection"
+                    >
+                      <View style={styles.habitSelectLeft}>
+                        <View style={[styles.habitSelectIcon, { backgroundColor: item.color || config.color }]}>
+                          <Ionicons name={getIconName(item.icon)} size={20} color="#FFFFFF" />
                         </View>
-                      )}
-                      <Ionicons
-                        name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={22}
-                        color={isSelected ? colors.accentPrimary : colors.textTertiary}
-                      />
-                    </View>
-                  </TouchableOpacity>
+                        <View style={styles.habitSelectInfo}>
+                          <Text style={[styles.habitSelectName, { color: colors.textPrimary }]}>{item.name}</Text>
+                          <Text style={[styles.habitSelectFrequency, { color: colors.textTertiary }]}>
+                            {FREQUENCY_LABELS[item.frequency] || item.frequency}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.habitSelectRight}>
+                        {isSelected && (
+                          <View style={[styles.orderBadge, { backgroundColor: colors.accentPrimary }]}>
+                            <Text style={styles.orderBadgeText}>{order}</Text>
+                          </View>
+                        )}
+                        <Ionicons
+                          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                          size={22}
+                          color={isSelected ? colors.accentPrimary : colors.textTertiary}
+                        />
+                      </View>
+                    </TactilePressable>
+                  </StaggeredEntry>
                 );
               })}
             </View>
@@ -245,12 +251,14 @@ export function RoutineDetailScreen() {
             />
           </View>
           {isEditing && (
-            <TouchableOpacity
+            <TactilePressable
               onPress={handleDelete}
+              scaleDownTo={0.96}
+              hapticStyle="medium"
               style={[styles.deleteButton, { borderColor: colors.accentRose || '#EB697F' }]}
             >
               <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete</Text>
-            </TouchableOpacity>
+            </TactilePressable>
           )}
         </View>
       </ScrollView>

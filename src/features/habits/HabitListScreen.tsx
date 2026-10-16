@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import React, { useRef, useState, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -7,8 +7,7 @@ import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
 import { getHabitEncouragement } from '../../utils/encouragement';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { StatPill } from '../../components/StatPill';
-import { HabitPlantingIllustration } from '../../components';
+import { HabitPlantingIllustration, StaggeredEntry, CelebratoryCheckbox, Skeleton, SkeletonCard, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 
@@ -62,9 +61,10 @@ export function HabitListScreen() {
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [showEmptyState, setShowEmptyState] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const [allHabits, completions] = await Promise.all([
         habitRepository.getAll(false),
@@ -79,13 +79,10 @@ export function HabitListScreen() {
       setHabits((prev) => prev ?? []);
       setTodayCompletions((prev) => prev ?? {});
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -147,8 +144,25 @@ export function HabitListScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading mindful habits...</Text>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: colors.bgPrimary, paddingHorizontal: 20, paddingTop: 16 },
+        ]}
+      >
+        <View style={styles.header}>
+          <View style={{ gap: 8 }}>
+            <Skeleton width={130} height={30} radius={10} />
+            <Skeleton width={190} height={14} radius={7} />
+          </View>
+          <Skeleton width={44} height={44} radius={22} />
+        </View>
+        <Skeleton width="100%" height={104} radius={20} style={{ marginBottom: 20 }} />
+        <View style={styles.list}>
+          {[0, 1, 2, 3].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </View>
       </View>
     );
   }
@@ -169,13 +183,17 @@ export function HabitListScreen() {
           <Text style={[styles.title, { color: colors.textPrimary }]}>Habits</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Nurture your daily rhythm</Text>
         </View>
-        <TouchableOpacity
+        <TactilePressable
           onPress={handleAddHabit}
+          scaleDownTo={0.9}
+          hapticStyle="medium"
           style={[styles.addButton, { backgroundColor: colors.accentPrimary }]}
-          activeOpacity={0.8}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Add habit"
         >
           <Ionicons name="add" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        </TactilePressable>
       </View>
 
       {totalDue > 0 && (
@@ -226,7 +244,7 @@ export function HabitListScreen() {
         </View>
       ) : (
         <View style={styles.list}>
-          {(dueHabits ?? []).map((habit) => {
+          {(dueHabits ?? []).map((habit, index) => {
             let dayLabels: string[] = [];
             try {
               const parsed = JSON.parse(habit?.customDays || '[]');
@@ -239,58 +257,55 @@ export function HabitListScreen() {
             const habitColor = habit?.color || COLORS[0];
 
             return (
-              <TouchableOpacity
-                key={habit?.id ?? Math.random().toString()}
-                onPress={() => handleHabitPress(habit)}
-                style={[
-                  styles.habitCard,
-                  { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-                  isCompleted && { borderColor: habitColor + '40' },
-                ]}
-                activeOpacity={0.75}
-              >
-                <View style={styles.habitLeft}>
-                  <View style={[styles.habitIcon, { backgroundColor: habitColor }]}>
-                    <Ionicons name={getIconName(habit?.icon)} size={22} color="#FFFFFF" />
+              <StaggeredEntry key={habit?.id ?? Math.random().toString()} index={Math.min(index, 7)} delayStep={26}>
+                <TactilePressable
+                  onPress={() => handleHabitPress(habit)}
+                  scaleDownTo={0.98}
+                  hapticStyle="none"
+                  accessibilityRole="button"
+                  accessibilityLabel={`${habit?.name ?? 'Habit'}${isCompleted ? ', completed' : ''}`}
+                  style={[
+                    styles.habitCard,
+                    {
+                      backgroundColor: colors.bgCard,
+                      borderColor: colors.isDark ? '#2E3D52' : colors.borderLight,
+                    },
+                    isCompleted && { borderColor: habitColor + '55' },
+                  ]}
+                >
+                  <View style={styles.habitLeft}>
+                    <View style={[styles.habitIcon, { backgroundColor: habitColor }]}>
+                      <Ionicons name={getIconName(habit?.icon)} size={22} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.habitInfo}>
+                      <Text
+                        style={[
+                          styles.habitName,
+                          { color: colors.textPrimary },
+                          isCompleted && { opacity: 0.75, textDecorationLine: 'line-through' },
+                        ]}
+                      >
+                        {habit?.name ?? ''}
+                      </Text>
+                      <Text style={[styles.habitFrequency, { color: colors.textTertiary }]}>
+                        {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
+                        {habit?.frequency === 'custom' && dayLabels.length > 0 && ` • ${dayLabels.join(', ')}`}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.habitInfo}>
-                    <Text
-                      style={[
-                        styles.habitName,
-                        { color: colors.textPrimary },
-                        isCompleted && { opacity: 0.75, textDecorationLine: 'line-through' },
-                      ]}
-                    >
-                      {habit?.name ?? ''}
-                    </Text>
-                    <Text style={[styles.habitFrequency, { color: colors.textTertiary }]}>
-                      {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
-                      {habit?.frequency === 'custom' && dayLabels.length > 0 && ` • ${dayLabels.join(', ')}`}
-                    </Text>
-                  </View>
-                </View>
 
-                <View style={styles.habitRight}>
-                  <TouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      toggleHabit(habit, isCompleted);
-                    }}
-                    style={[
-                      styles.checkButton,
-                      { borderColor: habitColor },
-                      isCompleted && { backgroundColor: habitColor },
-                    ]}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={isCompleted ? 'checkmark' : 'checkmark-outline'}
-                      size={20}
-                      color={isCompleted ? '#FFFFFF' : habitColor}
+                  <View style={styles.habitRight}>
+                    <CelebratoryCheckbox
+                      checked={isCompleted}
+                      onToggle={() => toggleHabit(habit, isCompleted)}
+                      size={26}
+                      activeColor={habitColor}
+                      borderColor={habitColor}
+                      particleColors={COLORS}
                     />
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
+                  </View>
+                </TactilePressable>
+              </StaggeredEntry>
             );
           })}
 
@@ -303,14 +318,23 @@ export function HabitListScreen() {
       )}
 
       <View style={[styles.bottomActions, { borderTopColor: colors.borderLight }]}>
-        <TouchableOpacity
+        <TactilePressable
           onPress={() => navigation.navigate('Routines')}
-          style={[styles.routineButton, { borderColor: colors.accentPrimary, backgroundColor: colors.bgCard }]}
-          activeOpacity={0.8}
+          scaleDownTo={0.98}
+          hapticStyle="light"
+          accessibilityRole="button"
+          accessibilityLabel="Mindful Routines"
+          style={[
+            styles.routineButton,
+            {
+              borderColor: colors.accentPrimary,
+              backgroundColor: colors.bgCard,
+            },
+          ]}
         >
           <Ionicons name="list-outline" size={20} color={colors.accentPrimary} />
           <Text style={[styles.routineButtonText, { color: colors.accentPrimary }]}>Mindful Routines</Text>
-        </TouchableOpacity>
+        </TactilePressable>
       </View>
     </ScrollView>
   );
@@ -454,7 +478,7 @@ const styles = StyleSheet.create({
   },
   habitRight: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 10,
   },
   checkButton: {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, BreathingPreset } from '../../types/navigation';
@@ -85,13 +85,21 @@ export function BreathworkStudioScreen() {
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
       {/* Top Navigation Bar */}
       <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
-        <TouchableOpacity
+        <Pressable
           onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          style={({ pressed }) => [
+            styles.backButton,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderLight,
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
           hitSlop={10}
         >
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <View style={styles.navTitleCol}>
           <Text style={[styles.navTitle, { color: colors.textPrimary }]}>Breathwork Studio</Text>
           <Text style={[styles.navSubtitle, { color: colors.textTertiary }]}>Parasympathetic Cadence</Text>
@@ -151,6 +159,7 @@ export function BreathworkStudioScreen() {
                         : colors.bgCard,
                       borderColor: isSelected ? colors.accentPrimary : colors.borderLight,
                       opacity: pressed ? 0.9 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
                     },
                   ]}
                 >
@@ -223,11 +232,13 @@ export function BreathworkStudioScreen() {
                 <Pressable
                   key={dur.val}
                   onPress={() => setSelectedDuration(dur.val)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.durationPill,
                     {
                       backgroundColor: isSelected ? colors.accentPrimary : colors.bgCard,
                       borderColor: isSelected ? colors.accentPrimary : colors.borderLight,
+                      transform: [{ scale: pressed ? 0.94 : 1 }],
+                      opacity: pressed ? 0.88 : 1,
                     },
                   ]}
                 >
@@ -270,11 +281,13 @@ export function BreathworkStudioScreen() {
                 <Pressable
                   key={snd.id}
                   onPress={() => handleToggleAmbient(snd.id as any)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.ambientPill,
                     {
                       backgroundColor: isSelected ? colors.accentBg : colors.bgCard,
                       borderColor: isSelected ? colors.accentPrimary : colors.borderLight,
+                      transform: [{ scale: pressed ? 0.94 : 1 }],
+                      opacity: pressed ? 0.88 : 1,
                     },
                   ]}
                 >

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -8,6 +8,7 @@ import { Q } from '@nozbe/watermelondb';
 import Affirmation from '../../database/models/Affirmation';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { StaggeredEntry, SkeletonCard, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 
@@ -105,9 +106,10 @@ export function AffirmationsScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [dailyAffirmation, setDailyAffirmation] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
 
   const loadAffirmations = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       let query = database.get<Affirmation>('affirmations').query(Q.sortBy('created_at', Q.desc));
       if (selectedCategory !== 'all') {
@@ -129,6 +131,7 @@ export function AffirmationsScreen() {
       console.error('Failed to load affirmations:', error);
       setAffirmations((prev) => prev ?? []);
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, [selectedCategory]);
@@ -196,32 +199,36 @@ export function AffirmationsScreen() {
   const renderItem = ({ item }: { item: AffirmationItem }) => {
     if (!item) return null;
     return (
-      <TouchableOpacity
+      <TactilePressable
         onPress={() => item?.id && navigation.navigate('AffirmationDetail', { id: item.id })}
+        scaleDownTo={0.985}
+        hapticStyle="light"
+        accessibilityRole="button"
+        accessibilityLabel={`Affirmation: ${item?.text ?? ''}`}
         style={[styles.affirmationCard, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-        activeOpacity={0.75}
       >
         <Text style={[styles.affirmationText, { color: colors.textPrimary }]} numberOfLines={3}>
           {item?.text ?? ''}
         </Text>
         <View style={styles.affirmationFooter}>
           <Text style={[styles.affirmationCategory, { color: colors.accentPrimary }]}>{item?.category ?? ''}</Text>
-          <TouchableOpacity
-            onPress={(e) => {
-              e.stopPropagation();
-              item?.id && handleToggleFavorite(item.id, item?.favorite ?? false);
-            }}
+          <TactilePressable
+            onPress={() => item?.id && handleToggleFavorite(item.id, item?.favorite ?? false)}
+            scaleDownTo={0.85}
+            hapticStyle="selection"
             style={styles.favoriteButton}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={item?.favorite ? 'Remove from favorites' : 'Add to favorites'}
           >
             <Ionicons
               name={item?.favorite ? 'heart' : 'heart-outline'}
               size={20}
               color={item?.favorite ? (colors.accentPeach || '#EB876D') : colors.textTertiary}
             />
-          </TouchableOpacity>
+          </TactilePressable>
         </View>
-      </TouchableOpacity>
+      </TactilePressable>
     );
   };
 
@@ -244,28 +251,36 @@ export function AffirmationsScreen() {
           <Text style={[styles.dailyLabel, { color: colors.accentPrimary }]}>Daily Reflection</Text>
         </View>
         <Text style={[styles.dailyText, { color: colors.textPrimary }]}>"{dailyAffirmation ?? ''}"</Text>
-        <TouchableOpacity
+        <TactilePressable
           onPress={() => {
             try {
               const all = Object.values(STATIC_AFFIRMATIONS ?? {}).flat() ?? [];
               if ((all ?? []).length > 0) setDailyAffirmation(all[Math.floor(Math.random() * all.length)] ?? '');
             } catch {}
           }}
+          scaleDownTo={0.94}
+          hapticStyle="selection"
           style={styles.refreshButton}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Show a new affirmation"
         >
           <Ionicons name="refresh-outline" size={16} color={colors.accentPrimary} />
           <Text style={[styles.refreshText, { color: colors.accentPrimary }]}>New affirmation</Text>
-        </TouchableOpacity>
+        </TactilePressable>
       </Card>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
         {AFFIRMATION_CATEGORIES.map((cat) => {
           const isSelected = selectedCategory === cat;
           return (
-            <TouchableOpacity
+            <TactilePressable
               key={cat}
               onPress={() => setSelectedCategory(cat)}
+              scaleDownTo={0.93}
+              hapticStyle="selection"
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
               style={[
                 styles.categoryChip,
                 { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
@@ -281,14 +296,16 @@ export function AffirmationsScreen() {
               >
                 {cat.replace('-', ' ')}
               </Text>
-            </TouchableOpacity>
+            </TactilePressable>
           );
         })}
       </ScrollView>
 
       {loading ? (
-        <View style={styles.loading}>
-          <Text style={{ color: colors.textTertiary, fontSize: 14 }}>Loading mindful affirmations...</Text>
+        <View style={{ gap: 12 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <SkeletonCard key={i} rows={2} showAvatar={false} showTrailing={false} />
+          ))}
         </View>
       ) : (affirmations ?? []).length === 0 ? (
         <View style={styles.emptyState}>
@@ -300,21 +317,24 @@ export function AffirmationsScreen() {
       ) : (
         <View style={{ gap: 12 }}>
           {(affirmations ?? []).map((item, idx) => (
-            <React.Fragment key={item?.id ?? String(idx)}>
+            <StaggeredEntry key={item?.id ?? String(idx)} index={Math.min(idx, 7)} delayStep={26}>
               {renderItem({ item })}
-            </React.Fragment>
+            </StaggeredEntry>
           ))}
         </View>
       )}
 
-      <TouchableOpacity
+      <TactilePressable
         onPress={handleAddCustom}
+        scaleDownTo={0.98}
+        hapticStyle="light"
+        accessibilityRole="button"
+        accessibilityLabel="Add custom affirmation"
         style={[styles.addButton, { borderColor: colors.accentPrimary, backgroundColor: colors.bgCard }]}
-        activeOpacity={0.8}
       >
         <Ionicons name="add" size={20} color={colors.accentPrimary} />
         <Text style={[styles.addButtonText, { color: colors.accentPrimary }]}>Add Custom Affirmation</Text>
-      </TouchableOpacity>
+      </TactilePressable>
     </ScrollView>
   );
 }

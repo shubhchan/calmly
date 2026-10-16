@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { useThemeColors } from '../theme/ThemeContext';
+import { fontFamilies } from '../theme/typography';
 
 interface StatPillProps {
   label: string;
@@ -100,6 +101,7 @@ export const StatPill = ({
         <Text
           style={[
             {
+              fontFamily: fontFamilies.sans.medium,
               fontSize: 12,
               fontWeight: '500',
               color: colors.textTertiary,
@@ -114,6 +116,7 @@ export const StatPill = ({
           <Text
             style={[
               {
+                fontFamily: fontFamilies.sans.bold,
                 fontSize: 17,
                 fontWeight: '700',
                 color: colors.textPrimary,
@@ -128,6 +131,7 @@ export const StatPill = ({
             <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
               <Text
                 style={{
+                  fontFamily: fontFamilies.sans.semiBold,
                   fontSize: 12,
                   fontWeight: '600',
                   color: trendColors[trend],
@@ -208,11 +212,11 @@ export const MoodStatPill = ({
         <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: color }} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 13, fontWeight: '500', color: colors.textSecondary }}>
+        <Text style={{ fontFamily: fontFamilies.sans.medium, fontSize: 13, fontWeight: '500', color: colors.textSecondary }}>
           {mood}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary, minWidth: 42 }}>
+          <Text style={{ fontFamily: fontFamilies.sans.bold, fontSize: 16, fontWeight: '700', color: colors.textPrimary, minWidth: 42 }}>
             {Math.round(percentage)}%
           </Text>
           <View

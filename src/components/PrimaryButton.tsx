@@ -1,6 +1,9 @@
 import React from 'react';
 import { Pressable, Text, View, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { useThemeColors } from '../theme/ThemeContext';
+import { hapticFeedback } from '../utils/haptics';
+import { fontFamilies } from '../theme/typography';
+import { TactilePressable } from './interactive/TactilePressable';
 
 interface PrimaryButtonProps {
   title: string;
@@ -94,27 +97,33 @@ export const PrimaryButton = React.forwardRef<React.ElementRef<typeof Pressable>
         ? '#FFFFFF'
         : colors.accentPrimary;
 
+    const handlePress = () => {
+      if (isDisabled) return;
+      hapticFeedback.light();
+      onPress?.();
+    };
+
     return (
-      <Pressable
-        ref={ref}
+      <TactilePressable
+        ref={ref as any}
         onPress={onPress}
         disabled={isDisabled}
         className={className}
-        style={({ pressed }) => [
+        scaleDownTo={0.965}
+        hapticStyle="light"
+        style={[
           {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: 9999,
             width: fullWidth ? '100%' : undefined,
-            opacity: isDisabled ? 0.5 : pressed ? 0.88 : 1,
-            transform: [{ scale: pressed && !isDisabled ? 0.98 : 1 }],
+            opacity: isDisabled ? 0.5 : 1,
           },
           paddingStyles,
           variantStyles[variant],
           style,
         ]}
-        android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: false }}
         {...props}
       >
         {loading && (
@@ -128,6 +137,7 @@ export const PrimaryButton = React.forwardRef<React.ElementRef<typeof Pressable>
             {
               color: textColor,
               fontSize: fontSizes,
+              fontFamily: fontFamilies.sans.semiBold,
               fontWeight: '600',
               letterSpacing: 0.2,
               textAlign: 'center',
@@ -138,7 +148,7 @@ export const PrimaryButton = React.forwardRef<React.ElementRef<typeof Pressable>
           {title}
         </Text>
         {!loading && rightIcon && <View style={{ marginLeft: 8 }}>{rightIcon}</View>}
-      </Pressable>
+      </TactilePressable>
     );
   }
 );

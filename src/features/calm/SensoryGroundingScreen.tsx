@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -21,13 +21,21 @@ export function SensoryGroundingScreen() {
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
       {/* Top Bar */}
       <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
-        <TouchableOpacity
+        <Pressable
           onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          style={({ pressed }) => [
+            styles.backButton,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderLight,
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
           hitSlop={10}
         >
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <View style={styles.navTitleCol}>
           <Text style={[styles.navTitle, { color: colors.textPrimary }]}>5-4-3-2-1 Grounding</Text>
           <Text style={[styles.navSubtitle, { color: colors.textTertiary }]}>Sensory Presence Anchor</Text>

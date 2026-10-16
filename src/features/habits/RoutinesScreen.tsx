@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { routineRepository, TimeOfDay } from '../../database/repositories/routineRepository';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { TactilePressable } from '../../components/interactive/TactilePressable';
+import { StaggeredEntry } from '../../components/interactive/StaggeredEntry';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 
@@ -102,84 +104,120 @@ export function RoutinesScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.topNav}>
-        <TouchableOpacity
+        <Pressable
           onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          style={({ pressed }) => [
+            styles.backButton,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderLight,
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
           hitSlop={10}
         >
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Mindful Routines</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      {(['morning', 'afternoon', 'evening'] as TimeOfDay[]).map((timeOfDay) => {
+      {(['morning', 'afternoon', 'evening'] as TimeOfDay[]).map((timeOfDay, sectionIndex) => {
         const config = TIME_OF_DAY_CONFIG[timeOfDay];
         const list = safeRoutines[timeOfDay] ?? [];
 
         return (
-          <Card key={timeOfDay} style={styles.sectionCard}>
-            <View style={styles.timeOfDayHeader}>
-              <View style={[styles.timeOfDayIcon, { backgroundColor: config.color + '20' }]}>
-                <Ionicons name={config.icon} size={22} color={config.color} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.timeOfDayLabel, { color: colors.textPrimary }]}>{config.label}</Text>
-                <Text style={{ fontSize: 12, color: colors.textTertiary }}>
-                  {list.length} {list.length === 1 ? 'routine' : 'routines'}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleCreateRoutine(timeOfDay)}
-                style={[styles.addRoutineButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="add" size={20} color={colors.accentPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            {list.length === 0 ? (
-              <View style={styles.emptyRoutine}>
-                <Text style={[styles.emptyRoutineText, { color: colors.textTertiary }]}>
-                  No {config.label.toLowerCase()} routine defined
-                </Text>
-                <TouchableOpacity
+          <StaggeredEntry key={timeOfDay} index={sectionIndex} baseDelay={60}>
+            <Card style={styles.sectionCard}>
+              <View style={styles.timeOfDayHeader}>
+                <View style={[styles.timeOfDayIcon, { backgroundColor: config.color + '20' }]}>
+                  <Ionicons name={config.icon} size={22} color={config.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.timeOfDayLabel, { color: colors.textPrimary }]}>{config.label}</Text>
+                  <Text style={{ fontSize: 12, color: colors.textTertiary }}>
+                    {list.length} {list.length === 1 ? 'routine' : 'routines'}
+                  </Text>
+                </View>
+                <TactilePressable
                   onPress={() => handleCreateRoutine(timeOfDay)}
-                  style={[styles.createFirstButton, { borderColor: config.color, backgroundColor: config.color + '12' }]}
+                  scaleDownTo={0.9}
+                  hapticStyle="light"
+                  style={[
+                    styles.addRoutineButton,
+                    {
+                      backgroundColor: colors.bgCard,
+                      borderColor: colors.borderLight,
+                    },
+                  ]}
+                  hitSlop={8}
                 >
-                  <Text style={[styles.createFirstButtonText, { color: config.color }]}>Add {config.label} Routine</Text>
-                </TouchableOpacity>
+                  <Ionicons name="add" size={20} color={colors.accentPrimary} />
+                </TactilePressable>
               </View>
-            ) : (
-              <View style={styles.routineList}>
-                {list.map((routine) => (
-                  <TouchableOpacity
-                    key={routine.id}
-                    onPress={() => handleEditRoutine(routine)}
-                    style={[styles.routineCard, { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: colors.borderLight }]}
-                    activeOpacity={0.75}
+
+              {list.length === 0 ? (
+                <View style={styles.emptyRoutine}>
+                  <Text style={[styles.emptyRoutineText, { color: colors.textTertiary }]}>
+                    No {config.label.toLowerCase()} routine defined
+                  </Text>
+                  <TactilePressable
+                    onPress={() => handleCreateRoutine(timeOfDay)}
+                    scaleDownTo={0.96}
+                    hapticStyle="light"
+                    style={[
+                      styles.createFirstButton,
+                      {
+                        borderColor: config.color,
+                        backgroundColor: config.color + '12',
+                      },
+                    ]}
                   >
-                    <View style={styles.routineCardLeft}>
-                      <Text style={[styles.routineName, { color: colors.textPrimary }]}>{routine.name}</Text>
-                      <Text style={[styles.routineHabitCount, { color: colors.textTertiary }]}>
-                        {routine.items?.length ?? 0} {routine.items?.length === 1 ? 'habit' : 'habits'} linked
-                      </Text>
-                    </View>
-                    <View style={styles.routineCardRight}>
-                      <TouchableOpacity
-                        onPress={() => handleDeleteRoutine(routine)}
-                        style={styles.deleteIcon}
-                        hitSlop={8}
+                    <Text style={[styles.createFirstButtonText, { color: config.color }]}>Add {config.label} Routine</Text>
+                  </TactilePressable>
+                </View>
+              ) : (
+                <View style={styles.routineList}>
+                  {list.map((routine, routineIdx) => (
+                    <StaggeredEntry key={routine.id} index={routineIdx} delayStep={30}>
+                      <TactilePressable
+                        onPress={() => handleEditRoutine(routine)}
+                        scaleDownTo={0.98}
+                        hapticStyle="light"
+                        style={[
+                          styles.routineCard,
+                          {
+                            backgroundColor: colors.bgSecondary ?? '#F4EFE6',
+                            borderColor: colors.borderLight,
+                          },
+                        ]}
                       >
-                        <Ionicons name="trash-outline" size={18} color={colors.accentRose || '#EB697F'} />
-                      </TouchableOpacity>
-                      <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </Card>
+                        <View style={styles.routineCardLeft}>
+                          <Text style={[styles.routineName, { color: colors.textPrimary }]}>{routine.name}</Text>
+                          <Text style={[styles.routineHabitCount, { color: colors.textTertiary }]}>
+                            {routine.items?.length ?? 0} {routine.items?.length === 1 ? 'habit' : 'habits'} linked
+                          </Text>
+                        </View>
+                        <View style={styles.routineCardRight}>
+                          <TactilePressable
+                            onPress={() => handleDeleteRoutine(routine)}
+                            scaleDownTo={0.88}
+                            hapticStyle="medium"
+                            style={styles.deleteIcon}
+                            hitSlop={8}
+                          >
+                            <Ionicons name="trash-outline" size={18} color={colors.accentRose || '#EB697F'} />
+                          </TactilePressable>
+                          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                        </View>
+                      </TactilePressable>
+                    </StaggeredEntry>
+                  ))}
+                </View>
+              )}
+            </Card>
+          </StaggeredEntry>
         );
       })}
     </ScrollView>

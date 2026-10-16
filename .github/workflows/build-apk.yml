@@ -2,7 +2,7 @@ name: Build APK to Telegram
 
 on:
   push:
-    branches: [master]
+    branches: [master, main]
   workflow_dispatch:
 
 jobs:
@@ -63,22 +63,24 @@ jobs:
           retention-days: 14
 
       - name: Warn if Telegram secrets are missing
-        if: ${{ secrets.TELEGRAM_BOT_TOKEN == '' || secrets.TELEGRAM_CHAT_ID == '' }}
+        if: ${{ (secrets.TELEGRAM_TOKEN == '' && secrets.TELEGRAM_BOT_TOKEN == '') || (secrets.TELEGRAM_TO == '' && secrets.TELEGRAM_CHAT_ID == '') }}
         run: |
-          echo "::warning::TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set. APK is saved as a workflow artifact, but was NOT sent to Telegram. Add them under GitHub repo Settings > Secrets and variables > Actions."
+          echo "::warning::Telegram secrets not set. APK is saved as a workflow artifact, but was NOT sent to Telegram. Add TELEGRAM_TOKEN (or TELEGRAM_BOT_TOKEN) and TELEGRAM_TO (or TELEGRAM_CHAT_ID) under GitHub repo Settings > Secrets and variables > Actions."
 
-      - name: Send APK to Telegram channel
-        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
-        env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
-          CAPTION="calmly APK build
-          Branch: ${GITHUB_REF_NAME}
-          Commit: ${SHORT_SHA}
-          ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          curl -f -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
-            -F chat_id="${CHAT_ID}" \
-            -F document=@"${APK_PATH}" \
-            -F caption="${CAPTION}"
+      - name: Send APK to Telegram Channel
+        if: ${{ (secrets.TELEGRAM_TOKEN != '' || secrets.TELEGRAM_BOT_TOKEN != '') && (secrets.TELEGRAM_TO != '' || secrets.TELEGRAM_CHAT_ID != '') }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO || secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_TOKEN || secrets.TELEGRAM_BOT_TOKEN }}
+          document: ${{ env.APK_PATH }}
+          format: markdown
+          message: |
+            🚀 *New Calmly APK Build Successful!*
+
+            *Repository:* ${{ github.repository }}
+            *Branch:* ${{ github.ref_name }}
+            *Commit:* ${{ github.sha }}
+            *Pushed By:* ${{ github.actor }}
+
+            The release APK has been attached below.

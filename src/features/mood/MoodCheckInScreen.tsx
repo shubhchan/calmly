@@ -112,9 +112,13 @@ export function MoodCheckInScreen() {
                 setSelectedMood(mood.id);
                 setTimeout(() => goNext(), 180);
               }}
-              style={[
+              style={({ pressed }) => [
                 styles.moodCard,
-                { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                {
+                  backgroundColor: colors.bgCard,
+                  borderColor: colors.borderLight,
+                  transform: [{ scale: pressed ? 0.93 : 1 }],
+                },
                 isSelected && { borderColor: mood.color, backgroundColor: mood.color + '18', borderWidth: 2 },
               ]}
             >
@@ -177,9 +181,13 @@ export function MoodCheckInScreen() {
                 <Pressable
                   key={v}
                   onPress={() => onChange?.(v)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.levelPill,
-                    { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                    {
+                      backgroundColor: colors.bgCard,
+                      borderColor: colors.borderLight,
+                      transform: [{ scale: pressed ? 0.88 : 1 }],
+                    },
                     isSelected && { backgroundColor: accentColor, borderColor: accentColor },
                   ]}
                 >
@@ -216,9 +224,13 @@ export function MoodCheckInScreen() {
             <Pressable
               key={e?.value}
               onPress={() => e?.value && setEnergy(e.value)}
-              style={[
+              style={({ pressed }) => [
                 styles.energyCard,
-                { backgroundColor: colors.bgCard, borderColor: isSelected ? colors.accentPrimary : colors.borderLight },
+                {
+                  backgroundColor: colors.bgCard,
+                  borderColor: isSelected ? colors.accentPrimary : colors.borderLight,
+                  transform: [{ scale: pressed ? 0.96 : 1 }],
+                },
                 isSelected && { backgroundColor: colors.accentPrimary + '14', borderWidth: 2 },
               ]}
             >
@@ -292,7 +304,15 @@ export function MoodCheckInScreen() {
       <View style={styles.header}>
         <Pressable
           onPress={goBack}
-          style={[styles.navButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          style={({ pressed }) => [
+            styles.navButton,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderLight,
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
           disabled={step === 'complete'}
           hitSlop={10}
         >

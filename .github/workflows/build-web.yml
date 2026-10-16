@@ -1,0 +1,61 @@
+name: Build React Web App & Push to Telegram
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Expo Web
+        run: npx expo export --platform web
+
+      - name: Zip Build Folder
+        run: zip -r build-artifact.zip dist/
+
+      - name: Upload Build Artifact to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: calmly-web-build
+          path: build-artifact.zip
+          retention-days: 14
+
+      - name: Warn if Telegram secrets are missing
+        if: ${{ (secrets.TELEGRAM_TOKEN == '' && secrets.TELEGRAM_BOT_TOKEN == '') || (secrets.TELEGRAM_TO == '' && secrets.TELEGRAM_CHAT_ID == '') }}
+        run: |
+          echo "::warning::Telegram secrets not set. Web build is saved as a workflow artifact, but was NOT sent to Telegram. Add TELEGRAM_TOKEN and TELEGRAM_TO under GitHub repo Settings > Secrets and variables > Actions."
+
+      - name: Send Build to Telegram Channel
+        if: ${{ (secrets.TELEGRAM_TOKEN != '' || secrets.TELEGRAM_BOT_TOKEN != '') && (secrets.TELEGRAM_TO != '' || secrets.TELEGRAM_CHAT_ID != '') }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO || secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_TOKEN || secrets.TELEGRAM_BOT_TOKEN }}
+          document: build-artifact.zip
+          format: markdown
+          message: |
+            🚀 *New Web Production Build Successful!*
+
+            *Repository:* ${{ github.repository }}
+            *Branch:* ${{ github.ref_name }}
+            *Commit:* ${{ github.sha }}
+            *Pushed By:* ${{ github.actor }}
+
+            The web production assets have been bundled and attached below.

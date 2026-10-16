@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository } from '../../database/repositories/insightsRepository';
 import { MoodEntry } from '../../database/models';
-import { Card, CardContent, AppIcon, moodIcon } from '../../components';
+import { Card, CardContent, AppIcon, moodIcon, Skeleton, SkeletonCard } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { hapticFeedback } from '../../utils/haptics';
+import { fontFamilies } from '../../theme/typography';
 
 const MOOD_COLORS: Record<string, string> = {
   happy: '#5A955A',
@@ -43,10 +45,15 @@ export function MoodCalendarScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [moodData, setMoodData] = useState<Record<number, DayMoodData>>({});
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
 
-  const loadMonthData = useCallback(async () => {
-    setLoading(true);
+  const loadMonthData = useCallback(async (isInitial = false) => {
+    if (isInitial) {
+      setInitialLoading(true);
+    } else {
+      setFetching(true);
+    }
     try {
       const safeDate = currentDate ?? new Date();
       const year = safeDate?.getFullYear?.() ?? new Date().getFullYear();
@@ -91,13 +98,18 @@ export function MoodCalendarScreen() {
       setMoodData({});
       setSelectedDay(null);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
+      setFetching(false);
     }
   }, [currentDate]);
 
   useEffect(() => {
-    loadMonthData();
-  }, [loadMonthData]);
+    loadMonthData(true);
+  }, []);
+
+  useEffect(() => {
+    loadMonthData(false);
+  }, [currentDate]);
 
   const safeCurrentDate = currentDate ?? new Date();
   const year = safeCurrentDate?.getFullYear?.() ?? new Date().getFullYear();
@@ -115,14 +127,17 @@ export function MoodCalendarScreen() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const handlePrevMonth = () => {
+    hapticFeedback.light();
     setCurrentDate(new Date(year, month - 1, 1));
   };
 
   const handleNextMonth = () => {
+    hapticFeedback.light();
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
   const handleDayPress = (day: number) => {
+    hapticFeedback.selection();
     if ((moodData ?? {})?.[day]) {
       setSelectedDay(day);
     }
@@ -148,42 +163,49 @@ export function MoodCalendarScreen() {
     const moodIconName = hasData ? moodIcon(moodKey) : moodIcon(null);
 
     return (
-      <Pressable
-        key={day}
-        onPress={() => handleDayPress(day)}
-        disabled={!hasData}
-        style={[
-          styles.dayCell,
-          isSelected && { backgroundColor: colors.accentPrimary },
-          isTodayDay && !isSelected && { borderWidth: 2, borderColor: colors.accentPrimary },
-          !hasData && { opacity: 0.4 },
-        ]}
-      >
-        <Text
-          style={[
-            styles.dayText,
-            { color: colors.textPrimary },
-            isSelected && { color: '#FFFFFF', fontWeight: '700' },
-            isTodayDay && !isSelected && { color: colors.accentPrimary, fontWeight: '700' },
+      <View key={day} style={styles.dayCellContainer}>
+        <Pressable
+          onPress={() => handleDayPress(day)}
+          disabled={!hasData}
+          style={({ pressed }) => [
+            styles.dayCell,
+            isSelected && { backgroundColor: colors.accentPrimary },
+            isTodayDay && !isSelected && { borderWidth: 2, borderColor: colors.accentPrimary },
+            !hasData && { opacity: 0.35 },
+            { transform: [{ scale: pressed ? 0.92 : 1 }] },
           ]}
         >
-          {day}
-        </Text>
-        {hasData && (
-          <View style={[styles.moodIndicator, { backgroundColor: moodColor }]}>
-            <AppIcon name={moodIconName} size={10} loop={false} />
-          </View>
-        )}
-      </Pressable>
+          <Text
+            style={[
+              styles.dayText,
+              { color: colors.textPrimary },
+              isSelected && { color: '#FFFFFF', fontWeight: '700' },
+              isTodayDay && !isSelected && { color: colors.accentPrimary, fontWeight: '700' },
+            ]}
+          >
+            {day}
+          </Text>
+          {hasData && (
+            <View style={[styles.moodIndicator, { backgroundColor: moodColor }]}>
+              <AppIcon name={moodIconName} size={10} loop={false} />
+            </View>
+          )}
+        </Pressable>
+      </View>
     );
   };
 
   const selectedDayData = selectedDay != null ? ((moodData ?? {})?.[selectedDay] ?? null) : null;
 
-  if (loading) {
+  if (initialLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.accentPrimary} />
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary, paddingHorizontal: 20, paddingTop: 16 }]}>
+        <View style={{ gap: 8, marginBottom: 20 }}>
+          <Skeleton width={190} height={30} radius={10} />
+          <Skeleton width={240} height={14} radius={7} />
+        </View>
+        <Skeleton width="100%" height={360} radius={24} style={{ marginBottom: 16 }} />
+        <SkeletonCard rows={2} />
       </View>
     );
   }
@@ -192,23 +214,50 @@ export function MoodCalendarScreen() {
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
       <View style={styles.header}>
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            hapticFeedback.light();
+            navigation.goBack();
+          }}
           hitSlop={12}
-          style={[styles.navButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          style={({ pressed }) => [
+            styles.navButton,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderLight,
+              opacity: pressed ? 0.75 : 1,
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+            },
+          ]}
         >
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </Pressable>
         <View style={styles.monthNav}>
-          <Pressable onPress={handlePrevMonth} hitSlop={10} style={styles.arrowButton}>
+          <Pressable
+            onPress={handlePrevMonth}
+            hitSlop={10}
+            style={({ pressed }) => [
+              styles.arrowButton,
+              { opacity: pressed ? 0.6 : 1, transform: [{ scale: pressed ? 0.92 : 1 }] },
+            ]}
+          >
             <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
             {monthName} {year}
           </Text>
-          <Pressable onPress={handleNextMonth} hitSlop={10} style={styles.arrowButton}>
+          <Pressable
+            onPress={handleNextMonth}
+            hitSlop={10}
+            style={({ pressed }) => [
+              styles.arrowButton,
+              { opacity: pressed ? 0.6 : 1, transform: [{ scale: pressed ? 0.92 : 1 }] },
+            ]}
+          >
             <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
           </Pressable>
         </View>
+        {/* Right balancing spacer so monthNav is centered on screen */}
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -223,7 +272,9 @@ export function MoodCalendarScreen() {
 
           <View style={styles.calendarGrid}>
             {[...Array(Math.max(0, firstDay ?? 0))].map((_, i) => (
-              <View key={`empty-${i}`} style={styles.dayCell} />
+              <View key={`empty-${i}`} style={styles.dayCellContainer}>
+                <View style={styles.dayCellEmpty} />
+              </View>
             ))}
             {[...Array(Math.max(0, daysInMonth ?? 0))].map((_, i) => renderDay(i + 1))}
           </View>
@@ -301,7 +352,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
-    gap: 12,
   },
   navButton: {
     width: 40,
@@ -316,42 +366,123 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 8,
   },
   arrowButton: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  headerTitle: {
+    fontFamily: fontFamilies.serif.bold,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 110, gap: 16 },
   calendarCard: {
     borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
+    padding: 14,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
-  weekdays: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  weekday: { width: 40, textAlign: 'center', fontSize: 12, fontWeight: '600' },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
-  dayCell: { width: 40, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  dayText: { fontSize: 14, fontWeight: '500' },
-  moodIndicator: { marginTop: 2, width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  weekdays: {
+    flexDirection: 'row',
+    width: '100%',
+    marginBottom: 8,
+  },
+  weekday: {
+    width: '14.285%',
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: fontFamilies.sans.semiBold,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: '100%',
+  },
+  dayCellContainer: {
+    width: '14.285%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 3,
+  },
+  dayCell: {
+    width: 38,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayCellEmpty: {
+    width: 38,
+    height: 44,
+  },
+  dayText: {
+    fontFamily: fontFamilies.sans.medium,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  moodIndicator: {
+    marginTop: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   detailCard: { marginTop: 0 },
-  detailDate: { fontSize: 18, fontWeight: '700', marginBottom: 14, textAlign: 'center' },
+  detailDate: {
+    fontFamily: fontFamilies.serif.bold,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 14,
+    textAlign: 'center',
+  },
   detailMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 },
   moodCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   detailMoodInfo: { flex: 1, gap: 4 },
-  detailMoodLabel: { fontSize: 18, fontWeight: '700' },
-  detailMoodMeta: { fontSize: 13 },
+  detailMoodLabel: {
+    fontFamily: fontFamilies.serif.bold,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  detailMoodMeta: {
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 13,
+  },
   detailStats: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 12, borderTopWidth: 1 },
   detailStat: { alignItems: 'center', gap: 4 },
-  detailStatLabel: { fontSize: 12, fontWeight: '500' },
-  detailStatValue: { fontSize: 15, fontWeight: '600' },
+  detailStatLabel: {
+    fontFamily: fontFamilies.sans.medium,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  detailStatValue: {
+    fontFamily: fontFamilies.sans.bold,
+    fontSize: 15,
+    fontWeight: '600',
+  },
   emptyCard: { marginTop: 0 },
   emptyCardContent: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  emptyTitle: { fontSize: 16, fontWeight: '600' },
-  emptyText: { fontSize: 13, textAlign: 'center', paddingHorizontal: 20, lineHeight: 18 },
+  emptyTitle: {
+    fontFamily: fontFamilies.serif.bold,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyText: {
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 18,
+  },
 });

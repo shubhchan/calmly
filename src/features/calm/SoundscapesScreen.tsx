@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Card, CardContent, PrimaryButton, NatureSoundscapeIllustration, AppIcon } from '../../components';
@@ -84,13 +84,21 @@ export function SoundscapesScreen() {
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
       {/* Top Bar */}
       <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
-        <TouchableOpacity
+        <Pressable
           onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          style={({ pressed }) => [
+            styles.backButton,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderLight,
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
           hitSlop={10}
         >
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <View style={styles.navTitleCol}>
           <Text style={[styles.navTitle, { color: colors.textPrimary }]}>Soundscapes Sanctuary</Text>
           <Text style={[styles.navSubtitle, { color: colors.textTertiary }]}>Acoustic Rest & Masking</Text>
@@ -161,6 +169,7 @@ export function SoundscapesScreen() {
                         : colors.bgCard,
                       borderColor: isPlaying ? colors.accentPrimary : colors.borderLight,
                       opacity: pressed ? 0.9 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
                     },
                   ]}
                 >
@@ -239,11 +248,13 @@ export function SoundscapesScreen() {
                     <Pressable
                       key={timer}
                       onPress={() => handleSelectTimer(timer)}
-                      style={[
+                      style={({ pressed }) => [
                         styles.timerPill,
                         {
                           backgroundColor: isTimerActive ? colors.accentPrimary : colors.bgCard,
                           borderColor: isTimerActive ? colors.accentPrimary : colors.borderLight,
+                          transform: [{ scale: pressed ? 0.93 : 1 }],
+                          opacity: pressed ? 0.88 : 1,
                         },
                       ]}
                     >
@@ -279,11 +290,13 @@ export function SoundscapesScreen() {
                     <Pressable
                       key={vol.label}
                       onPress={() => handleSetVolume(vol.val)}
-                      style={[
+                      style={({ pressed }) => [
                         styles.volumePill,
                         {
                           backgroundColor: isVolActive ? colors.accentPrimary : colors.bgCard,
                           borderColor: isVolActive ? colors.accentPrimary : colors.borderLight,
+                          transform: [{ scale: pressed ? 0.93 : 1 }],
+                          opacity: pressed ? 0.88 : 1,
                         },
                       ]}
                     >
@@ -315,13 +328,21 @@ export function SoundscapesScreen() {
               {selectedTimer !== 'Off' ? `Timer active: ${selectedTimer}` : 'Continuous loop'}
             </Text>
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={() => soundService.stop()}
-            style={[styles.stopBtn, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}
+            style={({ pressed }) => [
+              styles.stopBtn,
+              {
+                backgroundColor: colors.accentBg,
+                borderColor: colors.accentBorder,
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
           >
             <Ionicons name="stop" size={16} color={colors.accentPrimary} />
             <Text style={[styles.stopBtnText, { color: colors.accentPrimary }]}>Stop</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
     </View>

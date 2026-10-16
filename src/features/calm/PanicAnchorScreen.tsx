@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Card, CardContent, PrimaryButton, PanicAnchorIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
+import { hapticFeedback } from '../../utils/haptics';
+import { fontFamilies } from '../../theme/typography';
 
 export function PanicAnchorScreen() {
   const navigation = useNavigation();
@@ -14,10 +16,12 @@ export function PanicAnchorScreen() {
   const [isPlayingRain, setIsPlayingRain] = useState<boolean>(false);
 
   const handleSighPress = () => {
+    hapticFeedback.medium();
     setSighCount((prev) => (prev >= 3 ? 1 : prev + 1));
   };
 
   const handleToggleRain = async () => {
+    hapticFeedback.light();
     if (isPlayingRain) {
       await soundService.stop();
       setIsPlayingRain(false);
@@ -31,13 +35,21 @@ export function PanicAnchorScreen() {
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
       {/* Top Bar */}
       <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
-        <TouchableOpacity
+        <Pressable
           onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          style={({ pressed }) => [
+            styles.backButton,
+            {
+              backgroundColor: colors.bgCard,
+              borderColor: colors.borderLight,
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
           hitSlop={10}
         >
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <View style={styles.navTitleCol}>
           <Text style={[styles.navTitle, { color: colors.textPrimary }]}>Acute Panic Anchor</Text>
           <Text style={[styles.navSubtitle, { color: colors.accentRose || '#EB697F' }]}>Biological SOS Aid</Text>
@@ -105,7 +117,15 @@ export function PanicAnchorScreen() {
             </Text>
             <Pressable
               onPress={handleSighPress}
-              style={[styles.sighButton, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}
+              style={({ pressed }) => [
+                styles.sighButton,
+                {
+                  backgroundColor: colors.accentBg,
+                  borderColor: colors.accentBorder,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
             >
               <Ionicons name="sparkles" size={18} color={colors.accentPrimary} />
               <Text style={[styles.sighButtonText, { color: colors.accentPrimary }]}>
@@ -168,13 +188,15 @@ export function PanicAnchorScreen() {
           <Text style={[styles.soundPromptText, { color: colors.textSecondary }]}>
             Need soothing acoustics right now?
           </Text>
-          <TouchableOpacity
+          <Pressable
             onPress={handleToggleRain}
-            style={[
+            style={({ pressed }) => [
               styles.soundToggleBtn,
               {
                 backgroundColor: isPlayingRain ? colors.accentPrimary : colors.bgCard,
                 borderColor: isPlayingRain ? colors.accentPrimary : colors.borderLight,
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+                opacity: pressed ? 0.88 : 1,
               },
             ]}
           >
@@ -186,7 +208,7 @@ export function PanicAnchorScreen() {
             <Text style={[styles.soundToggleBtnText, { color: isPlayingRain ? '#FFFFFF' : colors.textPrimary }]}>
               {isPlayingRain ? 'Pause Rain' : 'Play Gentle Rain'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </ScrollView>
 
@@ -224,8 +246,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navTitleCol: { alignItems: 'center' },
-  navTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  navSubtitle: { fontSize: 12, fontWeight: '700', marginTop: 1 },
+  navTitle: { fontFamily: fontFamilies.sans.bold, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  navSubtitle: { fontFamily: fontFamilies.sans.semiBold, fontSize: 12, fontWeight: '700', marginTop: 1 },
   badgeOrb: {
     width: 36,
     height: 36,
@@ -272,16 +294,18 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     borderWidth: 1,
   },
-  heroBadgeText: { fontSize: 12, fontWeight: '700' },
-  heroEstText: { fontSize: 13, fontWeight: '600' },
+  heroBadgeText: { fontFamily: fontFamilies.sans.bold, fontSize: 12, fontWeight: '700' },
+  heroEstText: { fontFamily: fontFamilies.sans.semiBold, fontSize: 13, fontWeight: '600' },
   section: { gap: 8 },
   headline: {
+    fontFamily: fontFamilies.serif.bold,
     fontSize: 24,
     fontWeight: '800',
     letterSpacing: -0.4,
     lineHeight: 30,
   },
   subheadline: {
+    fontFamily: fontFamilies.sans.regular,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -299,10 +323,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepNumText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  stepTitle: { fontSize: 16, fontWeight: '700' },
-  stepSubtitle: { fontSize: 12, fontWeight: '600', marginTop: 2 },
-  stepBody: { fontSize: 13, lineHeight: 19 },
+  stepNumText: { fontFamily: fontFamilies.sans.bold, color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  stepTitle: { fontFamily: fontFamilies.serif.semiBold, fontSize: 16, fontWeight: '700' },
+  stepSubtitle: { fontFamily: fontFamilies.sans.semiBold, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  stepBody: { fontFamily: fontFamilies.sans.regular, fontSize: 13, lineHeight: 19 },
   sighButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -314,7 +338,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 4,
   },
-  sighButtonText: { fontSize: 13, fontWeight: '700' },
+  sighButtonText: { fontFamily: fontFamilies.sans.bold, fontSize: 13, fontWeight: '700' },
   soundRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -325,7 +349,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.06)',
     marginTop: 4,
   },
-  soundPromptText: { fontSize: 13, fontWeight: '500' },
+  soundPromptText: { fontFamily: fontFamilies.sans.medium, fontSize: 13, fontWeight: '500' },
   soundToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -335,7 +359,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     borderWidth: 1,
   },
-  soundToggleBtnText: { fontSize: 12, fontWeight: '700' },
+  soundToggleBtnText: { fontFamily: fontFamilies.sans.bold, fontSize: 12, fontWeight: '700' },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
