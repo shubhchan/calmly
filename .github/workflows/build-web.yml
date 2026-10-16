@@ -10,6 +10,9 @@ on:
 jobs:
   build-and-notify:
     runs-on: ubuntu-latest
+    env:
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN || secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_TO: ${{ secrets.TELEGRAM_TO || secrets.TELEGRAM_CHAT_ID }}
 
     steps:
       - name: Checkout repository
@@ -38,16 +41,16 @@ jobs:
           retention-days: 14
 
       - name: Warn if Telegram secrets are missing
-        if: ${{ (secrets.TELEGRAM_TOKEN == '' && secrets.TELEGRAM_BOT_TOKEN == '') || (secrets.TELEGRAM_TO == '' && secrets.TELEGRAM_CHAT_ID == '') }}
+        if: ${{ env.TELEGRAM_TOKEN == '' || env.TELEGRAM_TO == '' }}
         run: |
           echo "::warning::Telegram secrets not set. Web build is saved as a workflow artifact, but was NOT sent to Telegram. Add TELEGRAM_TOKEN and TELEGRAM_TO under GitHub repo Settings > Secrets and variables > Actions."
 
       - name: Send Build to Telegram Channel
-        if: ${{ (secrets.TELEGRAM_TOKEN != '' || secrets.TELEGRAM_BOT_TOKEN != '') && (secrets.TELEGRAM_TO != '' || secrets.TELEGRAM_CHAT_ID != '') }}
+        if: ${{ env.TELEGRAM_TOKEN != '' && env.TELEGRAM_TO != '' }}
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_TO || secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_TOKEN || secrets.TELEGRAM_BOT_TOKEN }}
+          to: ${{ env.TELEGRAM_TO }}
+          token: ${{ env.TELEGRAM_TOKEN }}
           document: build-artifact.zip
           format: markdown
           message: |
