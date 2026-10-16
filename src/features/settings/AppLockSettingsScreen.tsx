@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -9,6 +9,10 @@ import { settingsRepository } from '../../database/repositories/settingsReposito
 import { appLockService } from '../../services/appLock';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { BrandedLoader } from '../../components/interactive/LoadingState';
+import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'AppLockSettings'>['navigation'];
 
@@ -21,6 +25,7 @@ export function AppLockSettingsScreen() {
   const [hideInSwitcher, setHideInSwitcher] = useState(true);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
+  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -126,18 +131,14 @@ export function AppLockSettingsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.accentPrimary} />
-      </View>
+      <ScreenContainer scroll={false} style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <BrandedLoader label="Loading security settings" />
+      </ScreenContainer>
     );
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenContainer contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => (navigation as any)?.goBack?.()}
@@ -150,58 +151,64 @@ export function AppLockSettingsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <Card style={styles.card}>
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Lock Method</Text>
+      <PopIn index={0}>
+        <Card tone="lilac" style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: lilacTint.text }]}>Lock Method</Text>
 
-        <View style={styles.lockOption}>
-          <View style={styles.lockOptionInfo}>
-            <View style={[styles.lockIcon, { backgroundColor: colors.accentPrimary + '18' }]}>
-              <Ionicons name="lock-closed" size={20} color={colors.accentPrimary} />
-            </View>
-            <View style={styles.lockOptionText}>
-              <Text style={[styles.lockOptionLabel, { color: colors.textPrimary }]}>PIN Protection</Text>
-              <Text style={[styles.lockOptionDesc, { color: colors.textTertiary }]}>
-                {pinEnabled ? '6-digit PIN required on opening' : 'Set a private 6-digit PIN'}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.lockOptionActions}>
-            {pinEnabled ? (
-              <>
-                <TouchableOpacity
-                  onPress={handleChangePin}
-                  style={[styles.changeButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-                >
-                  <Text style={[styles.changeButtonText, { color: colors.accentPrimary }]}>Change</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleRemovePin}
-                  style={[styles.removeButton, { borderColor: (colors.accentRose || '#EB697F') + '60' }]}
-                >
-                  <Text style={[styles.removeButtonText, { color: colors.accentRose || '#EB697F' }]}>Remove</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <TouchableOpacity
-                onPress={() => handlePinToggle(true)}
-                style={[styles.setupButton, { backgroundColor: colors.accentPrimary }]}
-              >
-                <Text style={styles.setupButtonText}>Set Up PIN</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {biometricAvailable && (
-          <View style={[styles.lockOption, styles.lockOptionDivider, { borderTopColor: colors.borderLight }]}>
+          <View style={styles.lockOption}>
             <View style={styles.lockOptionInfo}>
-              <View style={[styles.lockIcon, { backgroundColor: (colors.accentSky || '#6B9BCD') + '18' }]}>
-                <Ionicons name="finger-print" size={20} color={colors.accentSky || '#6B9BCD'} />
+              <View style={[styles.lockIcon, { backgroundColor: lilacTint.plate }]}>
+                <Ionicons name="lock-closed" size={20} color={lilacTint.accent} />
               </View>
               <View style={styles.lockOptionText}>
-                <Text style={[styles.lockOptionLabel, { color: colors.textPrimary }]}>Biometric Unlock</Text>
-                <Text style={[styles.lockOptionDesc, { color: colors.textTertiary }]}>
-                  {biometricEnabled ? 'Biometrics active' : 'Unlock using Face ID or Fingerprint'}
+                <Text style={[styles.lockOptionLabel, { color: lilacTint.text }]}>PIN Protection</Text>
+                <Text style={[styles.lockOptionDesc, { color: lilacTint.muted }]}>
+                  {pinEnabled ? '6-digit PIN required on opening' : 'Set a private 6-digit PIN'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.lockOptionActions}>
+              {pinEnabled ? (
+                <>
+                  <TouchableOpacity
+                    onPress={handleChangePin}
+                    style={[styles.changeButton, { backgroundColor: lilacTint.plate, borderColor: lilacTint.border }]}
+                  >
+                    <Text style={[styles.changeButtonText, { color: lilacTint.accent }]}>Change</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleRemovePin}
+                    style={[styles.removeButton, { borderColor: (colors.accentRose || '#EB697F') + '60' }]}
+                  >
+                    <Text style={[styles.removeButtonText, { color: colors.accentRose || '#EB697F' }]}>Remove</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => handlePinToggle(true)}
+                  style={[styles.setupButton, { backgroundColor: colors.accentPrimary }]}
+                >
+                  <Text style={styles.setupButtonText}>Set Up PIN</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <View style={[styles.lockOption, styles.lockOptionDivider, { borderTopColor: lilacTint.border }]}>
+            <View style={styles.lockOptionInfo}>
+              <View style={[styles.lockIcon, { backgroundColor: lilacTint.plate, opacity: biometricAvailable ? 1 : 0.5 }]}>
+                <Ionicons name="finger-print" size={20} color={lilacTint.accent} />
+              </View>
+              <View style={styles.lockOptionText}>
+                <Text style={[styles.lockOptionLabel, { color: lilacTint.text }]}>Biometric Unlock</Text>
+                <Text style={[styles.lockOptionDesc, { color: lilacTint.muted }]}>
+                  {!biometricAvailable
+                    ? 'Not available on this device'
+                    : !pinEnabled
+                      ? 'Set a PIN first to enable biometrics'
+                      : biometricEnabled
+                        ? 'Biometrics active'
+                        : 'Unlock using Face ID or Fingerprint'}
                 </Text>
               </View>
             </View>
@@ -209,15 +216,16 @@ export function AppLockSettingsScreen() {
               value={biometricEnabled}
               onValueChange={handleBiometricToggle}
               thumbColor="#FFFFFF"
-              trackColor={{ false: colors.borderLight, true: colors.accentPrimary }}
-              disabled={!pinEnabled}
-              style={{ marginTop: 2 }}
+              trackColor={{ false: lilacTint.border, true: lilacTint.accent }}
+              disabled={!pinEnabled || !biometricAvailable}
+              style={{ marginTop: 2, opacity: biometricAvailable ? 1 : 0.5 }}
             />
           </View>
-        )}
-      </Card>
+        </Card>
+      </PopIn>
 
-      <Card style={styles.card}>
+      <PopIn index={1}>
+        <Card style={styles.card}>
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Auto-Lock Timeout</Text>
         <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
           Require passcode after app remains inactive
@@ -250,7 +258,10 @@ export function AppLockSettingsScreen() {
         </View>
       </Card>
 
-      <Card style={styles.card}>
+      </PopIn>
+
+      <PopIn index={2}>
+        <Card style={styles.card}>
         <View style={styles.switcherRow}>
           <View style={styles.switcherInfo}>
             <View style={[styles.lockIcon, { backgroundColor: (colors.accentPeach || '#EB876D') + '18' }]}>
@@ -271,8 +282,9 @@ export function AppLockSettingsScreen() {
             style={{ marginTop: 2 }}
           />
         </View>
-      </Card>
-    </ScrollView>
+        </Card>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 

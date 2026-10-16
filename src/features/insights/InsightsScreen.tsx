@@ -4,12 +4,16 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository, WeeklyStats, Insight, HabitStats } from '../../database/repositories/insightsRepository';
-import { Card, CardContent, PrimaryButton, AppIcon, MoodLandscapeIllustration, HabitPlantingIllustration, MoodAuraIllustration, Skeleton, SkeletonCard, StaggeredEntry } from '../../components';
+import { Card, CardContent, PrimaryButton, AppIcon, MoodLandscapeIllustration, HabitPlantingIllustration, MoodAuraIllustration, StaggeredEntry } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { DetailSkeleton } from '../../components/interactive/LoadingState';
+import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Insights'>['navigation'];
 
@@ -182,30 +186,23 @@ export function InsightsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, paddingHorizontal: 20, paddingTop: 16 }]}>
-        <View style={{ gap: 8, marginBottom: 20 }}>
-          <Skeleton width={140} height={30} radius={10} />
-          <Skeleton width={260} height={14} radius={7} />
-        </View>
-        <Skeleton width="100%" height={48} radius={16} style={{ marginBottom: 20 }} />
-        <Skeleton width="100%" height={150} radius={24} style={{ marginBottom: 16 }} />
-        <View style={{ gap: 12 }}>
-          {[0, 1, 2].map((i) => (
-            <SkeletonCard key={i} rows={2} showAvatar={false} />
-          ))}
-        </View>
-      </View>
+      <ScreenContainer contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}>
+        <DetailSkeleton />
+      </ScreenContainer>
     );
   }
+
+  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
+  const skyTint = resolveTint(!!colors.isDark, 'sky');
+  const creamTint = resolveTint(!!colors.isDark, 'cream');
+  const coralTint = resolveTint(!!colors.isDark, 'coral');
+  const navyTint = resolveTint(!!colors.isDark, 'navy');
+  const mintTint = resolveTint(!!colors.isDark, 'mint');
 
   const activeHabitsCount = (habitStats ?? []).filter(h => (h.completedThisWeek || 0) > 0).length;
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenContainer contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
@@ -267,47 +264,48 @@ export function InsightsScreen() {
       </View>
 
       {/* 2x2 Metric Grid (Symmetrical 2-row layout) */}
+      <PopIn index={0}>
       <View style={{ gap: 12 }}>
         <View style={styles.metricRow}>
-          {/* Metric 1: Avg Mood */}
-          <Card variant="elevated" style={styles.metricCard}>
+          {/* Metric 1: Avg Mood — lilac pop card */}
+          <Card variant="elevated" tone="lilac" style={styles.metricCard}>
             <CardContent style={styles.metricCardContent}>
               <View style={styles.metricTopRow}>
-                <View style={[styles.metricIconOrb, { backgroundColor: colors.accentBg }]}>
+                <View style={[styles.metricIconOrb, { backgroundColor: lilacTint.plate }]}>
                   <AppIcon name="l-heart" size={26} loop />
                 </View>
-                <View style={[styles.trendBadge, { backgroundColor: ((stats?.avgMood ?? 0) >= 6 ? colors.success : colors.textTertiary) + '15' }]}>
-                  <Text style={[styles.trendBadgeText, { color: (stats?.avgMood ?? 0) >= 6 ? colors.success : colors.textTertiary }]}>
+                <View style={[styles.trendBadge, { backgroundColor: ((stats?.avgMood ?? 0) >= 6 ? colors.success : lilacTint.accent) + '15' }]}>
+                  <Text style={[styles.trendBadgeText, { color: (stats?.avgMood ?? 0) >= 6 ? colors.success : lilacTint.accent }]}>
                     {(stats?.avgMood ?? 0) >= 6 ? '↑ Good' : '→ Calm'}
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>
+              <Text style={[styles.metricValue, { color: lilacTint.text }]}>
                 {stats?.avgMood ? `${stats.avgMood}/10` : '—'}
               </Text>
-              <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
+              <Text style={[styles.metricLabel, { color: lilacTint.muted }]}>
                 Average Mood
               </Text>
             </CardContent>
           </Card>
 
-          {/* Metric 2: Mindful Minutes */}
-          <Card variant="elevated" style={styles.metricCard}>
+          {/* Metric 2: Mindful Minutes — sky pop card */}
+          <Card variant="elevated" tone="sky" style={styles.metricCard}>
             <CardContent style={styles.metricCardContent}>
               <View style={styles.metricTopRow}>
-                <View style={[styles.metricIconOrb, { backgroundColor: (colors.accentSky || '#6B9BCD') + '15' }]}>
+                <View style={[styles.metricIconOrb, { backgroundColor: skyTint.plate }]}>
                   <AppIcon name="l-expand" size={26} loop />
                 </View>
-                <View style={[styles.trendBadge, { backgroundColor: colors.accentBg }]}>
-                  <Text style={[styles.trendBadgeText, { color: colors.accentPrimary }]}>
+                <View style={[styles.trendBadge, { backgroundColor: skyTint.plate }]}>
+                  <Text style={[styles.trendBadgeText, { color: skyTint.accent }]}>
                     Somatic
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>
+              <Text style={[styles.metricValue, { color: skyTint.text }]}>
                 {stats?.breathingMinutes ? `${stats.breathingMinutes}m` : '0m'}
               </Text>
-              <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
+              <Text style={[styles.metricLabel, { color: skyTint.muted }]}>
                 Mindful Breathwork
               </Text>
             </CardContent>
@@ -315,59 +313,61 @@ export function InsightsScreen() {
         </View>
 
         <View style={styles.metricRow}>
-          {/* Metric 3: Journal Entries */}
-          <Card variant="elevated" style={styles.metricCard}>
+          {/* Metric 3: Journal Entries — cream pop card */}
+          <Card variant="elevated" tone="cream" style={styles.metricCard}>
             <CardContent style={styles.metricCardContent}>
               <View style={styles.metricTopRow}>
-                <View style={[styles.metricIconOrb, { backgroundColor: (colors.accentLavender || '#877FC5') + '15' }]}>
+                <View style={[styles.metricIconOrb, { backgroundColor: creamTint.plate }]}>
                   <AppIcon name="l-book" size={26} loop />
                 </View>
-                <View style={[styles.trendBadge, { backgroundColor: (colors.accentLavender || '#877FC5') + '15' }]}>
-                  <Text style={[styles.trendBadgeText, { color: colors.accentLavender || '#877FC5' }]}>
+                <View style={[styles.trendBadge, { backgroundColor: creamTint.plate }]}>
+                  <Text style={[styles.trendBadgeText, { color: creamTint.accent }]}>
                     {(stats?.journalCount ?? 0) >= 3 ? 'Active' : 'Light'}
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>
+              <Text style={[styles.metricValue, { color: creamTint.text }]}>
                 {stats?.journalCount ? `${stats.journalCount} logs` : '0 logs'}
               </Text>
-              <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
+              <Text style={[styles.metricLabel, { color: creamTint.muted }]}>
                 Journal Reflections
               </Text>
             </CardContent>
           </Card>
 
-          {/* Metric 4: Active Habits */}
-          <Card variant="elevated" style={styles.metricCard}>
+          {/* Metric 4: Active Habits — coral pop card */}
+          <Card variant="elevated" tone="coral" style={styles.metricCard}>
             <CardContent style={styles.metricCardContent}>
               <View style={styles.metricTopRow}>
-                <View style={[styles.metricIconOrb, { backgroundColor: (colors.accentPeach || '#EB876D') + '15' }]}>
+                <View style={[styles.metricIconOrb, { backgroundColor: coralTint.plate }]}>
                   <AppIcon name="l-star" size={26} loop />
                 </View>
-                <View style={[styles.trendBadge, { backgroundColor: (colors.accentPeach || '#EB876D') + '15' }]}>
-                  <Text style={[styles.trendBadgeText, { color: colors.accentPeach || '#EB876D' }]}>
+                <View style={[styles.trendBadge, { backgroundColor: coralTint.plate }]}>
+                  <Text style={[styles.trendBadgeText, { color: coralTint.accent }]}>
                     Streak
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>
+              <Text style={[styles.metricValue, { color: coralTint.text }]}>
                 {activeHabitsCount > 0 ? `${activeHabitsCount} active` : '0 active'}
               </Text>
-              <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
+              <Text style={[styles.metricLabel, { color: coralTint.muted }]}>
                 Habits Maintained
               </Text>
             </CardContent>
           </Card>
         </View>
       </View>
+      </PopIn>
 
-      {/* Mood & Stress Trend Chart Card */}
-      <Card variant="elevated" style={styles.sectionCard}>
+      {/* Mood & Stress Trend Chart Card — navy pop card */}
+      <PopIn index={1}>
+      <Card variant="elevated" tone="navy" style={styles.sectionCard}>
         <CardContent style={styles.sectionCardContent}>
           <View style={styles.sectionHeaderRow}>
             <View>
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Mood & Stress Rhythm</Text>
-              <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>
+              <Text style={[styles.sectionTitle, { color: navyTint.text }]}>Mood & Stress Rhythm</Text>
+              <Text style={[styles.sectionSubtitle, { color: navyTint.muted }]}>
                 {timeRange === 'week' ? 'Daily emotional progression' : 'Monthly overview'}
               </Text>
             </View>
@@ -376,15 +376,15 @@ export function InsightsScreen() {
               style={({ pressed }) => [
                 styles.calendarLink,
                 {
-                  backgroundColor: colors.accentBg,
+                  backgroundColor: navyTint.plate,
                   transform: [{ scale: pressed ? 0.94 : 1 }],
                   opacity: pressed ? 0.85 : 1,
                 },
               ]}
               hitSlop={8}
             >
-              <Ionicons name="calendar-outline" size={14} color={colors.accentPrimary} />
-              <Text style={[styles.calendarLinkText, { color: colors.accentPrimary }]}>Calendar</Text>
+              <Ionicons name="calendar-outline" size={14} color={navyTint.accent} />
+              <Text style={[styles.calendarLinkText, { color: navyTint.accent }]}>Calendar</Text>
             </Pressable>
           </View>
 
@@ -413,7 +413,7 @@ export function InsightsScreen() {
                         ]}
                       />
                     </View>
-                    <Text style={[styles.chartDayLabel, { color: colors.textTertiary }]}>
+                    <Text style={[styles.chartDayLabel, { color: navyTint.muted }]}>
                       {point?.date ?? ''}
                     </Text>
                   </View>
@@ -423,42 +423,44 @@ export function InsightsScreen() {
               <View style={styles.chartLegend}>
                 <View style={styles.legendRow}>
                   <View style={[styles.legendDot, { backgroundColor: colors.accentPrimary }]} />
-                  <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Mood Intensity</Text>
+                  <Text style={[styles.legendLabel, { color: navyTint.muted }]}>Mood Intensity</Text>
                 </View>
                 <View style={styles.legendRow}>
                   <View style={[styles.legendDot, { backgroundColor: colors.accentRose || '#EB697F' }]} />
-                  <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Stress Level</Text>
+                  <Text style={[styles.legendLabel, { color: navyTint.muted }]}>Stress Level</Text>
                 </View>
               </View>
             </View>
           ) : (
             <View style={styles.emptyChartBox}>
               <MoodLandscapeIllustration width={190} height={125} style={{ marginBottom: 6 }} />
-              <Text style={[styles.emptyChartTitle, { color: colors.textPrimary }]}>
+              <Text style={[styles.emptyChartTitle, { color: navyTint.text }]}>
                 No data points yet
               </Text>
-              <Text style={[styles.emptyChartSub, { color: colors.textTertiary }]}>
+              <Text style={[styles.emptyChartSub, { color: navyTint.muted }]}>
                 Check in your mood each day to see your rhythm chart appear here.
               </Text>
             </View>
           )}
         </CardContent>
       </Card>
+      </PopIn>
 
-      {/* Habit Consistency Progress Card */}
-      <Card variant="elevated" style={styles.sectionCard}>
+      {/* Habit Consistency Progress Card — mint pop card */}
+      <PopIn index={2}>
+      <Card variant="elevated" tone="mint" style={styles.sectionCard}>
         <CardContent style={styles.sectionCardContent}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 4 }]}>
+          <Text style={[styles.sectionTitle, { color: mintTint.text, marginBottom: 4 }]}>
             Habit Consistency
           </Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.textTertiary, marginBottom: 14 }]}>
+          <Text style={[styles.sectionSubtitle, { color: mintTint.muted, marginBottom: 14 }]}>
             Completion rates over the past 7 days
           </Text>
 
           {(habitStats ?? []).length === 0 ? (
             <View style={styles.emptyInlineBox}>
               <HabitPlantingIllustration width={120} height={100} style={{ marginBottom: 4 }} />
-              <Text style={[styles.emptyInlineText, { color: colors.textTertiary }]}>
+              <Text style={[styles.emptyInlineText, { color: mintTint.muted }]}>
                 No habits tracked yet this week.
               </Text>
             </View>
@@ -473,12 +475,12 @@ export function InsightsScreen() {
                 return (
                   <StaggeredEntry key={h?.id ?? Math.random().toString()} index={Math.min(index, 7)} delayStep={28}>
                   <View
-                    style={[styles.habitRowCard, { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: colors.borderLight }]}
+                    style={[styles.habitRowCard, { backgroundColor: mintTint.plate, borderColor: mintTint.border }]}
                   >
                     <View style={styles.habitRowHeader}>
                       <View style={styles.habitTitleRow}>
                         <View style={[styles.habitColorDot, { backgroundColor: habitColor }]} />
-                        <Text style={[styles.habitName, { color: colors.textPrimary }]} numberOfLines={1}>
+                        <Text style={[styles.habitName, { color: mintTint.text }]} numberOfLines={1}>
                           {h?.name ?? 'Habit'}
                         </Text>
                       </View>
@@ -489,7 +491,7 @@ export function InsightsScreen() {
                       </View>
                     </View>
 
-                    <View style={[styles.progressBarTrack, { backgroundColor: colors.borderLight }]}>
+                    <View style={[styles.progressBarTrack, { backgroundColor: mintTint.border }]}>
                       <View
                         style={[
                           styles.progressBarFill,
@@ -508,21 +510,23 @@ export function InsightsScreen() {
           )}
         </CardContent>
       </Card>
+      </PopIn>
 
-      {/* Mindful Reflections & Insights Card */}
-      <Card variant="outlined" style={styles.sectionCard}>
+      {/* Mindful Reflections & Insights Card — lilac pop card */}
+      <PopIn index={3}>
+      <Card variant="outlined" tone="lilac" style={styles.sectionCard}>
         <CardContent style={styles.sectionCardContent}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 4 }]}>
+          <Text style={[styles.sectionTitle, { color: lilacTint.text, marginBottom: 4 }]}>
             Mindful Reflections
           </Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.textTertiary, marginBottom: 14 }]}>
+          <Text style={[styles.sectionSubtitle, { color: lilacTint.muted, marginBottom: 14 }]}>
             Observations tailored to your patterns
           </Text>
 
           {(insights ?? []).length === 0 ? (
             <View style={styles.emptyInlineBox}>
               <MoodAuraIllustration width={120} height={100} style={{ marginBottom: 4 }} />
-              <Text style={[styles.emptyInlineText, { color: colors.textTertiary }]}>
+              <Text style={[styles.emptyInlineText, { color: lilacTint.muted }]}>
                 Keep tracking daily to unlock mindful personal reflections.
               </Text>
             </View>
@@ -534,8 +538,8 @@ export function InsightsScreen() {
                   style={[
                     styles.insightCard,
                     {
-                      backgroundColor: colors.bgSecondary ?? '#F4EFE6',
-                      borderColor: colors.borderLight,
+                      backgroundColor: lilacTint.plate,
+                      borderColor: lilacTint.border,
                     },
                     insight?.type === 'positive' && {
                       borderColor: colors.accentPrimary + '50',
@@ -554,7 +558,7 @@ export function InsightsScreen() {
                       loop
                     />
                   </View>
-                  <Text style={[styles.insightText, { color: colors.textPrimary }]}>
+                  <Text style={[styles.insightText, { color: lilacTint.text }]}>
                     {insight?.text ?? ''}
                   </Text>
                 </View>
@@ -564,11 +568,13 @@ export function InsightsScreen() {
           )}
         </CardContent>
       </Card>
+      </PopIn>
 
-      {/* Export & Actions */}
-      <Card variant="elevated" style={styles.sectionCard}>
+      {/* Export & Actions — cream pop card */}
+      <PopIn index={4}>
+      <Card variant="elevated" tone="cream" style={styles.sectionCard}>
         <CardContent style={styles.sectionCardContent}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 12 }]}>
+          <Text style={[styles.sectionTitle, { color: creamTint.text, marginBottom: 12 }]}>
             Data Management
           </Text>
           <View style={styles.actionButtons}>
@@ -610,7 +616,8 @@ export function InsightsScreen() {
           </Pressable>
         </CardContent>
       </Card>
-    </ScrollView>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 

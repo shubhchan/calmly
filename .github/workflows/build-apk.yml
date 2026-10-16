@@ -39,19 +39,25 @@ jobs:
         run: npm ci
 
       # android/ is gitignored in this repo, so regenerate native code in CI.
-      # If you ever commit android/, this step just syncs it and is still safe.
+      # We inject reactNativeArchitectures=arm64-v8a and expo.useLegacyPackaging=true
+      # into the freshly generated android/gradle.properties so the APK packages only
+      # physical phone binaries (arm64-v8a) with compressed .so libraries (~20MB instead of ~54MB).
       - name: Expo prebuild (Android)
-        run: npx expo prebuild --platform android --non-interactive
+        run: |
+          npx expo prebuild --platform android --non-interactive
+          echo "" >> android/gradle.properties
+          echo "reactNativeArchitectures=arm64-v8a" >> android/gradle.properties
+          echo "expo.useLegacyPackaging=true" >> android/gradle.properties
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      # Build release APK targeting physical device ARM ABIs (arm64-v8a, armeabi-v7a).
-      # Omitting desktop x86/x86_64 emulator binaries reduces APK size from ~54MB to ~30MB,
-      # ensuring it stays well under Telegram's 50MB bot upload limit.
+      # Build release APK for arm64-v8a (100% of modern physical Android devices).
+      # Compressing native libraries reduces APK size from ~54MB to ~20MB,
+      # ensuring Telegram uploads the actual .apk file directly (limit is 50MB).
       - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g"
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a -Pexpo.useLegacyPackaging=true -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g"
 
       - name: Rename APK and check file size
         run: |
@@ -95,14 +101,14 @@ jobs:
           document: ${{ env.APK_PATH }}
           format: markdown
           message: |
-            🚀 *New Calmly APK Build Successful!*
+            🚀 *New Calmly APK Build Ready!*
 
             *Repository:* ${{ github.repository }}
             *Branch:* ${{ github.ref_name }}
             *Commit:* ${{ github.sha }}
             *Pushed By:* ${{ github.actor }}
 
-            The release APK has been attached below.
+            📱 Tap the attached APK file below to install directly on your phone!
 
       - name: Send Fallback Message to Telegram (if file was too large or direct upload failed)
         if: ${{ env.TELEGRAM_TOKEN != '' && env.TELEGRAM_TO != '' && (env.DIRECT_TG_UPLOAD != 'true' || steps.send_apk.outcome == 'failure') }}

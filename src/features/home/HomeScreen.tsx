@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration, TactilePressable, StaggeredEntry, CelebratoryCheckbox, SkeletonCard } from '../../components';
+import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration, TactilePressable, StaggeredEntry, CelebratoryCheckbox } from '../../components';
 import type { AppIconName } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
@@ -14,6 +14,10 @@ import { bootLog } from '../../components/ErrorBoundary';
 import { format } from 'date-fns';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { ListSkeleton } from '../../components/interactive/LoadingState';
+import { resolveTint } from '../../theme/tints';
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -143,14 +147,17 @@ export function HomeScreen() {
 
   const dateLabel = format(new Date(), 'EEEE, MMMM d');
 
+  const heroTint = resolveTint(!!colors.isDark, 'cream');
+  const calmTint = resolveTint(!!colors.isDark, 'coral');
+  const journalTint = resolveTint(!!colors.isDark, 'sky');
+
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.bgPrimary }}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 }}
-      showsVerticalScrollIndicator={false}
+    <ScreenContainer
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}
+      backgroundColor={colors.bgPrimary}
     >
       {/* Header Greeting */}
-      <View style={{ marginBottom: 22, marginTop: 4 }}>
+      <PopIn index={0} style={{ marginBottom: 22, marginTop: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View>
             <Text
@@ -190,10 +197,11 @@ export function HomeScreen() {
             <AppIcon name="l-calm" size={26} loop />
           </View>
         </View>
-      </View>
+      </PopIn>
 
-      {/* Hero Mindful Sanctuary Card */}
-      <Card variant="elevated" style={{ marginBottom: 20, borderRadius: 22, overflow: 'hidden' }}>
+      {/* Hero Mindful Sanctuary Card — playful cream pop */}
+      <PopIn index={1}>
+      <Card variant="elevated" tone="cream" style={{ marginBottom: 20, borderRadius: 22, overflow: 'hidden' }}>
         <CardContent style={{ padding: 18 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -202,11 +210,11 @@ export function HomeScreen() {
                   width: 8,
                   height: 8,
                   borderRadius: 4,
-                  backgroundColor: colors.accentPrimary,
+                  backgroundColor: heroTint.accent,
                   marginRight: 8,
                 }}
               />
-              <Text style={{ fontSize: 16, fontFamily: fontFamilies.sans.bold, fontWeight: '700', color: colors.textPrimary }}>
+              <Text style={{ fontSize: 16, fontFamily: fontFamilies.sans.bold, fontWeight: '700', color: heroTint.text }}>
                 Daily Mindset
               </Text>
             </View>
@@ -220,23 +228,23 @@ export function HomeScreen() {
                   paddingVertical: 6,
                   paddingHorizontal: 14,
                   borderRadius: 9999,
-                  backgroundColor: colors.accentBg,
+                  backgroundColor: heroTint.plate,
                   borderWidth: 1,
-                  borderColor: colors.accentBorder,
+                  borderColor: heroTint.border,
                   opacity: pressed ? 0.75 : 1,
                   transform: [{ scale: pressed ? 0.94 : 1 }],
                 },
               ]}
             >
-              <Text style={{ fontSize: 13, fontFamily: fontFamilies.sans.bold, fontWeight: '700', color: colors.accentPrimary }}>Check in</Text>
+              <Text style={{ fontSize: 13, fontFamily: fontFamilies.sans.bold, fontWeight: '700', color: heroTint.accent }}>Check in</Text>
             </Pressable>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.3 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: heroTint.text, letterSpacing: -0.3 }}>
                 {latestMood?.mood ? `${latestMood.mood.charAt(0).toUpperCase()}${latestMood.mood.slice(1)} & Present` : 'Peaceful & Grounded'}
               </Text>
-              <Text style={{ fontSize: 13, color: colors.textTertiary, lineHeight: 18 }}>
+              <Text style={{ fontSize: 13, color: heroTint.muted, lineHeight: 18 }}>
                 {latestMood
                   ? `${latestMood.intensity ?? 7}/10 intensity · stress ${latestMood.stress ?? 2}/10. Keep going.`
                   : '7/10 serenity · low stress today. Take a mindful breath.'}
@@ -248,7 +256,7 @@ export function HomeScreen() {
                   strokeWidth={3.8}
                   showPercentage={false}
                 />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.accentPrimary }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: heroTint.accent }}>
                   {latestMood
                     ? (latestMood.intensity ?? 7) >= 7
                       ? 'Serenity in harmony'
@@ -263,80 +271,85 @@ export function HomeScreen() {
           </View>
         </CardContent>
       </Card>
+      </PopIn>
 
-      {/* Quick Mindful Actions */}
+      {/* Quick Mindful Actions — colorful popping tiles */}
       <View style={{ marginBottom: 22 }}>
-        <Text style={{ fontSize: 20, fontFamily: fontFamilies.serif.semiBold, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>
-          Quick Practices
-        </Text>
+        <PopIn index={2}>
+          <Text style={{ fontSize: 20, fontFamily: fontFamilies.serif.semiBold, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>
+            Quick Practices
+          </Text>
+        </PopIn>
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <TactilePressable
-            onPress={handleCalmDown}
-            scaleDownTo={0.97}
-            hapticStyle="light"
-            style={{
-              flex: 1,
-              padding: 16,
-              borderRadius: 20,
-              backgroundColor: colors.accentBg,
-              borderWidth: 1,
-              borderColor: colors.accentBorder,
-            }}
-          >
-            <View
+          <PopIn index={3} style={{ flex: 1 }}>
+            <TactilePressable
+              onPress={handleCalmDown}
+              scaleDownTo={0.97}
+              hapticStyle="light"
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 14,
-                backgroundColor: colors.bgCard,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 10,
+                padding: 16,
+                borderRadius: 20,
+                backgroundColor: calmTint.bg,
+                borderWidth: 1,
+                borderColor: calmTint.border,
               }}
             >
-              <AppIcon name="l-breathe" size={22} loop />
-            </View>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>
-              Calm Space
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 2, lineHeight: 16 }}>
-              Breathing & grounding
-            </Text>
-          </TactilePressable>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 14,
+                  backgroundColor: calmTint.plate,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 10,
+                }}
+              >
+                <AppIcon name="l-breathe" size={22} loop />
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: calmTint.text }}>
+                Calm Space
+              </Text>
+              <Text style={{ fontSize: 12, color: calmTint.muted, marginTop: 2, lineHeight: 16 }}>
+                Breathing & grounding
+              </Text>
+            </TactilePressable>
+          </PopIn>
 
-          <TactilePressable
-            onPress={() => navigation?.navigate?.('Journal')}
-            scaleDownTo={0.97}
-            hapticStyle="light"
-            style={{
-              flex: 1,
-              padding: 16,
-              borderRadius: 20,
-              backgroundColor: colors.bgCard,
-              borderWidth: 1,
-              borderColor: colors.borderLight,
-            }}
-          >
-            <View
+          <PopIn index={4} style={{ flex: 1 }}>
+            <TactilePressable
+              onPress={() => navigation?.navigate?.('Journal')}
+              scaleDownTo={0.97}
+              hapticStyle="light"
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 14,
-                backgroundColor: colors.accentBg,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 10,
+                padding: 16,
+                borderRadius: 20,
+                backgroundColor: journalTint.bg,
+                borderWidth: 1,
+                borderColor: journalTint.border,
               }}
             >
-              <AppIcon name="l-book" size={22} loop />
-            </View>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>
-              Daily Journal
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 2, lineHeight: 16 }}>
-              Reflect & write
-            </Text>
-          </TactilePressable>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 14,
+                  backgroundColor: journalTint.plate,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 10,
+                }}
+              >
+                <AppIcon name="l-book" size={22} loop />
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: journalTint.text }}>
+                Daily Journal
+              </Text>
+              <Text style={{ fontSize: 12, color: journalTint.muted, marginTop: 2, lineHeight: 16 }}>
+                Reflect & write
+              </Text>
+            </TactilePressable>
+          </PopIn>
         </View>
       </View>
 
@@ -352,11 +365,7 @@ export function HomeScreen() {
         </View>
 
         {loading ? (
-          <View style={{ gap: 10 }}>
-            {[1, 2, 3].map((i) => (
-              <SkeletonCard key={i} rows={2} />
-            ))}
-          </View>
+          <ListSkeleton rows={3} showHeader={false} />
         ) : (dueHabits ?? []).length === 0 ? (
           <Card variant="outlined" style={{ borderRadius: 20 }}>
             <CardContent style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 }}>
@@ -521,23 +530,25 @@ export function HomeScreen() {
       </Card>
 
       {/* Weekly Insights */}
-      <Pressable onPress={() => navigation?.navigate?.('Insights')}>
-        <Card variant="outlined">
-          <CardContent>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
-                Weekly Insights
-              </Text>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accentPrimary }}>Open →</Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <StatPill label="Avg Mood" value={latestMood?.intensity ? `${latestMood.intensity}/10` : '7.2/10'} trend="up" trendValue="+0.3" accentColor={colors?.success ?? '#3E7B52'} />
-              <StatPill label="Journaling" value={`${Math.max(recentJournals.length, 1)} entries`} trend="neutral" accentColor={colors?.info ?? '#2563EB'} />
-            </View>
-          </CardContent>
-        </Card>
-      </Pressable>
-    </ScrollView>
+      <PopIn index={5}>
+        <Pressable onPress={() => navigation?.navigate?.('Insights')}>
+          <Card variant="outlined">
+            <CardContent>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
+                  Weekly Insights
+                </Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accentPrimary }}>Open →</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <StatPill label="Avg Mood" value={latestMood?.intensity ? `${latestMood.intensity}/10` : '7.2/10'} trend="up" trendValue="+0.3" accentColor={colors?.success ?? '#3E7B52'} />
+                <StatPill label="Journaling" value={`${Math.max(recentJournals.length, 1)} entries`} trend="neutral" accentColor={colors?.info ?? '#2563EB'} />
+              </View>
+            </CardContent>
+          </Card>
+        </Pressable>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 

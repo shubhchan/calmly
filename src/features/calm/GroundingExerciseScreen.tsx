@@ -10,6 +10,7 @@ import { calmRepository } from '../../database/repositories/calmRepository';
 import { hapticFeedback } from '../../utils/haptics';
 import Animated, { FadeIn, FadeInRight, useReducedMotion } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 const groundingSteps: Record<GroundingType, { label: string; instruction: string; icon: AppIconName }[]> = {
   '5-4-3-2-1': [
@@ -112,7 +113,7 @@ export function GroundingExerciseScreen() {
   const androidBarFallback = isDark ? 'rgba(24, 33, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       {/* Top Bar */}
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <TactilePressable
@@ -285,6 +286,6 @@ export function GroundingExerciseScreen() {
           </>
         )}
       </View>
-    </View>
+    </ScreenContainer>
   );
 }

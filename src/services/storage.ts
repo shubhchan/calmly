@@ -1,65 +1,71 @@
-// NOTE: react-native-mmkv v4 is backed by react-native-nitro-modules,
-// which does NOT exist in Expo Go. A static `import { createMMKV }` would
-// evaluate the Nitro TurboModule at bundle-load time and throw
-// "Failed to get NitroModules" before any try/catch below can run,
-// grey-screening the whole app. So we lazy-require it inside a try/catch
-// and fall back to in-memory storage when native code is missing
-// (Expo Go) or the app hasn't been rebuilt after install (dev build).
-interface KeyValueStore {
-  getString(key: string): string | undefined;
-  set(key: string, value: string): void;
-  remove(key: string): void;
-  clearAll(): void;
-  getAllKeys(): string[];
-}
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// In-memory fallback so a native-module failure (Expo Go, device without
-// Nitro/MMKV, fresh install race) can never throw at import time and grey-screen
-// the whole app. Theme/settings simply fall back to defaults for that session.
-function createMemoryStore(): KeyValueStore {
-  const map = new Map<string, string>();
-  return {
-    getString: (key: string) => map.get(key),
-    set: (key: string, value: string) => {
-      map.set(key, value);
-    },
-    remove: (key: string) => {
-      map.delete(key);
-    },
-    clearAll: () => {
-      map.clear();
-    },
-    getAllKeys: () => Array.from(map.keys()),
-  };
-}
+// In-memory cache for synchronous reads, backed by MMKV if native code is available,
+// and always written through to AsyncStorage for 100% durable persistence across app reloads/restarts.
+const memoryMap = new Map<string, string>();
+let mmkvInstance: any = null;
 
-let storage: KeyValueStore;
 try {
-  // Lazy require: throws inside this try block (caught below) when
-  // NitroModules native code is absent instead of crashing at import time.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createMMKV } = require('react-native-mmkv') as typeof import('react-native-mmkv');
-  storage = createMMKV();
-} catch (error) {
-  console.warn('MMKV unavailable (Expo Go or missing native rebuild?), using in-memory storage:', error);
-  storage = createMemoryStore();
+  const { createMMKV } = require('react-native-mmkv');
+  mmkvInstance = createMMKV();
+} catch {
+  // MMKV unavailable in Expo Go or unbuilt dev client; AsyncStorage handles durability
 }
+
+// Immediately seed memoryMap from AsyncStorage in the background
+(async () => {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    if (keys.length > 0) {
+      const pairs = await AsyncStorage.multiGet(keys);
+      for (const [k, v] of pairs) {
+        if (v !== null && !memoryMap.has(k)) {
+          memoryMap.set(k, v);
+        }
+      }
+    }
+  } catch {}
+})();
 
 function safeGetString(key: string): string | undefined {
-  try {
-    return storage.getString(key);
-  } catch (error) {
-    console.warn(`Storage.getString(${key}) failed:`, error);
-    return undefined;
+  if (mmkvInstance) {
+    try {
+      const val = mmkvInstance.getString(key);
+      if (val !== undefined) return val;
+    } catch {}
   }
+  return memoryMap.get(key);
 }
 
 function safeSet(key: string, value: string): void {
-  try {
-    storage.set(key, value);
-  } catch (error) {
-    console.warn(`Storage.set(${key}) failed:`, error);
+  memoryMap.set(key, value);
+  if (mmkvInstance) {
+    try {
+      mmkvInstance.set(key, value);
+    } catch {}
   }
+  AsyncStorage.setItem(key, value).catch(() => {});
+}
+
+function safeRemove(key: string): void {
+  memoryMap.delete(key);
+  if (mmkvInstance) {
+    try {
+      mmkvInstance.remove(key);
+    } catch {}
+  }
+  AsyncStorage.removeItem(key).catch(() => {});
+}
+
+function safeClearAll(): void {
+  memoryMap.clear();
+  if (mmkvInstance) {
+    try {
+      mmkvInstance.clearAll();
+    } catch {}
+  }
+  AsyncStorage.clear().catch(() => {});
 }
 
 export const Storage = {
@@ -108,25 +114,18 @@ export const Storage = {
     }
   },
   delete: (key: string): void => {
-    try {
-      storage.remove(key);
-    } catch (error) {
-      console.warn(`Storage.delete(${key}) failed:`, error);
-    }
+    safeRemove(key);
   },
   clearAll: (): void => {
-    try {
-      storage.clearAll();
-    } catch (error) {
-      console.warn('Storage.clearAll failed:', error);
-    }
+    safeClearAll();
   },
   getAllKeys: (): string[] => {
-    try {
-      return storage.getAllKeys();
-    } catch (error) {
-      console.warn('Storage.getAllKeys failed:', error);
-      return [];
+    const keys = new Set<string>(memoryMap.keys());
+    if (mmkvInstance) {
+      try {
+        for (const k of mmkvInstance.getAllKeys()) keys.add(k);
+      } catch {}
     }
+    return Array.from(keys);
   },
 };

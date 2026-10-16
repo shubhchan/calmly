@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, Alert } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
 import { Card, CardContent, PrimaryButton, AppIcon, JournalReflectionIllustration } from '../../components';
 import type { AppIconName } from '../../components';
@@ -7,6 +7,9 @@ import { RootStackParamList, JournalType } from '../../types/navigation';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { FormSkeleton } from '../../components/interactive/LoadingState';
 
 const journalTypeLabels: Record<JournalType, string> = {
   free: 'Free writing',
@@ -153,13 +156,9 @@ export function JournalEntryScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.bgPrimary }}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
+    <ScreenContainer contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 }}>
       {/* Top Bar */}
+      <PopIn index={0}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
         <Pressable
           onPress={() => navigation?.goBack?.()}
@@ -187,8 +186,10 @@ export function JournalEntryScreen() {
           </Pressable>
         )}
       </View>
+      </PopIn>
 
       {/* Visual Zen Header Card */}
+      <PopIn index={1}>
       <View
         style={{
           alignItems: 'center',
@@ -199,12 +200,11 @@ export function JournalEntryScreen() {
       >
         <JournalReflectionIllustration width={150} height={120} />
       </View>
+      </PopIn>
 
+      <PopIn index={2}>
       {loading ? (
-        <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={colors.accentPrimary} />
-          <Text style={{ marginTop: 12, color: colors.textTertiary, fontSize: 14 }}>Loading reflection...</Text>
-        </View>
+        <FormSkeleton fields={2} />
       ) : (
         <Card variant="elevated" style={{ marginBottom: 20 }}>
           <CardContent style={{ padding: 20 }}>
@@ -315,8 +315,10 @@ export function JournalEntryScreen() {
           </CardContent>
         </Card>
       )}
+      </PopIn>
 
       {/* Buttons */}
+      <PopIn index={3}>
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <PrimaryButton
           title={saving ? 'Saving...' : 'Save Reflection'}
@@ -337,6 +339,7 @@ export function JournalEntryScreen() {
           fullWidth={false}
         />
       </View>
-    </ScrollView>
+      </PopIn>
+    </ScreenContainer>
   );
 }

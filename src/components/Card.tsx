@@ -3,17 +3,20 @@ import { View, Pressable, ViewStyle, StyleProp, StyleSheet } from 'react-native'
 import { useThemeColors } from '../theme/ThemeContext';
 import { hapticFeedback } from '../utils/haptics';
 import { TactilePressable } from './interactive/TactilePressable';
+import { resolveTint, TintName } from '../theme/tints';
 
 interface CardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'elevated' | 'outlined';
+  /** Playful pastel tint — makes this card pop in one of eight colors. */
+  tone?: TintName;
   className?: string;
   onPress?: () => void;
 }
 
 const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
-  ({ children, style, variant = 'default', className = '', onPress, ...props }, ref) => {
+  ({ children, style, variant = 'default', tone, className = '', onPress, ...props }, ref) => {
     let colors: any;
     try {
       colors = useThemeColors();
@@ -27,12 +30,13 @@ const Card = forwardRef<React.ElementRef<typeof View>, CardProps>(
     }
 
     const isDark = !!colors?.isDark;
+    const tint = tone ? resolveTint(isDark, tone) : null;
 
     const baseCardStyle: ViewStyle = {
-      backgroundColor: colors?.bgCard ?? (isDark ? '#192332' : '#FFFFFF'),
+      backgroundColor: tint ? tint.bg : colors?.bgCard ?? (isDark ? '#192332' : '#FFFFFF'),
       borderRadius: variant === 'elevated' ? 28 : 24,
       borderWidth: 1,
-      borderColor: colors?.borderLight ?? (isDark ? '#243245' : '#EBE3D5'),
+      borderColor: tint ? tint.border : colors?.borderLight ?? (isDark ? '#243245' : '#EBE3D5'),
     };
 
     const variantStyles: Record<string, ViewStyle> = {

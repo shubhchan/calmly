@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Switch, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Switch, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, AccentColor } from '../../types/navigation';
@@ -9,6 +9,10 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { AppIcon } from '../../components/AppIcon';
 import type { AppIconName } from '../../components/AppIcon';
 import { Ionicons } from '@expo/vector-icons';
+import { useFontStore } from '../../theme/fontStore';
+import { useMotionPrefs } from '../../theme/motion';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -46,22 +50,55 @@ export function SettingsScreen() {
   const setTheme = themeContext.setTheme ?? (() => {});
   const setAccent = themeContext.setAccent ?? (() => {});
 
-  const [reduceAnimations, setReduceAnimations] = useState(false);
+  const activeFont = useFontStore((s) => s.active);
+  const reduceAnimations = useMotionPrefs((s) => s.reduceMotion);
+  const setReduceAnimations = useMotionPrefs((s) => s.setReduceMotion);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [highContrast, setHighContrast] = useState(false);
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenContainer contentContainerStyle={styles.content} backgroundColor={colors.bgPrimary}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Settings</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Personalize your mindful sanctuary</Text>
       </View>
 
+      {/* Typography */}
+      <PopIn index={0}>
+        <Card variant="elevated" style={styles.card}>
+          <CardContent>
+            <View style={styles.sectionHeaderRow}>
+              <View style={[styles.sectionIconWrap, { backgroundColor: (colors.accentLavender || '#877FC5') + '18' }]}>
+                <Ionicons name="text-outline" size={20} color={colors.accentLavender || '#877FC5'} />
+              </View>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Typography</Text>
+            </View>
+
+            <Pressable
+              onPress={() => navigation.navigate('FontBrowser')}
+              style={({ pressed }) => [
+                styles.menuRow,
+                { borderBottomWidth: 0 },
+                pressed && { opacity: 0.7 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`App font, currently ${activeFont.label}. Browse Google Fonts.`}
+            >
+              <View style={styles.menuTextWrap}>
+                <Text style={[styles.menuTitle, { color: colors.textPrimary }]}>App Font</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.textTertiary }]}>
+                  1500+ Google Fonts, applied everywhere — instantly
+                </Text>
+              </View>
+              <Text style={[styles.fontPreviewGlyph, { color: colors.accentPrimary }]}>Aa</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </Pressable>
+          </CardContent>
+        </Card>
+      </PopIn>
+
       {/* Appearance */}
+      <PopIn index={1}>
       <Card variant="elevated" style={styles.card}>
         <CardContent>
           <View style={styles.sectionHeaderRow}>
@@ -137,8 +174,10 @@ export function SettingsScreen() {
           </View>
         </CardContent>
       </Card>
+      </PopIn>
 
       {/* Navigation Sub-screens */}
+      <PopIn index={2}>
       <Card variant="elevated" style={styles.card}>
         <CardContent>
           <View style={styles.sectionHeaderRow}>
@@ -196,8 +235,10 @@ export function SettingsScreen() {
           </View>
         </CardContent>
       </Card>
+      </PopIn>
 
       {/* Accessibility & Experience */}
+      <PopIn index={3}>
       <Card variant="elevated" style={styles.card}>
         <CardContent>
           <View style={styles.sectionHeaderRow}>
@@ -249,8 +290,10 @@ export function SettingsScreen() {
           </View>
         </CardContent>
       </Card>
+      </PopIn>
 
       {/* About Calmly */}
+      <PopIn index={4}>
       <Card variant="outlined" style={styles.card}>
         <CardContent style={styles.aboutContent}>
           <View style={[styles.logoBadge, { backgroundColor: colors.accentPrimary + '20' }]}>
@@ -272,7 +315,8 @@ export function SettingsScreen() {
           />
         </CardContent>
       </Card>
-    </ScrollView>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 
@@ -330,6 +374,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   menuTextWrap: { flex: 1, paddingRight: 12 },
+  fontPreviewGlyph: { fontSize: 20, marginRight: 8 },
   menuTitle: { fontSize: 15, fontWeight: '600' },
   menuSubtitle: { fontSize: 12, marginTop: 2, lineHeight: 17 },
   switchList: { gap: 0 },

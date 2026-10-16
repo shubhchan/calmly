@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Pressable, ScrollView, StyleSheet, Alert, Keyboard } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -10,6 +10,9 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { HabitPlantingIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { FormSkeleton } from '../../components/interactive/LoadingState';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'HabitForm'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'HabitForm'>['route'];
@@ -218,8 +221,16 @@ export function HabitFormScreen() {
     </View>
   );
 
+  if (isEditing && loading && !name) {
+    return (
+      <ScreenContainer contentContainerStyle={styles.scrollContent}>
+        <FormSkeleton fields={5} />
+      </ScreenContainer>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       <View style={styles.topNav}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -241,13 +252,16 @@ export function HabitFormScreen() {
         onTouchStart={() => Keyboard.dismiss()}
         showsVerticalScrollIndicator={false}
       >
+        <PopIn index={0}>
         <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginBottom: 4 }}>
           <HabitPlantingIllustration width={140} height={110} />
           <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 8 }}>
             {isEditing ? 'Adjust your daily practice' : 'Plant a tiny mindful habit for daily growth'}
           </Text>
         </View>
+        </PopIn>
 
+        <PopIn index={1}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Habit Name</Text>
           <TextInput
@@ -260,7 +274,9 @@ export function HabitFormScreen() {
             maxLength={50}
           />
         </Card>
+        </PopIn>
 
+        <PopIn index={2}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Icon & Color Identity</Text>
           <View style={styles.iconColorRow}>
@@ -276,7 +292,9 @@ export function HabitFormScreen() {
             </TouchableOpacity>
           </View>
         </Card>
+        </PopIn>
 
+        <PopIn index={3}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Frequency</Text>
           {(FREQUENCY_OPTIONS ?? []).map((opt) => {
@@ -339,7 +357,9 @@ export function HabitFormScreen() {
             </View>
           )}
         </Card>
+        </PopIn>
 
+        <PopIn index={4}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Daily Reminder</Text>
           <TouchableOpacity
@@ -356,7 +376,9 @@ export function HabitFormScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} style={{ marginTop: 2 }} />
           </TouchableOpacity>
         </Card>
+        </PopIn>
 
+        <PopIn index={5}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Daily Repetitions</Text>
           <View style={styles.goalRow}>
@@ -378,7 +400,9 @@ export function HabitFormScreen() {
             </Text>
           </View>
         </Card>
+        </PopIn>
 
+        <PopIn index={6}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Intention & Notes</Text>
           <TextInput
@@ -392,7 +416,9 @@ export function HabitFormScreen() {
             maxLength={500}
           />
         </Card>
+        </PopIn>
 
+        <PopIn index={7}>
         <View style={styles.buttonRow}>
           <View style={{ flex: 1 }}>
             <PrimaryButton
@@ -411,22 +437,26 @@ export function HabitFormScreen() {
             </TouchableOpacity>
           )}
         </View>
+        </PopIn>
       </ScrollView>
 
       {showIconPicker && (
-        <View style={styles.modalOverlay} onTouchStart={() => setShowIconPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowIconPicker(false)} />
           {renderIconPicker()}
         </View>
       )}
 
       {showColorPicker && (
-        <View style={styles.modalOverlay} onTouchStart={() => setShowColorPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowColorPicker(false)} />
           {renderColorPicker()}
         </View>
       )}
 
       {showTimePicker && (
-        <View style={styles.modalOverlay} onTouchStart={() => setShowTimePicker(false)}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowTimePicker(false)} />
           <View style={[styles.timePickerContainer, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
             <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Set Reminder Time</Text>
             <View style={styles.timePicker}>
@@ -470,7 +500,7 @@ export function HabitFormScreen() {
           </View>
         </View>
       )}
-    </View>
+    </ScreenContainer>
   );
 }
 

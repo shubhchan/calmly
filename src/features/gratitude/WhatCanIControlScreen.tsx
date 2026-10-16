@@ -5,6 +5,9 @@ import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { resolveTint } from '../../theme/tints';
 
 const STEPS = [
   {
@@ -36,6 +39,7 @@ const STEPS = [
 export function WhatCanIControlScreen() {
   const navigation = useNavigation();
   const colors = useThemeColors();
+  const skyTint = resolveTint(!!colors.isDark, 'sky');
   const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState<string[]>(['', '', '', '']);
   const [completed, setCompleted] = useState(false);
@@ -72,33 +76,31 @@ export function WhatCanIControlScreen() {
 
   if (completed) {
     return (
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Card style={styles.completeCard}>
-          <View style={[styles.completeIconWrap, { backgroundColor: colors.accentPrimary + '18' }]}>
-            <Ionicons name="shield-checkmark" size={48} color={colors.accentPrimary} />
+      <ScreenContainer contentContainerStyle={styles.content}>
+        <PopIn index={0}>
+        <Card tone="sky" style={styles.completeCard}>
+          <View style={[styles.completeIconWrap, { backgroundColor: skyTint.plate }]}>
+            <Ionicons name="shield-checkmark" size={48} color={skyTint.accent} />
           </View>
-          <Text style={[styles.completeTitle, { color: colors.textPrimary }]}>Clarity Unlocked</Text>
-          <Text style={[styles.completeText, { color: colors.textSecondary }]}>
+          <Text style={[styles.completeTitle, { color: skyTint.text }]}>Clarity Unlocked</Text>
+          <Text style={[styles.completeText, { color: skyTint.text }]}>
             You have separated what you can change from what you must release. Channel your energy with calm intention.
           </Text>
 
-          <View style={[styles.summaryBox, { backgroundColor: colors.bgPrimary, borderColor: colors.borderLight }]}>
-            <Text style={[styles.summaryLabel, { color: colors.accentPrimary }]}>Your Chosen Action:</Text>
-            <Text style={[styles.summaryText, { color: colors.textPrimary }]}>{(responses ?? [])[3] || 'Take a deep breath and stay present.'}</Text>
+          <View style={[styles.summaryBox, { backgroundColor: skyTint.plate, borderColor: skyTint.border }]}>
+            <Text style={[styles.summaryLabel, { color: skyTint.accent }]}>Your Chosen Action:</Text>
+            <Text style={[styles.summaryText, { color: skyTint.text }]}>{(responses ?? [])[3] || 'Take a deep breath and stay present.'}</Text>
           </View>
 
           <PrimaryButton onPress={handleRestart} title="Do Exercise Again" style={styles.restartButton} variant="outline" />
         </Card>
-      </ScrollView>
+        </PopIn>
+      </ScreenContainer>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -123,6 +125,7 @@ export function WhatCanIControlScreen() {
           Step {currentStep + 1} of {(STEPS ?? []).length}
         </Text>
 
+        <PopIn index={0}>
         <Card style={styles.stepCard}>
           <Text style={[styles.stepTitle, { color: colors.accentPrimary }]}>{step?.title ?? ''}</Text>
           <Text style={[styles.stepPrompt, { color: colors.textPrimary }]}>{step?.prompt ?? ''}</Text>
@@ -144,6 +147,7 @@ export function WhatCanIControlScreen() {
             autoCapitalize="sentences"
           />
         </Card>
+        </PopIn>
       </ScrollView>
 
       <View style={[styles.bottomBar, { borderTopColor: colors.borderLight, backgroundColor: colors.bgPrimary }]}>
@@ -165,12 +169,11 @@ export function WhatCanIControlScreen() {
           </View>
         </View>
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
   header: {
     flexDirection: 'row',

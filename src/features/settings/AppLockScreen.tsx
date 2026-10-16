@@ -6,6 +6,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { appLockService } from '../../services/appLock';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'AppLock'>['navigation'];
 
@@ -93,7 +94,7 @@ export function AppLockScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={[styles.iconWrap, { backgroundColor: colors.accentPrimary + '18' }]}>
@@ -168,7 +169,7 @@ export function AppLockScreen() {
           ))}
         </View>
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 

@@ -1,47 +1,58 @@
 import { Platform, TextStyle } from 'react-native';
+import { getActiveFont } from './fontStore';
 
 /**
  * Editorial & Humanist Typographic Design System for Calmly.
- * Grounded in DESIGN.md, Apple HIG 'Typography', and mindfulness design principles:
- * - Newsreader: Literary, warm, serif for headings, reflections, and mindfulness moments.
- * - Plus Jakarta Sans: Clean, geometric humanist sans for high legibility in UI and controls.
+ * Dynamic: reads the currently active font (bundled or Google Font) with weight hierarchy.
  */
 
 export const fontFamilies = {
-  // Oddly Calming Handwritten Display (Powers screen titles, greetings, mindfulness cards, quotes)
-  calming: {
-    regular: 'OddlyCalming',
-    medium: 'OddlyCalming',
-    semiBold: 'OddlyCalming',
-    bold: 'OddlyCalming',
-    fallback: 'OddlyCalming',
+  // Oddly Calming or Active Font (Powers screen titles, greetings, mindfulness cards, quotes)
+  get calming() {
+    const f = getActiveFont().faces;
+    return {
+      get regular() { return f.regular; },
+      get medium() { return f.medium ?? f.regular; },
+      get semiBold() { return f.bold ?? f.medium ?? f.regular; },
+      get bold() { return f.bold ?? f.regular; },
+      get fallback() { return f.regular; },
+    };
   },
-  // Headings mapped to Oddly Calming for global friendly journal aesthetic
-  serif: {
-    regular: 'OddlyCalming',
-    medium: 'OddlyCalming',
-    semiBold: 'OddlyCalming',
-    bold: 'OddlyCalming',
-    italic: 'OddlyCalming',
-    fallback: 'OddlyCalming',
+  // Headings mapped to active font
+  get serif() {
+    const f = getActiveFont().faces;
+    return {
+      get regular() { return f.regular; },
+      get medium() { return f.medium ?? f.regular; },
+      get semiBold() { return f.bold ?? f.medium ?? f.regular; },
+      get bold() { return f.bold ?? f.regular; },
+      get italic() { return f.italic ?? f.regular; },
+      get fallback() { return f.regular; },
+    };
   },
-  // Editorial Book Serif mapped to Oddly Calming
-  editorial: {
-    regular: 'OddlyCalming',
-    medium: 'OddlyCalming',
-    semiBold: 'OddlyCalming',
-    bold: 'OddlyCalming',
-    italic: 'OddlyCalming',
-    fallback: 'OddlyCalming',
+  // Editorial Book Serif mapped to active font
+  get editorial() {
+    const f = getActiveFont().faces;
+    return {
+      get regular() { return f.regular; },
+      get medium() { return f.medium ?? f.regular; },
+      get semiBold() { return f.bold ?? f.medium ?? f.regular; },
+      get bold() { return f.bold ?? f.regular; },
+      get italic() { return f.italic ?? f.regular; },
+      get fallback() { return f.regular; },
+    };
   },
-  // Primary App Font - Oddly Calming used everywhere across the app
-  sans: {
-    regular: 'OddlyCalming',
-    medium: 'OddlyCalming',
-    semiBold: 'OddlyCalming',
-    bold: 'OddlyCalming',
-    extraBold: 'OddlyCalming',
-    fallback: 'OddlyCalming',
+  // Primary App Font - used everywhere across the app
+  get sans() {
+    const f = getActiveFont().faces;
+    return {
+      get regular() { return f.regular; },
+      get medium() { return f.medium ?? f.regular; },
+      get semiBold() { return f.bold ?? f.medium ?? f.regular; },
+      get bold() { return f.bold ?? f.regular; },
+      get extraBold() { return f.bold ?? f.regular; },
+      get fallback() { return f.regular; },
+    };
   },
 };
 

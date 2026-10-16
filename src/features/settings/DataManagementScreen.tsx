@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Share } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Share } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -7,6 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'DataManagement'>['navigation'];
 
@@ -26,6 +29,8 @@ export function DataManagementScreen() {
   const colors = useThemeColors();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const creamTint = resolveTint(!!colors.isDark, 'cream');
+  const blushTint = resolveTint(!!colors.isDark, 'blush');
 
   const handleExportAll = useCallback(async () => {
     setExporting(true);
@@ -184,11 +189,7 @@ export function DataManagementScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenContainer contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -201,21 +202,24 @@ export function DataManagementScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <Card style={styles.card}>
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Export Sanctuary</Text>
-        <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
-          Download a complete portable backup of your reflections, habits, and check-ins formatted as JSON.
-        </Text>
-        <PrimaryButton
-          onPress={handleExportAll}
-          loading={exporting}
-          title={exporting ? 'Packaging data...' : 'Export Complete Backup'}
-          leftIcon={<Ionicons name="download-outline" size={20} color="#FFFFFF" />}
-          fullWidth
-        />
-      </Card>
+      <PopIn index={0}>
+        <Card tone="cream" style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: creamTint.text }]}>Export Sanctuary</Text>
+          <Text style={[styles.sectionDesc, { color: creamTint.text }]}>
+            Download a complete portable backup of your reflections, habits, and check-ins formatted as JSON.
+          </Text>
+          <PrimaryButton
+            onPress={handleExportAll}
+            loading={exporting}
+            title={exporting ? 'Packaging data...' : 'Export Complete Backup'}
+            leftIcon={<Ionicons name="download-outline" size={20} color="#FFFFFF" />}
+            fullWidth
+          />
+        </Card>
+      </PopIn>
 
-      <Card style={styles.card}>
+      <PopIn index={1}>
+        <Card style={styles.card}>
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Category Management</Text>
         <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
           Selectively erase individual categories without affecting the rest of your history.
@@ -246,29 +250,32 @@ export function DataManagementScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      </Card>
+        </Card>
+      </PopIn>
 
-      <Card variant="outlined" style={[styles.dangerCard, { borderColor: (colors.accentRose || '#EB697F') + '60' }]}>
-        <View style={styles.dangerContent}>
-          <Ionicons name="warning-outline" size={28} color={colors.accentRose || '#EB697F'} />
-          <View style={styles.dangerText}>
-            <Text style={[styles.dangerTitle, { color: colors.accentRose || '#EB697F' }]}>Danger Zone</Text>
-            <Text style={[styles.dangerDesc, { color: colors.textSecondary }]}>
-              Permanent deletion. Once erased, your private local records cannot be restored.
-            </Text>
+      <PopIn index={2}>
+        <Card variant="outlined" tone="blush" style={styles.dangerCard}>
+          <View style={styles.dangerContent}>
+            <Ionicons name="warning-outline" size={28} color={blushTint.accent} />
+            <View style={styles.dangerText}>
+              <Text style={[styles.dangerTitle, { color: blushTint.accent }]}>Danger Zone</Text>
+              <Text style={[styles.dangerDesc, { color: blushTint.text }]}>
+                Permanent deletion. Once erased, your private local records cannot be restored.
+              </Text>
+            </View>
           </View>
-        </View>
-        <PrimaryButton
-          onPress={handleDeleteAll}
-          loading={deleting === 'all'}
-          title={deleting === 'all' ? 'Erasing...' : 'Wipe All Data Permanently'}
-          variant="outline"
-          style={{ borderColor: colors.accentRose || '#EB697F' }}
-          textStyle={{ color: colors.accentRose || '#EB697F' }}
-          fullWidth
-        />
-      </Card>
-    </ScrollView>
+          <PrimaryButton
+            onPress={handleDeleteAll}
+            loading={deleting === 'all'}
+            title={deleting === 'all' ? 'Erasing...' : 'Wipe All Data Permanently'}
+            variant="outline"
+            style={{ borderColor: colors.accentRose || '#EB697F' }}
+            textStyle={{ color: colors.accentRose || '#EB697F' }}
+            fullWidth
+          />
+        </Card>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 

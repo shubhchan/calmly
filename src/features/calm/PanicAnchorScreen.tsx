@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 export function PanicAnchorScreen() {
   const navigation = useNavigation();
@@ -32,7 +33,7 @@ export function PanicAnchorScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       {/* Top Bar */}
       <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
         <Pressable
@@ -222,7 +223,7 @@ export function PanicAnchorScreen() {
           leftIcon={<Ionicons name="checkmark-circle-outline" size={20} color={colors.accentPrimary} />}
         />
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 

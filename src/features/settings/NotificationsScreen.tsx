@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -8,6 +8,10 @@ import { Card } from '../../components/Card';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { notificationService, NotificationCategory } from '../../services/notifications';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { BrandedLoader } from '../../components/interactive/LoadingState';
+import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Notifications'>['navigation'];
 
@@ -28,6 +32,7 @@ export function NotificationsScreen() {
   const [times, setTimes] = useState<Record<NotificationCategory, string>>({} as any);
   const [loading, setLoading] = useState(true);
   const [permission, setPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+  const skyTint = resolveTint(!!colors.isDark, 'sky');
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -96,18 +101,14 @@ export function NotificationsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.accentPrimary} />
-      </View>
+      <ScreenContainer scroll={false} style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <BrandedLoader label="Loading reminders" />
+      </ScreenContainer>
     );
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenContainer contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => (navigation as any)?.goBack?.()}
@@ -120,23 +121,26 @@ export function NotificationsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <Card style={styles.card}>
-        <View style={styles.masterRow}>
-          <View style={styles.masterInfo}>
-            <Text style={[styles.masterLabel, { color: colors.textPrimary }]}>All Reminders</Text>
-            <Text style={[styles.masterDesc, { color: colors.textTertiary }]}>Master toggle for notifications</Text>
+      <PopIn index={0}>
+        <Card tone="sky" style={styles.card}>
+          <View style={styles.masterRow}>
+            <View style={styles.masterInfo}>
+              <Text style={[styles.masterLabel, { color: skyTint.text }]}>All Reminders</Text>
+              <Text style={[styles.masterDesc, { color: skyTint.muted }]}>Master toggle for notifications</Text>
+            </View>
+            <Switch
+              value={masterEnabled}
+              onValueChange={handleMasterToggle}
+              thumbColor="#FFFFFF"
+              trackColor={{ false: skyTint.border, true: skyTint.accent }}
+              disabled={permission !== 'granted'}
+            />
           </View>
-          <Switch
-            value={masterEnabled}
-            onValueChange={handleMasterToggle}
-            thumbColor="#FFFFFF"
-            trackColor={{ false: colors.borderLight, true: colors.accentPrimary }}
-            disabled={permission !== 'granted'}
-          />
-        </View>
-      </Card>
+        </Card>
+      </PopIn>
 
-      <Card style={styles.card}>
+      <PopIn index={1}>
+        <Card style={styles.card}>
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Categories</Text>
         <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
           Invitational, non-guilt prompts calibrated for mindful presence.
@@ -174,17 +178,20 @@ export function NotificationsScreen() {
             </View>
           </View>
         ))}
-      </Card>
+        </Card>
+      </PopIn>
 
-      <Card variant="outlined" style={[styles.noteCard, { backgroundColor: colors.accentPrimary + '10', borderColor: colors.accentPrimary + '30' }]}>
-        <View style={styles.noteContent}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.accentPrimary} />
-          <Text style={[styles.noteText, { color: colors.textSecondary }]}>
-            All notification messages use gentle, encouraging language. No aggressive streak warnings or guilt prompts.
-          </Text>
-        </View>
-      </Card>
-    </ScrollView>
+      <PopIn index={2}>
+        <Card variant="outlined" style={[styles.noteCard, { backgroundColor: colors.accentPrimary + '10', borderColor: colors.accentPrimary + '30' }]}>
+          <View style={styles.noteContent}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.accentPrimary} />
+            <Text style={[styles.noteText, { color: colors.textSecondary }]}>
+              All notification messages use gentle, encouraging language. No aggressive streak warnings or guilt prompts.
+            </Text>
+          </View>
+        </Card>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 

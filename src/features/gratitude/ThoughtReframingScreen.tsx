@@ -5,6 +5,9 @@ import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { resolveTint } from '../../theme/tints';
 
 const STEPS = [
   {
@@ -54,6 +57,7 @@ const STEPS = [
 export function ThoughtReframingScreen() {
   const navigation = useNavigation();
   const colors = useThemeColors();
+  const sageTint = resolveTint(!!colors.isDark, 'sage');
   const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState<string[]>(['', '', '', '', '', '', '']);
   const [completed, setCompleted] = useState(false);
@@ -110,40 +114,37 @@ export function ThoughtReframingScreen() {
     const reduction = Math.max(0, before - after);
 
     return (
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Card style={styles.completeCard}>
-          <View style={[styles.completeIconWrap, { backgroundColor: colors.accentPrimary + '18' }]}>
-            <Ionicons name="sparkles" size={48} color={colors.accentPrimary} />
+      <ScreenContainer contentContainerStyle={styles.content}>
+        <PopIn index={0}>
+        <Card tone="sage" style={styles.completeCard}>
+          <View style={[styles.completeIconWrap, { backgroundColor: sageTint.plate }]}>
+            <Ionicons name="sparkles" size={48} color={sageTint.accent} />
           </View>
-          <Text style={[styles.completeTitle, { color: colors.textPrimary }]}>Perspective Shifted</Text>
-          <Text style={[styles.completeText, { color: colors.textSecondary }]}>
+          <Text style={[styles.completeTitle, { color: sageTint.text }]}>Perspective Shifted</Text>
+          <Text style={[styles.completeText, { color: sageTint.text }]}>
             You stepped back from distortion and re-anchored your mind in balanced wisdom.
           </Text>
 
-          <View style={[styles.changeIndicator, { backgroundColor: colors.bgPrimary, borderColor: colors.borderLight }]}>
-            <Text style={[styles.changeLabel, { color: colors.textSecondary }]}>Emotional Charge Shift</Text>
+          <View style={[styles.changeIndicator, { backgroundColor: sageTint.plate, borderColor: sageTint.border }]}>
+            <Text style={[styles.changeLabel, { color: sageTint.text }]}>Emotional Charge Shift</Text>
             <View style={styles.changeBars}>
               <View style={styles.changeBarWrapper}>
-                <Text style={[styles.changeBarLabel, { color: colors.textTertiary }]}>Initial Intensity</Text>
-                <View style={[styles.changeBarTrack, { backgroundColor: colors.borderLight }]}>
-                  <View style={[styles.changeBarFill, { width: `${before}%`, backgroundColor: colors.accentRose || '#EB697F' }]} />
+                <Text style={[styles.changeBarLabel, { color: sageTint.muted }]}>Initial Intensity</Text>
+                <View style={[styles.changeBarTrack, { backgroundColor: sageTint.border }]}>
+                  <View style={[styles.changeBarFill, { width: `${before}%`, backgroundColor: sageTint.accent }]} />
                 </View>
-                <Text style={[styles.changeBarValue, { color: colors.accentRose || '#EB697F' }]}>{before}%</Text>
+                <Text style={[styles.changeBarValue, { color: sageTint.accent }]}>{before}%</Text>
               </View>
               <View style={styles.changeBarWrapper}>
-                <Text style={[styles.changeBarLabel, { color: colors.textTertiary }]}>Reframed Level</Text>
-                <View style={[styles.changeBarTrack, { backgroundColor: colors.borderLight }]}>
-                  <View style={[styles.changeBarFillAfter, { width: `${after}%`, backgroundColor: colors.accentPrimary }]} />
+                <Text style={[styles.changeBarLabel, { color: sageTint.muted }]}>Reframed Level</Text>
+                <View style={[styles.changeBarTrack, { backgroundColor: sageTint.border }]}>
+                  <View style={[styles.changeBarFillAfter, { width: `${after}%`, backgroundColor: sageTint.accent }]} />
                 </View>
-                <Text style={[styles.changeBarValue, { color: colors.accentPrimary }]}>{after}%</Text>
+                <Text style={[styles.changeBarValue, { color: sageTint.accent }]}>{after}%</Text>
               </View>
             </View>
             {reduction > 0 && (
-              <Text style={[styles.reductionText, { color: colors.accentPrimary }]}>
+              <Text style={[styles.reductionText, { color: sageTint.accent }]}>
                 Distress reduced by {reduction}%
               </Text>
             )}
@@ -151,12 +152,13 @@ export function ThoughtReframingScreen() {
 
           <PrimaryButton onPress={handleRestart} title="Reframe Another Thought" style={styles.restartButton} variant="outline" />
         </Card>
-      </ScrollView>
+        </PopIn>
+      </ScreenContainer>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -181,6 +183,7 @@ export function ThoughtReframingScreen() {
           Step {currentStep + 1} of {(STEPS ?? []).length}
         </Text>
 
+        <PopIn index={0}>
         <Card style={styles.stepCard}>
           <Text style={[styles.stepTitle, { color: colors.accentPrimary }]}>{step?.title ?? ''}</Text>
           <Text style={[styles.stepPrompt, { color: colors.textPrimary }]}>{step?.prompt ?? ''}</Text>
@@ -202,6 +205,7 @@ export function ThoughtReframingScreen() {
             autoCapitalize="sentences"
           />
         </Card>
+        </PopIn>
       </ScrollView>
 
       <View style={[styles.bottomBar, { borderTopColor: colors.borderLight, backgroundColor: colors.bgPrimary }]}>
@@ -223,12 +227,11 @@ export function ThoughtReframingScreen() {
           </View>
         </View>
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
   header: {
     flexDirection: 'row',

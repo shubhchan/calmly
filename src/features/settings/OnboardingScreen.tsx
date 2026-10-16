@@ -10,6 +10,7 @@ import type { AppIconName } from '../../components/AppIcon';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Onboarding'>['navigation'];
 
@@ -315,7 +316,7 @@ export function OnboardingScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={styles.container}>
       <View style={[styles.progressBar, { backgroundColor: colors.borderLight }]}>
         <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.accentPrimary }]} />
       </View>
@@ -351,7 +352,7 @@ export function OnboardingScreen() {
           />
         </View>
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 

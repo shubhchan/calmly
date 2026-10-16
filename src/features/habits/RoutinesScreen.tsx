@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -10,6 +10,10 @@ import { TactilePressable } from '../../components/interactive/TactilePressable'
 import { StaggeredEntry } from '../../components/interactive/StaggeredEntry';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { ListSkeleton } from '../../components/interactive/LoadingState';
+import { resolveTint, tintForIndex } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Routines'>['navigation'];
 
@@ -85,9 +89,9 @@ export function RoutinesScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading routines...</Text>
-      </View>
+      <ScreenContainer contentContainerStyle={styles.content}>
+        <ListSkeleton rows={3} />
+      </ScreenContainer>
     );
   }
 
@@ -98,11 +102,8 @@ export function RoutinesScreen() {
     (safeRoutines?.evening ?? []).length > 0;
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenContainer contentContainerStyle={styles.content}>
+      <PopIn index={0}>
       <View style={styles.topNav}>
         <Pressable
           onPress={() => navigation.goBack()}
@@ -122,6 +123,7 @@ export function RoutinesScreen() {
         <Text style={[styles.title, { color: colors.textPrimary }]}>Mindful Routines</Text>
         <View style={{ width: 40 }} />
       </View>
+      </PopIn>
 
       {(['morning', 'afternoon', 'evening'] as TimeOfDay[]).map((timeOfDay, sectionIndex) => {
         const config = TIME_OF_DAY_CONFIG[timeOfDay];
@@ -179,7 +181,9 @@ export function RoutinesScreen() {
                 </View>
               ) : (
                 <View style={styles.routineList}>
-                  {list.map((routine, routineIdx) => (
+                  {list.map((routine, routineIdx) => {
+                    const routineTint = resolveTint(!!colors.isDark, tintForIndex(routineIdx));
+                    return (
                     <StaggeredEntry key={routine.id} index={routineIdx} delayStep={30}>
                       <TactilePressable
                         onPress={() => handleEditRoutine(routine)}
@@ -188,14 +192,14 @@ export function RoutinesScreen() {
                         style={[
                           styles.routineCard,
                           {
-                            backgroundColor: colors.bgSecondary ?? '#F4EFE6',
-                            borderColor: colors.borderLight,
+                            backgroundColor: routineTint.bg,
+                            borderColor: routineTint.border,
                           },
                         ]}
                       >
                         <View style={styles.routineCardLeft}>
-                          <Text style={[styles.routineName, { color: colors.textPrimary }]}>{routine.name}</Text>
-                          <Text style={[styles.routineHabitCount, { color: colors.textTertiary }]}>
+                          <Text style={[styles.routineName, { color: routineTint.text }]}>{routine.name}</Text>
+                          <Text style={[styles.routineHabitCount, { color: routineTint.muted }]}>
                             {routine.items?.length ?? 0} {routine.items?.length === 1 ? 'habit' : 'habits'} linked
                           </Text>
                         </View>
@@ -209,18 +213,19 @@ export function RoutinesScreen() {
                           >
                             <Ionicons name="trash-outline" size={18} color={colors.accentRose || '#EB697F'} />
                           </TactilePressable>
-                          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                          <Ionicons name="chevron-forward" size={18} color={routineTint.muted} />
                         </View>
                       </TactilePressable>
                     </StaggeredEntry>
-                  ))}
+                    );
+                  })}
                 </View>
               )}
             </Card>
           </StaggeredEntry>
         );
       })}
-    </ScrollView>
+    </ScreenContainer>
   );
 }
 

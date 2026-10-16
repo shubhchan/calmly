@@ -9,6 +9,8 @@ import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'GratitudeForm'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'GratitudeForm'>['route'];
@@ -161,7 +163,7 @@ export function GratitudeFormScreen() {
     : 'What went well today? A kind word, personal milestone, or peaceful moment?...';
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -181,6 +183,7 @@ export function GratitudeFormScreen() {
         onTouchStart={() => Keyboard.dismiss()}
         showsVerticalScrollIndicator={false}
       >
+        <PopIn index={0}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Your Reflection</Text>
           <TextInput
@@ -195,7 +198,9 @@ export function GratitudeFormScreen() {
             autoFocus={!isEditing}
           />
         </Card>
+        </PopIn>
 
+        <PopIn index={1}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Associated Emotion</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moodScroll}>
@@ -225,7 +230,9 @@ export function GratitudeFormScreen() {
             })}
           </ScrollView>
         </Card>
+        </PopIn>
 
+        <PopIn index={2}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Tags (Optional)</Text>
           <TextInput
@@ -236,7 +243,9 @@ export function GratitudeFormScreen() {
             placeholderTextColor={colors.textTertiary}
           />
         </Card>
+        </PopIn>
 
+        <PopIn index={3}>
         <Card style={styles.section}>
           <TouchableOpacity onPress={() => setFavorite(!favorite)} style={styles.favoriteToggle}>
             <View style={styles.favoriteToggleLeft}>
@@ -266,7 +275,9 @@ export function GratitudeFormScreen() {
             </View>
           </TouchableOpacity>
         </Card>
+        </PopIn>
 
+        <PopIn index={4}>
         <View style={styles.buttonRow}>
           <View style={{ flex: 1 }}>
             <PrimaryButton
@@ -285,13 +296,13 @@ export function GratitudeFormScreen() {
             </TouchableOpacity>
           )}
         </View>
+        </PopIn>
       </ScrollView>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

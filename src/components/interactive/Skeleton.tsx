@@ -109,10 +109,18 @@ interface SkeletonTextProps {
   lineHeight?: number;
   gap?: number;
   lastLineWidth?: number | `${number}%`;
+  shimmer?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-export function SkeletonText({ lines = 2, lineHeight = 14, gap = 8, lastLineWidth = '62%', style }: SkeletonTextProps) {
+export function SkeletonText({
+  lines = 2,
+  lineHeight = 14,
+  gap = 8,
+  lastLineWidth = '62%',
+  shimmer = true,
+  style,
+}: SkeletonTextProps) {
   const safeLines = Math.max(1, lines);
   return (
     <View style={[{ gap }, style]}>
@@ -121,6 +129,7 @@ export function SkeletonText({ lines = 2, lineHeight = 14, gap = 8, lastLineWidt
           key={i}
           height={lineHeight}
           radius={lineHeight / 2}
+          shimmer={shimmer}
           width={i === safeLines - 1 && safeLines > 1 ? (lastLineWidth as any) : '100%'}
         />
       ))}
@@ -132,13 +141,20 @@ interface SkeletonCardProps {
   rows?: number;
   showAvatar?: boolean;
   showTrailing?: boolean;
+  shimmer?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
 /**
  * Card-shaped placeholder mirroring the app's rounded 20pt card geometry.
  */
-export function SkeletonCard({ rows = 2, showAvatar = true, showTrailing = true, style }: SkeletonCardProps) {
+export function SkeletonCard({
+  rows = 2,
+  showAvatar = true,
+  showTrailing = true,
+  shimmer = true,
+  style,
+}: SkeletonCardProps) {
   const colors = useThemeColors();
   return (
     <View
@@ -160,9 +176,9 @@ export function SkeletonCard({ rows = 2, showAvatar = true, showTrailing = true,
         style,
       ]}
     >
-      {showAvatar && <Skeleton width={44} height={44} radius={14} />}
-      <SkeletonText lines={rows} style={{ flex: 1 }} lineHeight={rows > 1 ? 14 : 16} lastLineWidth="48%" />
-      {showTrailing && <Skeleton width={38} height={38} radius={19} />}
+      {showAvatar && <Skeleton width={44} height={44} radius={14} shimmer={shimmer} />}
+      <SkeletonText lines={rows} style={{ flex: 1 }} lineHeight={rows > 1 ? 14 : 16} lastLineWidth="48%" shimmer={shimmer} />
+      {showTrailing && <Skeleton width={38} height={38} radius={19} shimmer={shimmer} />}
     </View>
   );
 }

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { appLockService } from '../../services/appLock';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['route'];
@@ -90,7 +91,7 @@ export function SetPinScreen() {
   }, [stage]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={styles.container}>
       <View style={styles.topNav}>
         <TouchableOpacity
           onPress={() => {
@@ -193,7 +194,7 @@ export function SetPinScreen() {
           ))}
         </View>
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 

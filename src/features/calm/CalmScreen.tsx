@@ -17,6 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -27,15 +30,16 @@ interface QuickSound {
   atmosphere: string;
 }
 
+const SOUNDS: QuickSound[] = [
+  { id: 'rain', label: 'Rainfall', icon: 'rainy-outline', atmosphere: 'Soft drizzle' },
+  { id: 'ocean', label: 'Ocean Waves', icon: 'water-outline', atmosphere: 'Deep tides' },
+  { id: 'birds', label: 'Forest Birds', icon: 'leaf-outline', atmosphere: 'Morning woods' },
+  { id: 'night', label: 'Night Breeze', icon: 'moon-outline', atmosphere: 'Quiet stream' },
+];
+
 const SOUND_ROWS: [QuickSound, QuickSound][] = [
-  [
-    { id: 'rain', label: 'Rainfall', icon: 'rainy-outline', atmosphere: 'Soft drizzle' },
-    { id: 'ocean', label: 'Ocean Waves', icon: 'water-outline', atmosphere: 'Deep tides' },
-  ],
-  [
-    { id: 'birds', label: 'Forest Birds', icon: 'leaf-outline', atmosphere: 'Morning woods' },
-    { id: 'night', label: 'Night Breeze', icon: 'moon-outline', atmosphere: 'Quiet stream' },
-  ],
+  [SOUNDS[0], SOUNDS[1]],
+  [SOUNDS[2], SOUNDS[3]],
 ];
 
 interface QuickBreathwork {
@@ -78,8 +82,14 @@ export function CalmScreen() {
     navigation.navigate('BreathingSession', { preset, duration });
   };
 
+  const skyTint = resolveTint(!!colors.isDark, 'sky');
+  const coralTint = resolveTint(!!colors.isDark, 'coral');
+  const creamTint = resolveTint(!!colors.isDark, 'cream');
+  const sageTint = resolveTint(!!colors.isDark, 'sage');
+  const blushTint = resolveTint(!!colors.isDark, 'blush');
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       {/* Sanctuary Top Bar */}
       <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
         <View style={styles.headerTitleRow}>
@@ -151,8 +161,9 @@ export function CalmScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. Nature Soundscapes Interactive Player Hub */}
-        <Card variant="elevated" style={styles.sectionCard}>
+        {/* 1. Nature Soundscapes Interactive Player Hub — sky pop card */}
+        <PopIn index={0}>
+        <Card variant="elevated" tone="sky" style={styles.sectionCard}>
           <CardContent style={styles.cardInner}>
             <View style={styles.cardHeaderRow}>
               <View style={{ flex: 1, paddingRight: 8 }}>
@@ -161,20 +172,20 @@ export function CalmScreen() {
                     Nature Soundscapes
                   </Text>
                 </View>
-                <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
+                <Text style={[styles.sectionHeading, { color: skyTint.text }]}>
                   Ambient Sanctuary
                 </Text>
-                <Text style={[styles.sectionSub, { color: colors.textTertiary }]}>
+                <Text style={[styles.sectionSub, { color: skyTint.muted }]}>
                   Tap any atmosphere for immediate calm
                 </Text>
               </View>
-              <NatureSoundscapeIllustration width={110} height={85} />
+              <NatureSoundscapeIllustration width={96} height={76} />
             </View>
 
-            {/* Symmetrical 2x2 Ambient Sound Grid */}
+            {/* Ambient Sound Grid (2x2 tactile cards) */}
             <View style={styles.soundGrid}>
-              {SOUND_ROWS.map((row, rowIdx) => (
-                <View key={rowIdx} style={styles.soundRow}>
+              {SOUND_ROWS.map((row, rIdx) => (
+                <View key={rIdx} style={styles.soundGridRow}>
                   {row.map((snd) => {
                     const isPlaying = activeSound === snd.id;
                     return (
@@ -186,54 +197,70 @@ export function CalmScreen() {
                           {
                             backgroundColor: isPlaying
                               ? (colors.isDark ? '#163022' : '#EDF5EF')
-                              : (colors.isDark ? '#1E293B' : (colors.bgSecondary || '#F4EFE6')),
-                            borderColor: isPlaying
-                              ? colors.accentPrimary
-                              : (colors.isDark ? '#354760' : (colors.borderMedium || '#D5CCC0')),
-                            transform: [{ scale: pressed ? 0.96 : 1 }],
+                              : skyTint.plate,
+                            borderColor: isPlaying ? colors.accentPrimary : skyTint.border,
+                            transform: [{ scale: pressed ? 0.97 : 1 }],
                             opacity: pressed ? 0.92 : 1,
                           },
-                          isPlaying && styles.soundTileActive,
                         ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${snd.label}, ${isPlaying ? 'playing' : snd.atmosphere}`}
                       >
-                        <View
-                          style={[
-                            styles.soundIconOrb,
-                            {
-                              backgroundColor: isPlaying
-                                ? colors.accentPrimary
-                                : (colors.isDark ? '#26344A' : colors.bgCard),
-                              borderColor: isPlaying
-                                ? colors.accentPrimary
-                                : (colors.isDark ? '#3D526E' : (colors.borderLight || '#E6E0D4')),
-                            },
-                          ]}
-                        >
-                          <Ionicons
-                            name={isPlaying ? 'pause' : snd.icon}
-                            size={20}
-                            color={isPlaying ? '#FFFFFF' : colors.accentPrimary}
-                          />
+                        <View style={styles.soundTileTop}>
+                          <View
+                            style={[
+                              styles.soundTileOrb,
+                              {
+                                backgroundColor: isPlaying ? colors.accentPrimary : colors.bgCard,
+                                borderColor: isPlaying ? colors.accentPrimary : skyTint.border,
+                              },
+                            ]}
+                          >
+                            <Ionicons
+                              name={isPlaying ? 'pause' : snd.icon}
+                              size={18}
+                              color={isPlaying ? '#FFFFFF' : skyTint.accent}
+                            />
+                          </View>
+                          {isPlaying && (
+                            <View
+                              style={[
+                                styles.playingBadge,
+                                {
+                                  backgroundColor: (colors.accentPrimary || '#3E7B52') + '18',
+                                  borderColor: colors.accentPrimary || '#3E7B52',
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.playingBadgeText,
+                                  { color: colors.accentPrimary || '#3E7B52' },
+                                ]}
+                              >
+                                Playing
+                              </Text>
+                            </View>
+                          )}
                         </View>
 
                         <Text
                           style={[
                             styles.soundTileTitle,
-                            { color: isPlaying ? colors.accentPrimary : colors.textPrimary },
+                            { color: isPlaying ? colors.accentPrimary : skyTint.text },
                           ]}
                           numberOfLines={1}
                         >
                           {snd.label}
                         </Text>
-
                         <Text
                           style={[
                             styles.soundTileSub,
-                            { color: isPlaying ? colors.accentPrimary : colors.textTertiary },
+                            { color: isPlaying ? colors.accentPrimary : skyTint.muted },
                           ]}
                           numberOfLines={1}
                         >
-                          {isPlaying ? 'Playing ♪' : snd.atmosphere}
+                          {isPlaying ? 'Tap to pause' : snd.atmosphere}
                         </Text>
                       </Pressable>
                     );
@@ -247,38 +274,40 @@ export function CalmScreen() {
               style={({ pressed }) => [
                 styles.fullPageLink,
                 {
-                  borderTopColor: colors.borderLight,
+                  borderTopColor: skyTint.border,
                   opacity: pressed ? 0.75 : 1,
                   transform: [{ scale: pressed ? 0.99 : 1 }],
                 },
               ]}
             >
-              <Text style={[styles.fullPageLinkText, { color: colors.accentPrimary }]}>
+              <Text style={[styles.fullPageLinkText, { color: skyTint.accent }]}>
                 Full Soundscapes Player & Sleep Timer
               </Text>
-              <Ionicons name="arrow-forward" size={15} color={colors.accentPrimary} />
+              <Ionicons name="arrow-forward" size={15} color={skyTint.accent} />
             </Pressable>
           </CardContent>
         </Card>
+        </PopIn>
 
-        {/* 2. Interactive Breathwork Studio Hub */}
-        <Card variant="elevated" style={styles.sectionCard}>
+        {/* 2. Interactive Breathwork Studio Hub — coral pop card */}
+        <PopIn index={1}>
+        <Card variant="elevated" tone="coral" style={styles.sectionCard}>
           <CardContent style={styles.cardInner}>
             <View style={styles.cardHeaderRow}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <View style={[styles.badgePill, { backgroundColor: colors.accentBg }]}>
-                  <Text style={[styles.badgePillText, { color: colors.accentPrimary }]}>
+                <View style={[styles.badgePill, { backgroundColor: (colors.accentPeach || '#D76949') + '20' }]}>
+                  <Text style={[styles.badgePillText, { color: colors.accentPeach || '#D76949' }]}>
                     Breathwork Studio
                   </Text>
                 </View>
-                <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
+                <Text style={[styles.sectionHeading, { color: coralTint.text }]}>
                   Paced Breathing
                 </Text>
-                <Text style={[styles.sectionSub, { color: colors.textTertiary }]}>
+                <Text style={[styles.sectionSub, { color: coralTint.muted }]}>
                   Restore nervous system rhythm
                 </Text>
               </View>
-              <BreathworkIllustration width={110} height={85} />
+              <BreathworkIllustration width={96} height={76} />
             </View>
 
             {/* Direct Breathwork Presets */}
@@ -289,19 +318,19 @@ export function CalmScreen() {
                   style={[
                     styles.presetRow,
                     {
-                      backgroundColor: colors.bgSecondary || '#F4EFE6',
-                      borderColor: colors.borderLight,
+                      backgroundColor: coralTint.plate,
+                      borderColor: coralTint.border,
                     },
                   ]}
                 >
                   <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={[styles.presetTitle, { color: colors.textPrimary }]}>
+                    <Text style={[styles.presetTitle, { color: coralTint.text }]}>
                       {preset.title}
                     </Text>
-                    <Text style={[styles.presetCadence, { color: colors.accentPrimary }]}>
+                    <Text style={[styles.presetCadence, { color: coralTint.accent }]}>
                       {preset.cadence}
                     </Text>
-                    <Text style={[styles.presetBenefit, { color: colors.textTertiary }]}>
+                    <Text style={[styles.presetBenefit, { color: coralTint.muted }]}>
                       {preset.benefit}
                     </Text>
                   </View>
@@ -310,7 +339,7 @@ export function CalmScreen() {
                     style={({ pressed }) => [
                       styles.presetStartButton,
                       {
-                        backgroundColor: colors.accentPrimary,
+                        backgroundColor: coralTint.accent,
                         transform: [{ scale: pressed ? 0.94 : 1 }],
                         opacity: pressed ? 0.88 : 1,
                       },
@@ -328,23 +357,26 @@ export function CalmScreen() {
               style={({ pressed }) => [
                 styles.fullPageLink,
                 {
-                  borderTopColor: colors.borderLight,
+                  borderTopColor: coralTint.border,
                   opacity: pressed ? 0.75 : 1,
                   transform: [{ scale: pressed ? 0.99 : 1 }],
                 },
               ]}
             >
-              <Text style={[styles.fullPageLinkText, { color: colors.accentPrimary }]}>
+              <Text style={[styles.fullPageLinkText, { color: coralTint.accent }]}>
                 Explore Custom Durations & Audio in Studio
               </Text>
-              <Ionicons name="arrow-forward" size={15} color={colors.accentPrimary} />
+              <Ionicons name="arrow-forward" size={15} color={coralTint.accent} />
             </Pressable>
           </CardContent>
         </Card>
+        </PopIn>
 
-        {/* 3. 5-4-3-2-1 Sensory Grounding Card (Full Width Horizontal) */}
+        {/* 3. 5-4-3-2-1 Sensory Grounding Card — cream pop card */}
+        <PopIn index={2}>
         <Card
           variant="elevated"
+          tone="cream"
           style={styles.sectionCard}
           onPress={() => navigation.navigate('SensoryGrounding')}
         >
@@ -356,27 +388,30 @@ export function CalmScreen() {
                     5 Senses Reset
                   </Text>
                 </View>
-                <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
+                <Text style={[styles.sectionHeading, { color: creamTint.text }]}>
                   Sensory Grounding
                 </Text>
-                <Text style={[styles.sectionSub, { color: colors.textTertiary }]} numberOfLines={2}>
+                <Text style={[styles.sectionSub, { color: creamTint.muted }]} numberOfLines={2}>
                   Engage physical senses to interrupt cognitive spirals
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
-                  <Text style={[styles.fullPageLinkText, { color: colors.accentPeach || '#EB876D' }]}>
+                  <Text style={[styles.fullPageLinkText, { color: creamTint.accent }]}>
                     Begin Grounding
                   </Text>
-                  <Ionicons name="arrow-forward" size={14} color={colors.accentPeach || '#EB876D'} />
+                  <Ionicons name="arrow-forward" size={14} color={creamTint.accent} />
                 </View>
               </View>
-              <SensoryGroundingIllustration width={105} height={90} />
+              <SensoryGroundingIllustration width={96} height={76} />
             </View>
           </CardContent>
         </Card>
+        </PopIn>
 
-        {/* 4. Somatic Body Scan Card (Full Width Horizontal) */}
+        {/* 4. Somatic Body Scan Card — sage pop card */}
+        <PopIn index={3}>
         <Card
           variant="elevated"
+          tone="sage"
           style={styles.sectionCard}
           onPress={() => navigation.navigate('BodyScan')}
         >
@@ -388,27 +423,30 @@ export function CalmScreen() {
                     Muscle Release
                   </Text>
                 </View>
-                <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
+                <Text style={[styles.sectionHeading, { color: sageTint.text }]}>
                   Somatic Body Scan
                 </Text>
-                <Text style={[styles.sectionSub, { color: colors.textTertiary }]} numberOfLines={2}>
+                <Text style={[styles.sectionSub, { color: sageTint.muted }]} numberOfLines={2}>
                   Progressive tension release across 5 anatomy zones
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
-                  <Text style={[styles.fullPageLinkText, { color: colors.accentPrimary }]}>
+                  <Text style={[styles.fullPageLinkText, { color: sageTint.accent }]}>
                     Begin Body Scan
                   </Text>
-                  <Ionicons name="arrow-forward" size={14} color={colors.accentPrimary} />
+                  <Ionicons name="arrow-forward" size={14} color={sageTint.accent} />
                 </View>
               </View>
-              <BodyScanIllustration width={105} height={90} />
+              <BodyScanIllustration width={96} height={76} />
             </View>
           </CardContent>
         </Card>
+        </PopIn>
 
-        {/* 5. Emergency SOS Acute Panic Anchor Card (Full Width Horizontal) */}
+        {/* 5. Emergency SOS Acute Panic Anchor Card — blush pop card */}
+        <PopIn index={4}>
         <Card
           variant="elevated"
+          tone="blush"
           style={styles.sectionCard}
           onPress={() => navigation.navigate('PanicAnchor')}
         >
@@ -420,25 +458,26 @@ export function CalmScreen() {
                     Emergency SOS
                   </Text>
                 </View>
-                <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
+                <Text style={[styles.sectionHeading, { color: blushTint.text }]}>
                   Acute Panic Anchor
                 </Text>
-                <Text style={[styles.sectionSub, { color: colors.textTertiary }]} numberOfLines={2}>
+                <Text style={[styles.sectionSub, { color: blushTint.muted }]} numberOfLines={2}>
                   Physiological sigh & cold water reflex for rapid de-escalation
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
-                  <Text style={[styles.fullPageLinkText, { color: colors.accentRose || '#EB697F' }]}>
+                  <Text style={[styles.fullPageLinkText, { color: blushTint.accent }]}>
                     Open SOS Relief
                   </Text>
-                  <Ionicons name="arrow-forward" size={14} color={colors.accentRose || '#EB697F'} />
+                  <Ionicons name="arrow-forward" size={14} color={blushTint.accent} />
                 </View>
               </View>
-              <PanicAnchorIllustration width={105} height={90} />
+              <PanicAnchorIllustration width={96} height={76} />
             </View>
           </CardContent>
         </Card>
+        </PopIn>
       </ScrollView>
-    </View>
+    </ScreenContainer>
   );
 }
 
@@ -547,44 +586,53 @@ const styles = StyleSheet.create({
   soundGrid: {
     gap: 10,
   },
-  soundRow: {
+  soundGridRow: {
     flexDirection: 'row',
     gap: 10,
   },
   soundTile: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    padding: 13,
     borderRadius: 16,
     borderWidth: 1.2,
+    minHeight: 104,
+    justifyContent: 'space-between',
+  },
+  soundTileTop: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 108,
-    gap: 4,
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  soundTileActive: {
-    borderWidth: 1.6,
-  },
-  soundIconOrb: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  soundTileOrb: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+  },
+  playingBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 9999,
+    borderWidth: 1,
+  },
+  playingBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   soundTileTitle: {
     fontFamily: fontFamilies.sans.bold,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    textAlign: 'center',
     letterSpacing: -0.2,
   },
   soundTileSub: {
     fontFamily: fontFamilies.sans.regular,
-    fontSize: 11,
-    textAlign: 'center',
+    fontSize: 11.5,
+    marginTop: 2,
   },
   fullPageLink: {
     flexDirection: 'row',

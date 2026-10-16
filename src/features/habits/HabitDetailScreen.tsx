@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -13,6 +13,10 @@ import { StatPill } from '../../components/StatPill';
 import { Ionicons } from '@expo/vector-icons';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { DetailSkeleton } from '../../components/interactive/LoadingState';
+import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>['route'];
@@ -146,9 +150,9 @@ export function HabitDetailScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading habit details...</Text>
-      </View>
+      <ScreenContainer contentContainerStyle={styles.content}>
+        <DetailSkeleton />
+      </ScreenContainer>
     );
   }
 
@@ -186,13 +190,11 @@ export function HabitDetailScreen() {
   }
 
   const habitAccentColor = habit?.color || colors.accentPrimary;
+  const sageTint = resolveTint(!!colors.isDark, 'sage');
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenContainer contentContainerStyle={styles.content}>
+      <PopIn index={0}>
       <View style={styles.topNav}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -216,26 +218,30 @@ export function HabitDetailScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      </PopIn>
 
-      <View style={styles.habitHero}>
+      <PopIn index={1}>
+      <Card tone="sage" style={styles.habitHero}>
         <View style={[styles.habitIconLarge, { backgroundColor: habitAccentColor }]}>
           <Ionicons name={getIconName(habit?.icon ?? '') as any} size={36} color="#FFFFFF" />
         </View>
-        <Text style={[styles.habitName, { color: colors.textPrimary }]}>{habit?.name ?? ''}</Text>
+        <Text style={[styles.habitName, { color: sageTint.text }]}>{habit?.name ?? ''}</Text>
         <View style={styles.habitMeta}>
-          <Text style={[styles.habitFrequency, { color: colors.textSecondary }]}>
+          <Text style={[styles.habitFrequency, { color: sageTint.muted }]}>
             {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
             {habit?.frequency === 'custom' && customDayLabels ? ` • ${customDayLabels}` : ''}
           </Text>
           {habit?.reminderTime ? (
             <View style={styles.reminderBadge}>
-              <Ionicons name="alarm-outline" size={13} color={colors.accentPrimary} />
-              <Text style={[styles.habitReminder, { color: colors.accentPrimary }]}>{habit.reminderTime}</Text>
+              <Ionicons name="alarm-outline" size={13} color={sageTint.accent} />
+              <Text style={[styles.habitReminder, { color: sageTint.accent }]}>{habit.reminderTime}</Text>
             </View>
           ) : null}
         </View>
-      </View>
+      </Card>
+      </PopIn>
 
+      <PopIn index={2}>
       <View style={styles.statsRow}>
         <StatPill
           label="Current Streak"
@@ -256,7 +262,9 @@ export function HabitDetailScreen() {
           icon={<Ionicons name="pie-chart-outline" size={16} color={colors.accentSky || '#6B9BCD'} />}
         />
       </View>
+      </PopIn>
 
+      <PopIn index={3}>
       <Card style={styles.calendarCard}>
         <View style={styles.calendarHeader}>
           <TouchableOpacity
@@ -345,21 +353,26 @@ export function HabitDetailScreen() {
           </View>
         </View>
       </Card>
+      </PopIn>
 
       {habit?.notes ? (
+        <PopIn index={4}>
         <Card style={styles.notesCard}>
           <Text style={[styles.notesLabel, { color: colors.textSecondary }]}>Mindful Intention</Text>
           <Text style={[styles.notesText, { color: colors.textPrimary }]}>{habit.notes}</Text>
         </Card>
+        </PopIn>
       ) : null}
 
+      <PopIn index={5}>
       <View style={[styles.encouragementCard, { backgroundColor: habitAccentColor + '14', borderColor: habitAccentColor + '30' }]}>
         <Ionicons name="sparkles" size={20} color={habitAccentColor} style={{ marginBottom: 6 }} />
         <Text style={[styles.encouragementText, { color: colors.textPrimary }]}>
           {getHabitEncouragement('streak', streak?.current ?? 0)}
         </Text>
       </View>
-    </ScrollView>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 
@@ -393,7 +406,8 @@ const styles = StyleSheet.create({
   },
   habitHero: {
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     gap: 8,
   },
   habitIconLarge: {

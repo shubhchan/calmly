@@ -1,5 +1,5 @@
-import React, { Suspense, useEffect, useRef, useCallback } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { Suspense, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -10,7 +10,7 @@ import Animated, {
   interpolate,
   Easing,
 } from 'react-native-reanimated';
-import { createNativeStackNavigator, NativeStackNavigationOptions } from '@react-navigation/native-stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { TabParamList, RootStackParamList } from '../types/navigation';
 import { useThemeColors } from '../theme/ThemeContext';
@@ -51,41 +51,13 @@ import { MoodCalendarScreen } from '../features/insights/MoodCalendarScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticFeedback } from '../utils/haptics';
 import { fontFamilies } from '../theme/typography';
+import { FontBrowserScreen } from '../features/settings/FontBrowserScreen';
+import { BrandedLoader } from '../components/interactive/LoadingState';
+import { useAppReducedMotion } from '../theme/motion';
+import { pushTransition, modalTransition, immersiveTransition, tabTransition } from './transitions';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
-
-/**
- * Standard pushed sub-pages: 100% native platform transition (UINavigationController / Fragment).
- * Driven directly by the GPU/render thread with subpixel gesture parallax and zero dropped frames.
- */
-const defaultStackOptions: NativeStackNavigationOptions = {
-  headerShown: false,
-  animation: 'default',
-  gestureEnabled: true,
-};
-
-/**
- * Introspective modals (Journal Entry, Mood Check-In, Forms):
- * Clean native bottom sheet presentation.
- */
-const modalOptions: NativeStackNavigationOptions = {
-  headerShown: false,
-  animation: 'slide_from_bottom',
-  presentation: 'modal',
-  gestureEnabled: true,
-};
-
-/**
- * Immersive somatic focus & relief (Breathing Sessions, Acute Panic SOS):
- * Tranquil hardware-accelerated fade.
- */
-const fullScreenFocusOptions: NativeStackNavigationOptions = {
-  headerShown: false,
-  animation: 'fade',
-  presentation: 'fullScreenModal',
-  gestureEnabled: true,
-};
 
 /**
  * Logs the first render attempt of a navigator (body runs even if the commit
@@ -116,7 +88,7 @@ function TabLoadingFallback() {
         justifyContent: 'center',
       }}
     >
-      <ActivityIndicator size="large" color={colors?.accentPrimary ?? '#3E7B52'} />
+      <BrandedLoader label="Opening your sanctuary…" />
     </View>
   );
 }
@@ -457,6 +429,7 @@ const tabBarStyles = StyleSheet.create({
 
 export function AppNavigator() {
   useRenderLog('app-navigator-render');
+  const reducedMotion = useAppReducedMotion();
   useEffect(() => {
     bootLog('app-navigator-mounted');
   }, []);
@@ -465,10 +438,7 @@ export function AppNavigator() {
     <Tab.Navigator
       initialRouteName="Home"
       tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        animation: 'fade',
-      }}
+      screenOptions={tabTransition(reducedMotion)}
     >
       <Tab.Screen name="Home" component={GuardedHomeStack} />
       <Tab.Screen name="Journal" component={GuardedJournalStack} />
@@ -482,47 +452,54 @@ export function AppNavigator() {
 
 export function RootNavigator() {
   useRenderLog('root-navigator-render');
+  const reducedMotion = useAppReducedMotion();
   useEffect(() => {
     bootLog('root-navigator-mounted');
   }, []);
 
+  // One transition matrix, resolved from the user's motion preference.
+  const push = useMemo(() => pushTransition(reducedMotion), [reducedMotion]);
+  const modal = useMemo(() => modalTransition(reducedMotion), [reducedMotion]);
+  const immersive = useMemo(() => immersiveTransition(reducedMotion), [reducedMotion]);
+
   return (
-    <RootStack.Navigator initialRouteName="App" screenOptions={defaultStackOptions}>
+    <RootStack.Navigator initialRouteName="App" screenOptions={push}>
       <RootStack.Screen name="App" component={AppNavigator} />
 
       {/* Introspective Modals & Sheet Flows */}
-      <RootStack.Screen name="JournalEntry" component={JournalEntryScreen} options={modalOptions} />
-      <RootStack.Screen name="MoodCheckIn" component={MoodCheckInScreen} options={modalOptions} />
-      <RootStack.Screen name="HabitForm" component={HabitFormScreen} options={modalOptions} />
-      <RootStack.Screen name="GratitudeForm" component={GratitudeFormScreen} options={modalOptions} />
-      <RootStack.Screen name="SetPin" component={SetPinScreen} options={modalOptions} />
+      <RootStack.Screen name="JournalEntry" component={JournalEntryScreen} options={modal} />
+      <RootStack.Screen name="MoodCheckIn" component={MoodCheckInScreen} options={modal} />
+      <RootStack.Screen name="HabitForm" component={HabitFormScreen} options={modal} />
+      <RootStack.Screen name="GratitudeForm" component={GratitudeFormScreen} options={modal} />
+      <RootStack.Screen name="SetPin" component={SetPinScreen} options={modal} />
 
-      {/* Immersive Somatic Focus Modes (Fade from bottom) */}
-      <RootStack.Screen name="BreathingSession" component={BreathingSessionScreen} options={fullScreenFocusOptions} />
-      <RootStack.Screen name="PanicAnchor" component={PanicAnchorScreen} options={fullScreenFocusOptions} />
-      <RootStack.Screen name="GroundingExercise" component={GroundingExerciseScreen} options={fullScreenFocusOptions} />
+      {/* Immersive Somatic Focus Modes (quiet fade) */}
+      <RootStack.Screen name="BreathingSession" component={BreathingSessionScreen} options={immersive} />
+      <RootStack.Screen name="PanicAnchor" component={PanicAnchorScreen} options={immersive} />
+      <RootStack.Screen name="GroundingExercise" component={GroundingExerciseScreen} options={immersive} />
 
-      {/* Sleek Horizontal Slide Pushed Sanctuaries */}
-      <RootStack.Screen name="Onboarding" component={OnboardingScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="AppLock" component={AppLockScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="Habits" component={HabitListScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="HabitDetail" component={HabitDetailScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="Routines" component={RoutinesScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="Gratitude" component={GratitudeScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="Affirmations" component={AffirmationsScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="AffirmationDetail" component={AffirmationDetailScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="SelfCompassion" component={SelfCompassionScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="WhatCanIControl" component={WhatCanIControlScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="ThoughtReframing" component={ThoughtReframingScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="Notifications" component={NotificationsScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="AppLockSettings" component={AppLockSettingsScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="DataManagement" component={DataManagementScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="BreathworkStudio" component={BreathworkStudioScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="Soundscapes" component={SoundscapesScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="SensoryGrounding" component={SensoryGroundingScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="BodyScan" component={BodyScanScreen} options={defaultStackOptions} />
-      <RootStack.Screen name="MoodCalendar" component={MoodCalendarScreen} options={defaultStackOptions} />
+      {/* Pushed Sanctuaries (horizontal slide) */}
+      <RootStack.Screen name="Onboarding" component={OnboardingScreen} options={push} />
+      <RootStack.Screen name="AppLock" component={AppLockScreen} options={push} />
+      <RootStack.Screen name="Habits" component={HabitListScreen} options={push} />
+      <RootStack.Screen name="HabitDetail" component={HabitDetailScreen} options={push} />
+      <RootStack.Screen name="Routines" component={RoutinesScreen} options={push} />
+      <RootStack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={push} />
+      <RootStack.Screen name="Gratitude" component={GratitudeScreen} options={push} />
+      <RootStack.Screen name="Affirmations" component={AffirmationsScreen} options={push} />
+      <RootStack.Screen name="AffirmationDetail" component={AffirmationDetailScreen} options={push} />
+      <RootStack.Screen name="SelfCompassion" component={SelfCompassionScreen} options={push} />
+      <RootStack.Screen name="WhatCanIControl" component={WhatCanIControlScreen} options={push} />
+      <RootStack.Screen name="ThoughtReframing" component={ThoughtReframingScreen} options={push} />
+      <RootStack.Screen name="Notifications" component={NotificationsScreen} options={push} />
+      <RootStack.Screen name="AppLockSettings" component={AppLockSettingsScreen} options={push} />
+      <RootStack.Screen name="DataManagement" component={DataManagementScreen} options={push} />
+      <RootStack.Screen name="BreathworkStudio" component={BreathworkStudioScreen} options={push} />
+      <RootStack.Screen name="Soundscapes" component={SoundscapesScreen} options={push} />
+      <RootStack.Screen name="SensoryGrounding" component={SensoryGroundingScreen} options={push} />
+      <RootStack.Screen name="BodyScan" component={BodyScanScreen} options={push} />
+      <RootStack.Screen name="MoodCalendar" component={MoodCalendarScreen} options={push} />
+      <RootStack.Screen name="FontBrowser" component={FontBrowserScreen} options={push} />
     </RootStack.Navigator>
   );
 }

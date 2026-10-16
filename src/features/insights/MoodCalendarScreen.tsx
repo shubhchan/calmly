@@ -5,12 +5,16 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository } from '../../database/repositories/insightsRepository';
 import { MoodEntry } from '../../database/models';
-import { Card, CardContent, AppIcon, moodIcon, Skeleton, SkeletonCard } from '../../components';
+import { Card, CardContent, AppIcon, moodIcon } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { GridSkeleton } from '../../components/interactive/LoadingState';
+import { resolveTint } from '../../theme/tints';
 
 const MOOD_COLORS: Record<string, string> = {
   happy: '#5A955A',
@@ -42,6 +46,8 @@ interface DayMoodData {
 export function MoodCalendarScreen() {
   const navigation = useNavigation<NavigationProp>();
   const colors = useThemeColors();
+  const sageTint = resolveTint(!!colors.isDark, 'sage');
+  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [moodData, setMoodData] = useState<Record<number, DayMoodData>>({});
@@ -169,8 +175,8 @@ export function MoodCalendarScreen() {
           disabled={!hasData}
           style={({ pressed }) => [
             styles.dayCell,
-            isSelected && { backgroundColor: colors.accentPrimary },
-            isTodayDay && !isSelected && { borderWidth: 2, borderColor: colors.accentPrimary },
+            isSelected && { backgroundColor: sageTint.accent },
+            isTodayDay && !isSelected && { borderWidth: 2, borderColor: sageTint.accent },
             !hasData && { opacity: 0.35 },
             { transform: [{ scale: pressed ? 0.92 : 1 }] },
           ]}
@@ -178,9 +184,9 @@ export function MoodCalendarScreen() {
           <Text
             style={[
               styles.dayText,
-              { color: colors.textPrimary },
+              { color: sageTint.text },
               isSelected && { color: '#FFFFFF', fontWeight: '700' },
-              isTodayDay && !isSelected && { color: colors.accentPrimary, fontWeight: '700' },
+              isTodayDay && !isSelected && { color: sageTint.accent, fontWeight: '700' },
             ]}
           >
             {day}
@@ -199,19 +205,14 @@ export function MoodCalendarScreen() {
 
   if (initialLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, paddingHorizontal: 20, paddingTop: 16 }]}>
-        <View style={{ gap: 8, marginBottom: 20 }}>
-          <Skeleton width={190} height={30} radius={10} />
-          <Skeleton width={240} height={14} radius={7} />
-        </View>
-        <Skeleton width="100%" height={360} radius={24} style={{ marginBottom: 16 }} />
-        <SkeletonCard rows={2} />
-      </View>
+      <ScreenContainer contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}>
+        <GridSkeleton cells={12} columns={3} />
+      </ScreenContainer>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       <View style={styles.header}>
         <Pressable
           onPress={() => {
@@ -261,10 +262,11 @@ export function MoodCalendarScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={[styles.calendarCard, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
+        <PopIn index={0}>
+        <Card variant="elevated" tone="sage" style={styles.calendarCard}>
           <View style={styles.weekdays}>
             {(weekDays ?? []).map((day) => (
-              <Text key={day ?? Math.random().toString()} style={[styles.weekday, { color: colors.textTertiary }]}>
+              <Text key={day ?? Math.random().toString()} style={[styles.weekday, { color: sageTint.muted }]}>
                 {day ?? ''}
               </Text>
             ))}
@@ -278,12 +280,14 @@ export function MoodCalendarScreen() {
             ))}
             {[...Array(Math.max(0, daysInMonth ?? 0))].map((_, i) => renderDay(i + 1))}
           </View>
-        </View>
+        </Card>
+        </PopIn>
 
         {selectedDayData && (
-          <Card variant="elevated" style={styles.detailCard}>
+          <PopIn index={1}>
+          <Card variant="elevated" tone="lilac" style={styles.detailCard}>
             <CardContent>
-              <Text style={[styles.detailDate, { color: colors.textPrimary }]}>
+              <Text style={[styles.detailDate, { color: lilacTint.text }]}>
                 {selectedDay ?? ''} {monthName ?? ''} {year ?? ''}
               </Text>
               <View style={styles.detailMoodRow}>
@@ -299,36 +303,38 @@ export function MoodCalendarScreen() {
                   <AppIcon name={moodIcon((selectedDayData as any)?.mood)} size={32} />
                 </View>
                 <View style={styles.detailMoodInfo}>
-                  <Text style={[styles.detailMoodLabel, { color: colors.textPrimary }]}>
+                  <Text style={[styles.detailMoodLabel, { color: lilacTint.text }]}>
                     {typeof (selectedDayData as any)?.mood === 'string' && (selectedDayData as any).mood.length > 0
                       ? (selectedDayData as any).mood.charAt(0).toUpperCase() + (selectedDayData as any).mood.slice(1)
                       : 'Unknown'}
                   </Text>
-                  <Text style={[styles.detailMoodMeta, { color: colors.textTertiary }]}>
+                  <Text style={[styles.detailMoodMeta, { color: lilacTint.muted }]}>
                     Intensity: {(selectedDayData as any)?.intensity ?? 0}/10 · Stress: {(selectedDayData as any)?.stress ?? 0}/10
                   </Text>
                 </View>
               </View>
 
-              <View style={[styles.detailStats, { borderTopColor: colors.borderLight }]}>
+              <View style={[styles.detailStats, { borderTopColor: lilacTint.border }]}>
                 <View style={styles.detailStat}>
-                  <Text style={[styles.detailStatLabel, { color: colors.textTertiary }]}>Journal Entry</Text>
-                  <Text style={[styles.detailStatValue, { color: colors.textPrimary }]}>
+                  <Text style={[styles.detailStatLabel, { color: lilacTint.muted }]}>Journal Entry</Text>
+                  <Text style={[styles.detailStatValue, { color: lilacTint.text }]}>
                     {(selectedDayData as any)?.hasJournal ? 'Recorded' : 'None'}
                   </Text>
                 </View>
                 <View style={styles.detailStat}>
-                  <Text style={[styles.detailStatLabel, { color: colors.textTertiary }]}>Habits Done</Text>
-                  <Text style={[styles.detailStatValue, { color: colors.textPrimary }]}>
+                  <Text style={[styles.detailStatLabel, { color: lilacTint.muted }]}>Habits Done</Text>
+                  <Text style={[styles.detailStatValue, { color: lilacTint.text }]}>
                     {(selectedDayData as any)?.habitsCompleted ?? 0}/{(selectedDayData as any)?.habitsTotal ?? 0}
                   </Text>
                 </View>
               </View>
             </CardContent>
           </Card>
+          </PopIn>
         )}
 
         {!selectedDayData && (
+          <PopIn index={1}>
           <Card variant="outlined" style={styles.emptyCard}>
             <CardContent style={styles.emptyCardContent}>
               <Ionicons name="calendar-outline" size={36} color={colors.textTertiary} />
@@ -338,14 +344,14 @@ export function MoodCalendarScreen() {
               </Text>
             </CardContent>
           </Card>
+          </PopIn>
         )}
       </ScrollView>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

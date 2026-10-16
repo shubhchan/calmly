@@ -8,9 +8,13 @@ import { Q } from '@nozbe/watermelondb';
 import Affirmation from '../../database/models/Affirmation';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { StaggeredEntry, SkeletonCard, TactilePressable } from '../../components';
+import { StaggeredEntry, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { ListSkeleton } from '../../components/interactive/LoadingState';
+import { resolveTint, tintForIndex } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Affirmations'>['navigation'];
 
@@ -196,8 +200,9 @@ export function AffirmationsScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: AffirmationItem }) => {
+  const renderItem = ({ item, idx }: { item: AffirmationItem; idx: number }) => {
     if (!item) return null;
+    const tint = resolveTint(!!colors.isDark, tintForIndex(idx));
     return (
       <TactilePressable
         onPress={() => item?.id && navigation.navigate('AffirmationDetail', { id: item.id })}
@@ -205,13 +210,13 @@ export function AffirmationsScreen() {
         hapticStyle="light"
         accessibilityRole="button"
         accessibilityLabel={`Affirmation: ${item?.text ?? ''}`}
-        style={[styles.affirmationCard, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+        style={[styles.affirmationCard, { backgroundColor: tint.bg, borderColor: tint.border }]}
       >
-        <Text style={[styles.affirmationText, { color: colors.textPrimary }]} numberOfLines={3}>
+        <Text style={[styles.affirmationText, { color: tint.text }]} numberOfLines={3}>
           {item?.text ?? ''}
         </Text>
         <View style={styles.affirmationFooter}>
-          <Text style={[styles.affirmationCategory, { color: colors.accentPrimary }]}>{item?.category ?? ''}</Text>
+          <Text style={[styles.affirmationCategory, { color: tint.accent }]}>{item?.category ?? ''}</Text>
           <TactilePressable
             onPress={() => item?.id && handleToggleFavorite(item.id, item?.favorite ?? false)}
             scaleDownTo={0.85}
@@ -224,7 +229,7 @@ export function AffirmationsScreen() {
             <Ionicons
               name={item?.favorite ? 'heart' : 'heart-outline'}
               size={20}
-              color={item?.favorite ? (colors.accentPeach || '#EB876D') : colors.textTertiary}
+              color={item?.favorite ? (colors.accentPeach || '#EB876D') : tint.muted}
             />
           </TactilePressable>
         </View>
@@ -233,18 +238,17 @@ export function AffirmationsScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenContainer contentContainerStyle={styles.content}>
+      <PopIn index={0}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: colors.textPrimary }]}>Affirmations</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Anchor positive truths in your everyday consciousness</Text>
         </View>
       </View>
+      </PopIn>
 
+      <PopIn index={1}>
       <Card style={styles.dailyCard}>
         <View style={styles.dailyHeader}>
           <Ionicons name="sunny-outline" size={22} color={colors.accentPrimary} />
@@ -269,7 +273,9 @@ export function AffirmationsScreen() {
           <Text style={[styles.refreshText, { color: colors.accentPrimary }]}>New affirmation</Text>
         </TactilePressable>
       </Card>
+      </PopIn>
 
+      <PopIn index={2}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
         {AFFIRMATION_CATEGORIES.map((cat) => {
           const isSelected = selectedCategory === cat;
@@ -300,13 +306,11 @@ export function AffirmationsScreen() {
           );
         })}
       </ScrollView>
+      </PopIn>
 
+      <PopIn index={3}>
       {loading ? (
-        <View style={{ gap: 12 }}>
-          {[0, 1, 2, 3].map((i) => (
-            <SkeletonCard key={i} rows={2} showAvatar={false} showTrailing={false} />
-          ))}
-        </View>
+        <ListSkeleton rows={4} showHeader={false} />
       ) : (affirmations ?? []).length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="sparkles-outline" size={48} color={colors.textTertiary} />
@@ -318,12 +322,14 @@ export function AffirmationsScreen() {
         <View style={{ gap: 12 }}>
           {(affirmations ?? []).map((item, idx) => (
             <StaggeredEntry key={item?.id ?? String(idx)} index={Math.min(idx, 7)} delayStep={26}>
-              {renderItem({ item })}
+              {renderItem({ item, idx })}
             </StaggeredEntry>
           ))}
         </View>
       )}
+      </PopIn>
 
+      <PopIn index={4}>
       <TactilePressable
         onPress={handleAddCustom}
         scaleDownTo={0.98}
@@ -335,12 +341,12 @@ export function AffirmationsScreen() {
         <Ionicons name="add" size={20} color={colors.accentPrimary} />
         <Text style={[styles.addButtonText, { color: colors.accentPrimary }]}>Add Custom Affirmation</Text>
       </TactilePressable>
-    </ScrollView>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 18 },
   header: { marginBottom: 2 },
   title: { fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },

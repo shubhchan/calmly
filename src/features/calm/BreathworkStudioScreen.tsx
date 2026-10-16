@@ -4,9 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, BreathingPreset } from '../../types/navigation';
 import { useThemeColors } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, MeditationHeroIllustration, BreathworkIllustration } from '../../components';
+import { Card, CardContent, PrimaryButton, MeditationHeroIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -57,7 +60,6 @@ const TECHNIQUES: TechniqueOption[] = [
 export function BreathworkStudioScreen() {
   const navigation = useNavigation<NavigationProp>();
   const colors = useThemeColors();
-  const isDark = colors.isDark;
 
   const [selectedTechnique, setSelectedTechnique] = useState<BreathingPreset>('4-7-8');
   const [selectedDuration, setSelectedDuration] = useState<number>(5); // minutes
@@ -81,8 +83,11 @@ export function BreathworkStudioScreen() {
     }
   };
 
+  const coralTint = resolveTint(!!colors.isDark, 'coral');
+  const sageTint = resolveTint(!!colors.isDark, 'sage');
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       {/* Top Navigation Bar */}
       <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
         <Pressable
@@ -114,6 +119,7 @@ export function BreathworkStudioScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Full-Page Hero Illustration Card */}
+        <PopIn index={0}>
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
             <View style={[styles.heroAuraGlow, { backgroundColor: colors.accentBg }]}>
@@ -128,8 +134,10 @@ export function BreathworkStudioScreen() {
             </View>
           </CardContent>
         </Card>
+        </PopIn>
 
         {/* Cadence Selection Header */}
+        <PopIn index={1}>
         <View style={{ marginBottom: 4 }}>
           <Text style={[styles.headline, { color: colors.textPrimary }]}>
             Restore Calm in 90 Seconds
@@ -138,58 +146,61 @@ export function BreathworkStudioScreen() {
             Select your rhythm below to lower resting pulse and ease tension.
           </Text>
         </View>
+        </PopIn>
 
         {/* Technique Selector Pills */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            Select Cadence Technique
-          </Text>
-          <View style={styles.techniqueList}>
-            {TECHNIQUES.map((tech) => {
-              const isSelected = selectedTechnique === tech.id;
-              return (
-                <Pressable
-                  key={tech.id}
-                  onPress={() => setSelectedTechnique(tech.id)}
-                  style={({ pressed }) => [
-                    styles.techniqueCard,
-                    {
-                      backgroundColor: isSelected
-                        ? (isDark ? 'rgba(94, 190, 123, 0.12)' : '#F5F9F6')
-                        : colors.bgCard,
-                      borderColor: isSelected ? colors.accentPrimary : colors.borderLight,
-                      opacity: pressed ? 0.9 : 1,
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
-                    },
-                  ]}
-                >
-                  <View style={styles.techniqueHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.techniqueTitle, { color: colors.textPrimary }]}>
-                        {tech.title}
-                      </Text>
-                      <Text style={[styles.techniqueCadence, { color: colors.accentPrimary }]}>
-                        {tech.cadence}
-                      </Text>
+        <PopIn index={2}>
+        <Card variant="outlined" tone="coral" style={styles.tintedSectionCard}>
+          <CardContent style={styles.tintedSectionContent}>
+            <Text style={[styles.sectionTitle, { color: coralTint.text }]}>
+              Select Cadence Technique
+            </Text>
+            <View style={styles.techniqueList}>
+              {TECHNIQUES.map((tech) => {
+                const isSelected = selectedTechnique === tech.id;
+                return (
+                  <Pressable
+                    key={tech.id}
+                    onPress={() => setSelectedTechnique(tech.id)}
+                    style={({ pressed }) => [
+                      styles.techniqueCard,
+                      {
+                        backgroundColor: coralTint.plate,
+                        borderColor: isSelected ? coralTint.accent : coralTint.border,
+                        opacity: pressed ? 0.9 : 1,
+                        transform: [{ scale: pressed ? 0.98 : 1 }],
+                      },
+                    ]}
+                  >
+                    <View style={styles.techniqueHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.techniqueTitle, { color: coralTint.text }]}>
+                          {tech.title}
+                        </Text>
+                        <Text style={[styles.techniqueCadence, { color: coralTint.accent }]}>
+                          {tech.cadence}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.radioCircle,
+                          { borderColor: isSelected ? coralTint.accent : coralTint.border },
+                          isSelected && { backgroundColor: coralTint.accent },
+                        ]}
+                      >
+                        {isSelected && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                      </View>
                     </View>
-                    <View
-                      style={[
-                        styles.radioCircle,
-                        { borderColor: isSelected ? colors.accentPrimary : colors.borderLight },
-                        isSelected && { backgroundColor: colors.accentPrimary },
-                      ]}
-                    >
-                      {isSelected && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
-                    </View>
-                  </View>
-                  <Text style={[styles.techniqueDesc, { color: colors.textSecondary }]}>
-                    {tech.description}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+                    <Text style={[styles.techniqueDesc, { color: coralTint.text }]}>
+                      {tech.description}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </CardContent>
+        </Card>
+        </PopIn>
 
         {/* Live Cadence Blueprint Visualizer */}
         <Card variant="outlined" style={styles.blueprintCard}>
@@ -217,54 +228,59 @@ export function BreathworkStudioScreen() {
         </Card>
 
         {/* Duration Selector */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            Practice Duration
-          </Text>
-          <View style={styles.durationPillsRow}>
-            {[
-              { val: 3, label: '3 min', sub: 'Quick Relief' },
-              { val: 5, label: '5 min', sub: 'Deep Rest' },
-              { val: 10, label: '10 min', sub: 'Full Unwind' },
-            ].map((dur) => {
-              const isSelected = selectedDuration === dur.val;
-              return (
-                <Pressable
-                  key={dur.val}
-                  onPress={() => setSelectedDuration(dur.val)}
-                  style={({ pressed }) => [
-                    styles.durationPill,
-                    {
-                      backgroundColor: isSelected ? colors.accentPrimary : colors.bgCard,
-                      borderColor: isSelected ? colors.accentPrimary : colors.borderLight,
-                      transform: [{ scale: pressed ? 0.94 : 1 }],
-                      opacity: pressed ? 0.88 : 1,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.durationVal,
-                      { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+        <PopIn index={3}>
+        <Card variant="outlined" tone="sage" style={styles.tintedSectionCard}>
+          <CardContent style={styles.tintedSectionContent}>
+            <Text style={[styles.sectionTitle, { color: sageTint.text }]}>
+              Practice Duration
+            </Text>
+            <View style={styles.durationPillsRow}>
+              {[
+                { val: 3, label: '3 min', sub: 'Quick Relief' },
+                { val: 5, label: '5 min', sub: 'Deep Rest' },
+                { val: 10, label: '10 min', sub: 'Full Unwind' },
+              ].map((dur) => {
+                const isSelected = selectedDuration === dur.val;
+                return (
+                  <Pressable
+                    key={dur.val}
+                    onPress={() => setSelectedDuration(dur.val)}
+                    style={({ pressed }) => [
+                      styles.durationPill,
+                      {
+                        backgroundColor: isSelected ? sageTint.accent : sageTint.plate,
+                        borderColor: isSelected ? sageTint.accent : sageTint.border,
+                        transform: [{ scale: pressed ? 0.94 : 1 }],
+                        opacity: pressed ? 0.88 : 1,
+                      },
                     ]}
                   >
-                    {dur.label}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.durationSub,
-                      { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textTertiary },
-                    ]}
-                  >
-                    {dur.sub}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+                    <Text
+                      style={[
+                        styles.durationVal,
+                        { color: isSelected ? '#FFFFFF' : sageTint.text },
+                      ]}
+                    >
+                      {dur.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.durationSub,
+                        { color: isSelected ? 'rgba(255,255,255,0.8)' : sageTint.muted },
+                      ]}
+                    >
+                      {dur.sub}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </CardContent>
+        </Card>
+        </PopIn>
 
         {/* Ambient Acoustics Selector */}
+        <PopIn index={4}>
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             Background Nature Acoustic
@@ -309,6 +325,7 @@ export function BreathworkStudioScreen() {
             })}
           </View>
         </View>
+        </PopIn>
       </ScrollView>
 
       {/* Floating Bottom Primary Action Bar */}
@@ -321,7 +338,7 @@ export function BreathworkStudioScreen() {
           leftIcon={<Ionicons name="play" size={20} color="#FFFFFF" />}
         />
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 
@@ -395,6 +412,8 @@ const styles = StyleSheet.create({
   heroBadgeText: { fontSize: 12, fontWeight: '700' },
   heroEstText: { fontSize: 13, fontWeight: '600' },
   section: { gap: 10 },
+  tintedSectionCard: { borderRadius: 20 },
+  tintedSectionContent: { padding: 16, gap: 10 },
   headline: {
     fontSize: 24,
     fontWeight: '800',

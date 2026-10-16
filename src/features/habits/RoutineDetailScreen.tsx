@@ -11,6 +11,9 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { TactilePressable, StaggeredEntry } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { DetailSkeleton } from '../../components/interactive/LoadingState';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'RoutineDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'RoutineDetail'>['route'];
@@ -58,6 +61,7 @@ export function RoutineDetailScreen() {
     }
   });
   const [loading, setLoading] = useState(false);
+  const [loadingHabits, setLoadingHabits] = useState(true);
 
   const loadHabits = useCallback(async () => {
     try {
@@ -66,6 +70,8 @@ export function RoutineDetailScreen() {
     } catch (error) {
       console.error('Failed to load habits:', error);
       setHabits((prev) => prev ?? []);
+    } finally {
+      setLoadingHabits(false);
     }
   }, []);
 
@@ -134,8 +140,16 @@ export function RoutineDetailScreen() {
     );
   };
 
+  if (loadingHabits) {
+    return (
+      <ScreenContainer contentContainerStyle={styles.scrollContent}>
+        <DetailSkeleton />
+      </ScreenContainer>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       <View style={styles.topNav}>
         <TactilePressable
           onPress={() => navigation.goBack()}
@@ -160,6 +174,7 @@ export function RoutineDetailScreen() {
         onTouchStart={() => Keyboard.dismiss()}
         showsVerticalScrollIndicator={false}
       >
+        <PopIn index={0}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Routine Title</Text>
           <TextInput
@@ -172,7 +187,9 @@ export function RoutineDetailScreen() {
             maxLength={50}
           />
         </Card>
+        </PopIn>
 
+        <PopIn index={1}>
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
@@ -240,7 +257,9 @@ export function RoutineDetailScreen() {
             </View>
           )}
         </Card>
+        </PopIn>
 
+        <PopIn index={2}>
         <View style={styles.buttonRow}>
           <View style={{ flex: 1 }}>
             <PrimaryButton
@@ -261,8 +280,9 @@ export function RoutineDetailScreen() {
             </TactilePressable>
           )}
         </View>
+        </PopIn>
       </ScrollView>
-    </View>
+    </ScreenContainer>
   );
 }
 

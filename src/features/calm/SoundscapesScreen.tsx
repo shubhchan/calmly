@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useThemeColors } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, NatureSoundscapeIllustration, AppIcon } from '../../components';
+import { Card, CardContent, NatureSoundscapeIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { resolveTint } from '../../theme/tints';
 
 interface TrackConfig {
   id: 'rain' | 'ocean' | 'birds' | 'night';
@@ -49,6 +52,7 @@ export function SoundscapesScreen() {
   const navigation = useNavigation();
   const colors = useThemeColors();
   const isDark = colors.isDark;
+  const skyTint = resolveTint(!!colors.isDark, 'sky');
 
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [selectedTimer, setSelectedTimer] = useState<string>('Off');
@@ -81,7 +85,7 @@ export function SoundscapesScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       {/* Top Bar */}
       <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
         <Pressable
@@ -122,6 +126,7 @@ export function SoundscapesScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Full-Page Hero Illustration Card */}
+        <PopIn index={0}>
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
             <View style={[styles.heroAuraGlow, { backgroundColor: (colors.accentSky || '#6B9BCD') + '15' }]}>
@@ -138,8 +143,10 @@ export function SoundscapesScreen() {
             </View>
           </CardContent>
         </Card>
+        </PopIn>
 
         {/* Header Cue */}
+        <PopIn index={1}>
         <View style={{ marginBottom: 4 }}>
           <Text style={[styles.headline, { color: colors.textPrimary }]}>
             Organic Ambient Audio
@@ -148,8 +155,10 @@ export function SoundscapesScreen() {
             Select an acoustic landscape for focus, calm, or restful sleep.
           </Text>
         </View>
+        </PopIn>
 
         {/* Soundscape Tiles */}
+        <PopIn index={2}>
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             Nature Soundscape Library
@@ -231,15 +240,17 @@ export function SoundscapesScreen() {
             })}
           </View>
         </View>
+        </PopIn>
 
         {/* Sleep Timer & Volume Controls */}
-        <Card variant="outlined" style={styles.controlsCard}>
+        <PopIn index={3}>
+        <Card variant="outlined" tone="sky" style={styles.controlsCard}>
           <CardContent style={styles.controlsContent}>
             {/* Sleep Timer */}
             <View style={styles.controlRow}>
               <View style={styles.controlLabelGroup}>
-                <Ionicons name="timer-outline" size={18} color={colors.accentPrimary} />
-                <Text style={[styles.controlHeading, { color: colors.textPrimary }]}>Sleep Auto-Timer</Text>
+                <Ionicons name="timer-outline" size={18} color={skyTint.accent} />
+                <Text style={[styles.controlHeading, { color: skyTint.text }]}>Sleep Auto-Timer</Text>
               </View>
               <View style={styles.timerPillsRow}>
                 {['Off', '15m', '30m', '60m', '90m'].map((timer) => {
@@ -251,8 +262,8 @@ export function SoundscapesScreen() {
                       style={({ pressed }) => [
                         styles.timerPill,
                         {
-                          backgroundColor: isTimerActive ? colors.accentPrimary : colors.bgCard,
-                          borderColor: isTimerActive ? colors.accentPrimary : colors.borderLight,
+                          backgroundColor: isTimerActive ? skyTint.accent : skyTint.plate,
+                          borderColor: isTimerActive ? skyTint.accent : skyTint.border,
                           transform: [{ scale: pressed ? 0.93 : 1 }],
                           opacity: pressed ? 0.88 : 1,
                         },
@@ -261,7 +272,7 @@ export function SoundscapesScreen() {
                       <Text
                         style={[
                           styles.timerPillText,
-                          { color: isTimerActive ? '#FFFFFF' : colors.textSecondary },
+                          { color: isTimerActive ? '#FFFFFF' : skyTint.text },
                         ]}
                       >
                         {timer}
@@ -275,8 +286,8 @@ export function SoundscapesScreen() {
             {/* Volume Presets */}
             <View style={[styles.controlRow, { marginTop: 12 }]}>
               <View style={styles.controlLabelGroup}>
-                <Ionicons name="volume-medium-outline" size={18} color={colors.accentPrimary} />
-                <Text style={[styles.controlHeading, { color: colors.textPrimary }]}>Soundscape Volume</Text>
+                <Ionicons name="volume-medium-outline" size={18} color={skyTint.accent} />
+                <Text style={[styles.controlHeading, { color: skyTint.text }]}>Soundscape Volume</Text>
               </View>
               <View style={styles.volumePillsRow}>
                 {[
@@ -293,8 +304,8 @@ export function SoundscapesScreen() {
                       style={({ pressed }) => [
                         styles.volumePill,
                         {
-                          backgroundColor: isVolActive ? colors.accentPrimary : colors.bgCard,
-                          borderColor: isVolActive ? colors.accentPrimary : colors.borderLight,
+                          backgroundColor: isVolActive ? skyTint.accent : skyTint.plate,
+                          borderColor: isVolActive ? skyTint.accent : skyTint.border,
                           transform: [{ scale: pressed ? 0.93 : 1 }],
                           opacity: pressed ? 0.88 : 1,
                         },
@@ -303,7 +314,7 @@ export function SoundscapesScreen() {
                       <Text
                         style={[
                           styles.volumePillText,
-                          { color: isVolActive ? '#FFFFFF' : colors.textSecondary },
+                          { color: isVolActive ? '#FFFFFF' : skyTint.text },
                         ]}
                       >
                         {vol.label}
@@ -315,6 +326,7 @@ export function SoundscapesScreen() {
             </View>
           </CardContent>
         </Card>
+        </PopIn>
       </ScrollView>
 
       {/* Floating Bottom Bar */}
@@ -345,7 +357,7 @@ export function SoundscapesScreen() {
           </Pressable>
         </View>
       )}
-    </View>
+    </ScreenContainer>
   );
 }
 

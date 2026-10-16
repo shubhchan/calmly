@@ -7,8 +7,9 @@ import { AppLockSettingsScreen } from './AppLockSettingsScreen';
 import { SetPinScreen } from './SetPinScreen';
 import { DataManagementScreen } from './DataManagementScreen';
 import { OnboardingScreen } from './OnboardingScreen';
+import { FontBrowserScreen } from './FontBrowserScreen';
 
-type SettingsStackParamList = Pick<RootStackParamList, 'SettingsMain' | 'Notifications' | 'AppLockSettings' | 'SetPin' | 'DataManagement' | 'Onboarding'>;
+type SettingsStackParamList = Pick<RootStackParamList, 'SettingsMain' | 'Notifications' | 'AppLockSettings' | 'SetPin' | 'DataManagement' | 'Onboarding' | 'FontBrowser'>;
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
 
@@ -21,6 +22,7 @@ export function SettingsStack() {
       <Stack.Screen name="SetPin" component={SetPinScreen} />
       <Stack.Screen name="DataManagement" component={DataManagementScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen name="FontBrowser" component={FontBrowserScreen} />
     </Stack.Navigator>
   );
 }

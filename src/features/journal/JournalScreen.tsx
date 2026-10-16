@@ -8,6 +8,10 @@ import { journalRepository } from '../../database/repositories/journalRepository
 import { format } from 'date-fns';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { ListSkeleton } from '../../components/interactive/LoadingState';
+import { resolveTint } from '../../theme/tints';
 
 interface JournalTemplate {
   id: string;
@@ -30,6 +34,7 @@ const journalTypes: JournalTemplate[] = [
 export function JournalScreen() {
   const navigation = useNavigation<any>();
   const colors = useThemeColors();
+  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const hasLoadedRef = useRef(false);
@@ -78,8 +83,8 @@ export function JournalScreen() {
         style={[
           styles.templateButton,
           {
-            backgroundColor: colors.isDark ? '#1C2636' : colors.bgSecondary,
-            borderColor: colors.isDark ? '#2E3D52' : colors.borderMedium,
+            backgroundColor: lilacTint.plate,
+            borderColor: lilacTint.border,
           },
         ]}
       >
@@ -97,10 +102,10 @@ export function JournalScreen() {
         </View>
       </View>
       <View style={styles.templateTextContainer}>
-        <Text style={[styles.templateTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+        <Text style={[styles.templateTitle, { color: lilacTint.text }]} numberOfLines={1}>
           {item.label}
         </Text>
-        <Text style={[styles.templateDesc, { color: colors.textTertiary }]} numberOfLines={2}>
+        <Text style={[styles.templateDesc, { color: lilacTint.muted }]} numberOfLines={2}>
           {item.desc}
         </Text>
       </View>
@@ -109,10 +114,8 @@ export function JournalScreen() {
   );
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+    <ScreenContainer
       contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => loadEntries(true)} tintColor={colors.accentPrimary} />
       }
@@ -125,15 +128,16 @@ export function JournalScreen() {
         </Text>
       </View>
 
-      {/* Prompts & Templates Card Container */}
-      <Card variant="outlined" style={styles.templatesSectionCard}>
+      {/* Prompts & Templates Card Container — lilac pop card */}
+      <PopIn index={0}>
+      <Card variant="outlined" tone="lilac" style={styles.templatesSectionCard}>
         <CardContent style={styles.templatesCardContent}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            <Text style={[styles.sectionTitle, { color: lilacTint.text }]}>
               Prompts & Templates
             </Text>
-            <View style={[styles.cardTag, { backgroundColor: colors.accentBg }]}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.accentPrimary }}>
+            <View style={[styles.cardTag, { backgroundColor: lilacTint.plate }]}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: lilacTint.accent }}>
                 Guided
               </Text>
             </View>
@@ -148,8 +152,10 @@ export function JournalScreen() {
           </ScrollView>
         </CardContent>
       </Card>
+      </PopIn>
 
       {/* Recent Reflections Feed */}
+      <PopIn index={1}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
@@ -170,7 +176,9 @@ export function JournalScreen() {
           </TactilePressable>
         </View>
 
-        {entries.length > 0 ? (
+        {loading && entries.length === 0 ? (
+          <ListSkeleton rows={4} showHeader={false} />
+        ) : entries.length > 0 ? (
           <View style={styles.entriesList}>
             {entries.map((entry, idx) => {
               const rawDate = entry.createdAt ? new Date(entry.createdAt) : new Date();
@@ -279,7 +287,8 @@ export function JournalScreen() {
           </Card>
         )}
       </View>
-    </ScrollView>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 

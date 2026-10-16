@@ -1,7 +1,8 @@
 import 'react-native-gesture-handler';
+import './src/theme/fontPatcher';
 import './global.css';
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View, StatusBar as RNStatusBar, Platform } from 'react-native';
+import { Pressable, ScrollView, Text, View, StatusBar as RNStatusBar, Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -17,8 +18,11 @@ import {
   bootLog,
   getBootTrail,
 } from './src/components/ErrorBoundary';
-import './src/theme/fontPatcher';
 import { useFonts } from 'expo-font';
+import { getBundledFontAssets } from './src/theme/fontRegistry';
+import { hydrateMotionPrefs } from './src/theme/motion';
+import { restoreSavedFont } from './src/services/googleFonts';
+import { BrandedLoader } from './src/components/interactive/LoadingState';
 
 const NAV_READY_TIMEOUT_MS = 12000;
 
@@ -96,7 +100,9 @@ function BootSplash() {
       >
         Take a gentle breath…
       </Text>
-      <ActivityIndicator size="large" color={colors?.accentPrimary ?? '#3E7B52'} style={{ marginTop: 24 }} />
+      <View style={{ marginTop: 18 }}>
+        <BrandedLoader />
+      </View>
     </View>
   );
 }
@@ -310,27 +316,10 @@ function AppShell({
   );
 }
 
-const calmingFontAsset = require('./assets/fonts/OddlyCalming.ttf');
+const bundledFontAssets = getBundledFontAssets();
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    OddlyCalming: calmingFontAsset,
-    'OddlyCalming-Regular': calmingFontAsset,
-    'OddlyCalming-Bold': calmingFontAsset,
-    'OddlyCalming-Medium': calmingFontAsset,
-    'OddlyCalming-SemiBold': calmingFontAsset,
-    PatrickHand_400Regular: calmingFontAsset,
-    PlusJakartaSans_400Regular: calmingFontAsset,
-    PlusJakartaSans_500Medium: calmingFontAsset,
-    PlusJakartaSans_600SemiBold: calmingFontAsset,
-    PlusJakartaSans_700Bold: calmingFontAsset,
-    PlusJakartaSans_800ExtraBold: calmingFontAsset,
-    Newsreader_400Regular: calmingFontAsset,
-    Newsreader_500Medium: calmingFontAsset,
-    Newsreader_600SemiBold: calmingFontAsset,
-    Newsreader_700Bold: calmingFontAsset,
-    Newsreader_400Regular_Italic: calmingFontAsset,
-  });
+  const [fontsLoaded] = useFonts(bundledFontAssets);
 
   const [navReady, setNavReady] = useState(false);
   const [navStalled, setNavStalled] = useState(false);
@@ -348,6 +337,16 @@ export default function App() {
     bisectMarkerRef.current = true;
     bootLog('bisect-marker-render');
   }
+
+  useEffect(() => {
+    hydrateMotionPrefs();
+  }, []);
+
+  useEffect(() => {
+    if (!fontsLoaded) return;
+    // Re-apply the persisted app-wide font choice (bundled or downloaded).
+    restoreSavedFont();
+  }, [fontsLoaded]);
 
   useEffect(() => {
     bootLog('app-mounted');

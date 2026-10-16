@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
-import { Card, CardContent } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressRing } from '../../components/ProgressRing';
 import { AppIcon, moodIcon, MoodAuraIllustration } from '../../components';
@@ -10,6 +9,8 @@ import { RootStackParamList, MoodType } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { moodRepository } from '../../database/repositories/moodRepository';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
 
 const moods: { id: MoodType; label: string; icon: AppIconName; color: string }[] = [
   { id: 'happy', label: 'Happy', icon: 'm-happy', color: '#5A955A' },
@@ -300,7 +301,7 @@ export function MoodCheckInScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       <View style={styles.header}>
         <Pressable
           onPress={goBack}
@@ -323,30 +324,44 @@ export function MoodCheckInScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {step === 'mood' && renderMoodSelector()}
-        {step === 'intensity' &&
-          renderSliderStep(
-            'How intense is this emotion?',
-            intensity ?? 5,
-            setIntensity,
-            1,
-            10,
-            moodIcon(selectedMood),
-            colors.accentPrimary
-          )}
-        {step === 'stress' &&
-          renderSliderStep(
-            'What is your stress level?',
-            stress ?? 5,
-            setStress,
-            1,
-            10,
-            'm-stressed',
-            colors.accentRose || '#EB697F'
-          )}
-        {step === 'energy' && renderEnergyStep()}
-        {step === 'context' && renderContextStep()}
-        {step === 'complete' && renderCompleteStep()}
+        {step === 'mood' && (
+          <PopIn index={0}>{renderMoodSelector()}</PopIn>
+        )}
+        {step === 'intensity' && (
+          <PopIn index={0}>
+            {renderSliderStep(
+              'How intense is this emotion?',
+              intensity ?? 5,
+              setIntensity,
+              1,
+              10,
+              moodIcon(selectedMood),
+              colors.accentPrimary
+            )}
+          </PopIn>
+        )}
+        {step === 'stress' && (
+          <PopIn index={0}>
+            {renderSliderStep(
+              'What is your stress level?',
+              stress ?? 5,
+              setStress,
+              1,
+              10,
+              'm-stressed',
+              colors.accentRose || '#EB697F'
+            )}
+          </PopIn>
+        )}
+        {step === 'energy' && (
+          <PopIn index={0}>{renderEnergyStep()}</PopIn>
+        )}
+        {step === 'context' && (
+          <PopIn index={0}>{renderContextStep()}</PopIn>
+        )}
+        {step === 'complete' && (
+          <PopIn index={0}>{renderCompleteStep()}</PopIn>
+        )}
       </ScrollView>
 
       {step !== 'complete' && step !== 'mood' && (
@@ -359,12 +374,11 @@ export function MoodCheckInScreen() {
           </View>
         </View>
       )}
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

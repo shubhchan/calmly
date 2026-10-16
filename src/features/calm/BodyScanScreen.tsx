@@ -4,8 +4,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useThemeColors } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, BodyScanIllustration, AppIcon } from '../../components';
+import { Card, CardContent, PrimaryButton, BodyScanIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -74,7 +75,7 @@ export function BodyScanScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       {/* Top Bar */}
       <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
         <Pressable
@@ -201,7 +202,7 @@ export function BodyScanScreen() {
           leftIcon={<Ionicons name="play" size={20} color="#FFFFFF" />}
         />
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 

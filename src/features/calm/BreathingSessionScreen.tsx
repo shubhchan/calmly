@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { calmRepository } from '../../database/repositories/calmRepository';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -382,7 +383,7 @@ export function BreathingSessionScreen() {
   const currentColor = isComplete ? colors.accentPrimary : phaseColors[phaseIdx] ?? colors.accentPrimary;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       {/* Top Header */}
       <View
         style={{
@@ -597,6 +598,6 @@ export function BreathingSessionScreen() {
           {safeDuration} min session · Mindful presence
         </Text>
       </View>
-    </View>
+    </ScreenContainer>
   );
 }

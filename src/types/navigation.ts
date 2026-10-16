@@ -38,6 +38,7 @@ export type RootStackParamList = {
   AppLockSettings: undefined;
   SetPin?: { onComplete?: () => void };
   DataManagement: undefined;
+  FontBrowser: undefined;
 };
 
 export type TabParamList = {

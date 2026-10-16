@@ -7,6 +7,9 @@ import { SelfCompassionIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { getCalmEncouragement } from '../../utils/encouragement';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { resolveTint } from '../../theme/tints';
 
 const STEPS = [
   {
@@ -38,6 +41,7 @@ const STEPS = [
 export function SelfCompassionScreen() {
   const navigation = useNavigation();
   const colors = useThemeColors();
+  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
   const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState<string[]>(['', '', '', '']);
   const [completed, setCompleted] = useState(false);
@@ -74,15 +78,12 @@ export function SelfCompassionScreen() {
 
   if (completed) {
     return (
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Card style={styles.completeCard}>
+      <ScreenContainer contentContainerStyle={styles.content}>
+        <PopIn index={0}>
+        <Card tone="lilac" style={styles.completeCard}>
           <SelfCompassionIllustration width={160} height={135} style={{ marginBottom: 10 }} />
-          <Text style={[styles.completeTitle, { color: colors.textPrimary }]}>Practice Complete</Text>
-          <Text style={[styles.completeText, { color: colors.textSecondary }]}>
+          <Text style={[styles.completeTitle, { color: lilacTint.text }]}>Practice Complete</Text>
+          <Text style={[styles.completeText, { color: lilacTint.text }]}>
             {(() => {
               try {
                 return getCalmEncouragement('complete') ?? 'You showed yourself profound kindness today.';
@@ -93,12 +94,13 @@ export function SelfCompassionScreen() {
           </Text>
           <PrimaryButton onPress={handleRestart} title="Practice Again" style={styles.restartButton} variant="outline" />
         </Card>
-      </ScrollView>
+        </PopIn>
+      </ScreenContainer>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -123,6 +125,7 @@ export function SelfCompassionScreen() {
           Step {currentStep + 1} of {(STEPS ?? []).length}
         </Text>
 
+        <PopIn index={0}>
         <Card style={styles.stepCard}>
           <Text style={[styles.stepTitle, { color: colors.accentPrimary }]}>{step?.title ?? ''}</Text>
           <Text style={[styles.stepPrompt, { color: colors.textPrimary }]}>{step?.prompt ?? ''}</Text>
@@ -144,6 +147,7 @@ export function SelfCompassionScreen() {
             autoCapitalize="sentences"
           />
         </Card>
+        </PopIn>
       </ScrollView>
 
       <View style={[styles.bottomBar, { borderTopColor: colors.borderLight, backgroundColor: colors.bgPrimary }]}>
@@ -165,12 +169,11 @@ export function SelfCompassionScreen() {
           </View>
         </View>
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
   header: {
     flexDirection: 'row',

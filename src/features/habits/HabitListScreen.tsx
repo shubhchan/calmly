@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -7,9 +7,14 @@ import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
 import { getHabitEncouragement } from '../../utils/encouragement';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { HabitPlantingIllustration, StaggeredEntry, CelebratoryCheckbox, Skeleton, SkeletonCard, TactilePressable } from '../../components';
+import { Card } from '../../components/Card';
+import { HabitPlantingIllustration, StaggeredEntry, CelebratoryCheckbox, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { ListSkeleton } from '../../components/interactive/LoadingState';
+import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Habits'>['navigation'];
 
@@ -144,26 +149,9 @@ export function HabitListScreen() {
 
   if (loading) {
     return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: colors.bgPrimary, paddingHorizontal: 20, paddingTop: 16 },
-        ]}
-      >
-        <View style={styles.header}>
-          <View style={{ gap: 8 }}>
-            <Skeleton width={130} height={30} radius={10} />
-            <Skeleton width={190} height={14} radius={7} />
-          </View>
-          <Skeleton width={44} height={44} radius={22} />
-        </View>
-        <Skeleton width="100%" height={104} radius={20} style={{ marginBottom: 20 }} />
-        <View style={styles.list}>
-          {[0, 1, 2, 3].map((i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </View>
-      </View>
+      <ScreenContainer contentContainerStyle={styles.content}>
+        <ListSkeleton rows={4} />
+      </ScreenContainer>
     );
   }
 
@@ -171,13 +159,11 @@ export function HabitListScreen() {
   const safeCompletions = todayCompletions ?? {};
   const completedCount = (dueHabits ?? []).filter((h) => h?.id && safeCompletions[h.id]).length;
   const totalDue = (dueHabits ?? []).length;
+  const mintTint = resolveTint(!!colors.isDark, 'mint');
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScreenContainer contentContainerStyle={styles.content}>
+      <PopIn index={0}>
       <View style={styles.header}>
         <View>
           <Text style={[styles.title, { color: colors.textPrimary }]}>Habits</Text>
@@ -195,54 +181,55 @@ export function HabitListScreen() {
           <Ionicons name="add" size={24} color="#FFFFFF" />
         </TactilePressable>
       </View>
+      </PopIn>
 
       {totalDue > 0 && (
-        <View
-          style={[
-            styles.progressCard,
-            { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-          ]}
-        >
+        <PopIn index={1}>
+        <Card tone="mint" style={styles.progressCard}>
           <View style={styles.progressCardTop}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.progressNumber, { color: colors.textPrimary }]}>
+              <Text style={[styles.progressNumber, { color: mintTint.text }]}>
                 {completedCount} of {totalDue} Completed
               </Text>
-              <Text style={[styles.encouragementText, { color: colors.textTertiary }]}>
+              <Text style={[styles.encouragementText, { color: mintTint.muted }]}>
                 {completedCount === totalDue && totalDue > 0
                   ? getHabitEncouragement('complete')
                   : getHabitEncouragement('empty')}
               </Text>
             </View>
-            <View style={[styles.percentageBadge, { backgroundColor: colors.accentBg }]}>
-              <Text style={[styles.percentageText, { color: colors.accentPrimary }]}>
+            <View style={[styles.percentageBadge, { backgroundColor: mintTint.plate }]}>
+              <Text style={[styles.percentageText, { color: mintTint.accent }]}>
                 {totalDue > 0 ? Math.round((completedCount / totalDue) * 100) : 0}%
               </Text>
             </View>
           </View>
 
-          <View style={[styles.progressTrack, { backgroundColor: colors.borderLight }]}>
+          <View style={[styles.progressTrack, { backgroundColor: mintTint.border }]}>
             <View
               style={[
                 styles.progressFill,
                 {
                   width: `${totalDue > 0 ? Math.min(Math.round((completedCount / totalDue) * 100), 100) : 0}%`,
-                  backgroundColor: colors.accentPrimary,
+                  backgroundColor: mintTint.accent,
                 },
               ]}
             />
           </View>
-        </View>
+        </Card>
+        </PopIn>
       )}
 
       {showEmptyState ? (
+        <PopIn index={2}>
         <View style={styles.emptyState}>
           <HabitPlantingIllustration width={160} height={135} style={{ marginBottom: 6 }} />
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No habits yet</Text>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{getHabitEncouragement('empty')}</Text>
           <PrimaryButton onPress={handleAddHabit} title="Create Your First Habit" style={styles.emptyButton} />
         </View>
+        </PopIn>
       ) : (
+        <PopIn index={2}>
         <View style={styles.list}>
           {(dueHabits ?? []).map((habit, index) => {
             let dayLabels: string[] = [];
@@ -315,8 +302,10 @@ export function HabitListScreen() {
             </Text>
           )}
         </View>
+        </PopIn>
       )}
 
+      <PopIn index={3}>
       <View style={[styles.bottomActions, { borderTopColor: colors.borderLight }]}>
         <TactilePressable
           onPress={() => navigation.navigate('Routines')}
@@ -336,7 +325,8 @@ export function HabitListScreen() {
           <Text style={[styles.routineButtonText, { color: colors.accentPrimary }]}>Mindful Routines</Text>
         </TactilePressable>
       </View>
-    </ScrollView>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 

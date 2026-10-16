@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Share } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Share } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -8,6 +8,10 @@ import Affirmation from '../../database/models/Affirmation';
 import { Card } from '../../components/Card';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { PopIn } from '../../components/interactive/PopIn';
+import { DetailSkeleton } from '../../components/interactive/LoadingState';
+import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'AffirmationDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'AffirmationDetail'>['route'];
@@ -16,6 +20,7 @@ export function AffirmationDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
   const colors = useThemeColors();
+  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
   const { id } = route.params ?? {};
 
   const [affirmation, setAffirmation] = useState<{
@@ -126,86 +131,91 @@ export function AffirmationDetailScreen() {
 
   if (!id) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+      <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={{ justifyContent: 'center', alignItems: 'center' }}>
         <Text style={{ color: colors.textSecondary }}>Not found</Text>
-      </View>
+      </ScreenContainer>
     );
   }
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.textSecondary }}>Loading affirmation...</Text>
-      </View>
+      <ScreenContainer contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}>
+        <DetailSkeleton />
+      </ScreenContainer>
     );
   }
 
   if (!affirmation) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
+      <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={{ justifyContent: 'center', alignItems: 'center' }}>
         <Text style={{ color: colors.textSecondary }}>Affirmation not found</Text>
-      </View>
+      </ScreenContainer>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-            hitSlop={10}
-          >
-            <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{affirmation?.category ?? ''}</Text>
-          <View style={{ width: 40 }} />
-        </View>
-
-        <Card style={styles.affirmationCard}>
-          <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.accentPrimary + '60'} style={{ marginBottom: 4 }} />
-          <Text style={[styles.affirmationText, { color: colors.textPrimary }]}>{affirmation?.text ?? ''}</Text>
-        </Card>
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            onPress={handleToggleFavorite}
-            style={[
-              styles.actionButton,
-              { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-              affirmation?.favorite && { borderColor: (colors.accentPeach || '#EB876D') + '60' },
-            ]}
-          >
-            <Ionicons
-              name={affirmation?.favorite ? 'heart' : 'heart-outline'}
-              size={20}
-              color={affirmation?.favorite ? (colors.accentPeach || '#EB876D') : colors.accentPrimary}
-            />
-            <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>
-              {affirmation?.favorite ? 'Favorited' : 'Favorite'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleShare}
-            style={[styles.actionButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          >
-            <Ionicons name="share-outline" size={20} color={colors.accentPrimary} />
-            <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Share</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-          <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete Affirmation</Text>
+    <ScreenContainer contentContainerStyle={styles.content}>
+      <PopIn index={0}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          hitSlop={10}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-      </ScrollView>
-    </View>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{affirmation?.category ?? ''}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+      </PopIn>
+
+      <PopIn index={1}>
+      <Card tone="lilac" style={styles.affirmationCard}>
+        <Ionicons name="chatbubble-ellipses-outline" size={32} color={lilacTint.accent + '60'} style={{ marginBottom: 4 }} />
+        <Text style={[styles.affirmationText, { color: lilacTint.text }]}>{affirmation?.text ?? ''}</Text>
+      </Card>
+      </PopIn>
+
+      <PopIn index={2}>
+      <View style={styles.actions}>
+        <TouchableOpacity
+          onPress={handleToggleFavorite}
+          style={[
+            styles.actionButton,
+            { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+            affirmation?.favorite && { borderColor: (colors.accentPeach || '#EB876D') + '60' },
+          ]}
+        >
+          <Ionicons
+            name={affirmation?.favorite ? 'heart' : 'heart-outline'}
+            size={20}
+            color={affirmation?.favorite ? (colors.accentPeach || '#EB876D') : colors.accentPrimary}
+          />
+          <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>
+            {affirmation?.favorite ? 'Favorited' : 'Favorite'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleShare}
+          style={[styles.actionButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+        >
+          <Ionicons name="share-outline" size={20} color={colors.accentPrimary} />
+          <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Share</Text>
+        </TouchableOpacity>
+      </View>
+      </PopIn>
+
+      <PopIn index={3}>
+      <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+        <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete Affirmation</Text>
+      </TouchableOpacity>
+      </PopIn>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 60, gap: 20 },
   header: {
     flexDirection: 'row',

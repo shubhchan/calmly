@@ -6,6 +6,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { Card, CardContent, PrimaryButton, SensoryGroundingIllustration, AppIcon } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -18,7 +19,7 @@ export function SensoryGroundingScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
       {/* Top Bar */}
       <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
         <Pressable
@@ -113,7 +114,7 @@ export function SensoryGroundingScreen() {
           leftIcon={<Ionicons name="compass" size={20} color="#FFFFFF" />}
         />
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 

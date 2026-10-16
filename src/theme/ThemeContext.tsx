@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useColorScheme, View } from 'react-native';
 import { vars } from 'nativewind';
+import { useFontStore } from './fontStore';
 import { Storage } from '../services/storage';
 import { bootLog } from '../components/ErrorBoundary';
 import { resolveColors, toCssVars, ThemeMode as ResolvedMode, AccentColor } from './palette';
@@ -17,6 +18,7 @@ interface ThemeContextType {
   setTheme: (theme: ThemeMode) => Promise<void>;
   setAccent: (accent: AccentColor) => Promise<void>;
   toggleTheme: () => Promise<void>;
+  fontRevision?: number;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -29,6 +31,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const [theme, setThemeState] = useState<ThemeMode>('system');
   const [accent, setAccentState] = useState<AccentColor>(DEFAULT_ACCENT);
+  const fontRevision = useFontStore((s) => s.revision);
 
   useEffect(() => {
     bootLog('theme-ready');
@@ -100,7 +103,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider
-      value={{ theme, accent, resolvedTheme, isDark, colors, setTheme, setAccent, toggleTheme }}
+      value={{ theme, accent, resolvedTheme, isDark, colors, setTheme, setAccent, toggleTheme, fontRevision }}
     >
       {/* This View carries the CSS variables for the whole native tree. */}
       {/* NOTE: flex:1 is set as a plain style (not only className) so a
