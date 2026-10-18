@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, Alert, Switch } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,7 @@ import { appLockService } from '../../services/appLock';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ScreenHeader } from '../../components';
+import { ScreenHeader, TactilePressable } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 import { BrandedLoader } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
@@ -28,8 +28,8 @@ export function AppLockSettingsScreen() {
   const [loading, setLoading] = useState(true);
   const lilacTint = resolveTint(!!isDark, 'lilac');
 
-  const loadSettings = useCallback(async () => {
-    setLoading(true);
+  const loadSettings = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const available = (await LocalAuthentication?.hasHardwareAsync?.()) ?? false;
       const enrolled = (await LocalAuthentication?.isEnrolledAsync?.()) ?? false;
@@ -47,14 +47,19 @@ export function AppLockSettingsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+  const firstFocusRef = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      const silent = !firstFocusRef.current;
+      firstFocusRef.current = false;
+      loadSettings(silent);
+    }, [loadSettings])
+  );
 
   const handlePinToggle = async (enabled: boolean) => {
     try {
       if (enabled && !pinEnabled) {
-        (navigation as any)?.navigate?.('SetPin', { onComplete: () => setPinEnabled(true) });
+        (navigation as any)?.navigate?.('SetPin');
       } else if (!enabled && pinEnabled) {
         await settingsRepository?.removePin?.();
         setPinEnabled(false);
@@ -62,6 +67,7 @@ export function AppLockSettingsScreen() {
           await settingsRepository?.updateSettings?.({ biometricEnabled: false });
           setBiometricEnabled(false);
         }
+        appLockService?.refresh?.();
       }
     } catch (error) {
       console.error('Failed to toggle PIN:', error);
@@ -80,6 +86,7 @@ export function AppLockSettingsScreen() {
       }
       setBiometricEnabled(enabled ?? false);
       await settingsRepository?.updateSettings?.({ biometricEnabled: enabled ?? false });
+      appLockService?.refresh?.();
     } catch (error) {
       console.error('Failed to toggle biometric:', error);
     }
@@ -99,13 +106,14 @@ export function AppLockSettingsScreen() {
     try {
       setHideInSwitcher(enabled ?? true);
       await settingsRepository?.updateSettings?.({ hideContentInSwitcher: enabled ?? true });
+      await appLockService?.setSwitcherProtection?.(enabled ?? true);
     } catch (error) {
       console.error('Failed to toggle switcher:', error);
     }
   };
 
   const handleChangePin = () => {
-    (navigation as any)?.navigate?.('SetPin', { onComplete: () => {} });
+    (navigation as any)?.navigate?.('SetPin');
   };
 
   const handleRemovePin = () => {
@@ -124,6 +132,7 @@ export function AppLockSettingsScreen() {
               await settingsRepository.updateSettings({ biometricEnabled: false });
               setBiometricEnabled(false);
             }
+            appLockService?.refresh?.();
           },
         },
       ]
@@ -161,26 +170,27 @@ export function AppLockSettingsScreen() {
             <View style={styles.lockOptionActions}>
               {pinEnabled ? (
                 <>
-                  <TouchableOpacity
+                  <TactilePressable
                     onPress={handleChangePin}
                     style={[styles.changeButton, { backgroundColor: lilacTint.plate, borderColor: lilacTint.border }]}
                   >
                     <Text style={[styles.changeButtonText, { color: lilacTint.accent }]}>Change</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </TactilePressable>
+                  <TactilePressable
                     onPress={handleRemovePin}
                     style={[styles.removeButton, { borderColor: colors.accents.rose + '60' }]}
                   >
                     <Text style={[styles.removeButtonText, { color: colors.accents.rose }]}>Remove</Text>
-                  </TouchableOpacity>
+                  </TactilePressable>
                 </>
               ) : (
-                <TouchableOpacity
+                <TactilePressable
                   onPress={() => handlePinToggle(true)}
+                  hapticStyle="medium"
                   style={[styles.setupButton, { backgroundColor: colors.primary.default }]}
                 >
                   <Text style={styles.setupButtonText}>Set Up PIN</Text>
-                </TouchableOpacity>
+                </TactilePressable>
               )}
             </View>
           </View>
@@ -225,7 +235,7 @@ export function AppLockSettingsScreen() {
           {[0, 1, 5, 15, 30].map((minutes) => {
             const isSelected = autoLockMinutes === minutes;
             return (
-              <TouchableOpacity
+              <TactilePressable
                 key={minutes}
                 onPress={() => handleAutoLockChange(minutes)}
                 style={[
@@ -243,7 +253,7 @@ export function AppLockSettingsScreen() {
                 >
                   {minutes === 0 ? 'Immediately' : `${minutes} min`}
                 </Text>
-              </TouchableOpacity>
+              </TactilePressable>
             );
           })}
         </View>
@@ -261,7 +271,7 @@ export function AppLockSettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.lockOptionLabel, { color: colors.text.primary }]}>Hide in App Switcher</Text>
               <Text style={[styles.lockOptionDesc, { color: colors.text.tertiary }]}>
-                Obscure app preview screen when switching tasks
+                Obscure app preview when switching tasks (blocks screenshots on Android)
               </Text>
             </View>
           </View>

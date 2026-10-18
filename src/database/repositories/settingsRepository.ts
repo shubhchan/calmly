@@ -1,8 +1,125 @@
-import { database } from '..';
+import { database, databaseAvailable } from '..';
 import { Q } from '@nozbe/watermelondb';
 import { UserSetting } from '../models';
 
 const getSettingsCollection = () => database.get<UserSetting>('user_settings');
+
+const SETTINGS_FILE_NAME = 'calmly-settings.json';
+
+// The JSON file store is authoritative for app settings. WatermelonDB used to
+// be the only store, but when the native database module fails to initialise
+// (stale dev build / missing JSI module) the repository silently wrote into a
+// no-op database: PIN setup and toggles "saved" and then vanished on reload.
+// Every write now lands in the settings file first (immune to database
+// failures), and WatermelonDB is mirrored best-effort for exports/back-compat.
+interface SettingsFile {
+  exists: boolean;
+  textSync(): string;
+  create(options?: { overwrite?: boolean }): void;
+  write(content: string): void;
+  delete(): void;
+}
+
+let fileStoreUnavailable = false;
+
+function getSettingsFile(): SettingsFile | null {
+  if (fileStoreUnavailable) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { File, Paths } = require('expo-file-system');
+    return new File(Paths.document, SETTINGS_FILE_NAME) as SettingsFile;
+  } catch (error) {
+    console.warn('Settings file store unavailable:', error);
+    fileStoreUnavailable = true;
+    return null;
+  }
+}
+
+function readSettingsFromFile(): Partial<AppSettings> | null {
+  const file = getSettingsFile();
+  if (!file) return null;
+  try {
+    if (!file.exists) return null;
+    const raw = file.textSync();
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (error) {
+    console.warn('Failed to read settings file:', error);
+    return null;
+  }
+}
+
+function writeSettingsToFile(settings: AppSettings): boolean {
+  const file = getSettingsFile();
+  if (!file) return false;
+  try {
+    const json = JSON.stringify(settings);
+    if (file.exists) {
+      file.write(json);
+    } else {
+      file.create({ overwrite: true });
+      file.write(json);
+    }
+    return true;
+  } catch (error) {
+    console.warn('Failed to write settings file:', error);
+    return false;
+  }
+}
+
+export function deleteSettingsFileStore(): void {
+  try {
+    const file = getSettingsFile();
+    if (file?.exists) file.delete();
+  } catch (error) {
+    console.warn('Failed to delete settings file:', error);
+  }
+}
+
+async function readSettingsFromDatabase(): Promise<Partial<AppSettings> | null> {
+  if (!databaseAvailable) return null;
+  try {
+    const setting = await getSettingsCollection()
+      .query(Q.where('key', 'app_settings'), Q.take(1))
+      .fetch();
+    if (setting.length > 0) {
+      const parsed = JSON.parse(setting[0].value);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Failed to read settings from database:', error);
+    return null;
+  }
+}
+
+async function writeSettingsToDatabase(settings: AppSettings): Promise<boolean> {
+  if (!databaseAvailable) return false;
+  try {
+    // user_settings has only (key, value) columns — never touch
+    // createdAt/updatedAt here (WatermelonDB throws on unknown fields).
+    await database.write(async () => {
+      const existing = await getSettingsCollection()
+        .query(Q.where('key', 'app_settings'), Q.take(1))
+        .fetch();
+      if (existing.length > 0) {
+        await existing[0].update((s: UserSetting) => {
+          s.value = JSON.stringify(settings);
+        });
+      } else {
+        await getSettingsCollection().create((s: UserSetting) => {
+          s.key = 'app_settings';
+          s.value = JSON.stringify(settings);
+        });
+      }
+    });
+    return true;
+  } catch (error) {
+    console.warn('Failed to write settings to database (file store still active):', error);
+    return false;
+  }
+}
 
 export interface AppSettings {
   biometricEnabled: boolean;
@@ -17,6 +134,7 @@ export interface AppSettings {
   notificationsEnabled: boolean;
   onboardingComplete?: boolean;
   userName?: string;
+  welcomeCardDismissed?: boolean;
   notificationTimes: {
     morningCheckIn: string;
     journalReminder: string;
@@ -45,6 +163,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   reducedMotion: false,
   hapticsEnabled: true,
   notificationsEnabled: true,
+  welcomeCardDismissed: false,
   notificationTimes: {
     morningCheckIn: '08:00',
     journalReminder: '20:00',
@@ -65,41 +184,29 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 export const settingsRepository = {
   async getSettings(): Promise<AppSettings> {
-    try {
-      const setting = await getSettingsCollection()
-        .query(Q.where('key', 'app_settings'), Q.take(1))
-        .fetch();
-      if (setting.length > 0) {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(setting[0].value) };
-      }
-      return DEFAULT_SETTINGS;
-    } catch {
-      return DEFAULT_SETTINGS;
+    const fromFile = readSettingsFromFile();
+    if (fromFile) return { ...DEFAULT_SETTINGS, ...fromFile };
+
+    const fromDatabase = await readSettingsFromDatabase();
+    if (fromDatabase) {
+      // Hydrate the file store so settings survive future database breakage.
+      writeSettingsToFile({ ...DEFAULT_SETTINGS, ...fromDatabase });
+      return { ...DEFAULT_SETTINGS, ...fromDatabase };
     }
+
+    return DEFAULT_SETTINGS;
   },
 
   async updateSettings(data: Partial<AppSettings>) {
-    // NOTE: user_settings has only (key, value) columns — do NOT write
-    // createdAt/updatedAt here (the model has no such fields; WatermelonDB
-    // throws when updating an unknown field, which used to crash every
-    // settings save in release builds).
-    return database.write(async () => {
-      const current = await this.getSettings();
-      const updated = { ...current, ...data };
-      const existing = await getSettingsCollection()
-        .query(Q.where('key', 'app_settings'), Q.take(1))
-        .fetch();
-      if (existing.length > 0) {
-        await existing[0].update((s: UserSetting) => {
-          s.value = JSON.stringify(updated);
-        });
-      } else {
-        await getSettingsCollection().create((s: UserSetting) => {
-          s.key = 'app_settings';
-          s.value = JSON.stringify(updated);
-        });
-      }
-    });
+    const current = await this.getSettings();
+    const updated = { ...current, ...data };
+
+    const fileOk = writeSettingsToFile(updated);
+    const databaseOk = await writeSettingsToDatabase(updated);
+
+    if (!fileOk && !databaseOk) {
+      throw new Error('Settings could not be persisted: no storage backend is available.');
+    }
   },
 
   async setPin(pin: string) {

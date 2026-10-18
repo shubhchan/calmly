@@ -7,10 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
 import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { useTabBarOffset } from '../../utils/useTabBarOffset';
 
 export function PanicAnchorScreen() {
   const navigation = useNavigation();
   const { colors } = useAppTheme();
+  const tabBarOffset = useTabBarOffset();
 
   const [sighCount, setSighCount] = useState<number>(0);
   const [isPlayingRain, setIsPlayingRain] = useState<boolean>(false);
@@ -33,7 +35,7 @@ export function PanicAnchorScreen() {
     <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Acute Panic Anchor" subtitle="Biological SOS Aid" bordered />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>
         {/* Hero Card with SVG Illustration */}
         <Card variant="elevated" style={[styles.heroCard, { borderColor: (colors.accents.rose) + '50' }]}>
           <CardContent style={styles.heroCardContent}>
@@ -181,7 +183,7 @@ export function PanicAnchorScreen() {
       </ScrollView>
 
       {/* Floating Bottom Action */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
+      <View style={[styles.bottomBar, { bottom: tabBarOffset, backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
         <PrimaryButton
           title="Return to Calm Sanctuary"
           variant="secondary"
@@ -302,7 +304,6 @@ const styles = StyleSheet.create({
   soundToggleBtnText: { fontFamily: fontFamilies.sans.bold, fontSize: 12, fontWeight: '700' },
   bottomBar: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 20,

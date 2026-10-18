@@ -6,6 +6,9 @@ import type { AppIconName } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { moodRepository } from '../../database/repositories/moodRepository';
+import { settingsRepository } from '../../database/repositories/settingsRepository';
+import { getDailyPrompt } from '../../utils/dailyPrompt';
+import { WelcomeCard } from './WelcomeCard';
 import Habit from '../../database/models/Habit';
 import { getIconName } from '../../utils/iconMap';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +29,7 @@ export function HomeScreen() {
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [recentJournals, setRecentJournals] = useState<any[]>([]);
   const [latestMood, setLatestMood] = useState<any>(null);
+  const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const renderLoggedRef = useRef(false);
@@ -38,16 +42,18 @@ export function HomeScreen() {
   const loadHomeData = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
     try {
-      const [allHabits, completions, journals, mood] = await Promise.all([
+      const [allHabits, completions, journals, mood, settings] = await Promise.all([
         habitRepository.getAll(false),
         habitRepository.getTodayCompletions(),
         journalRepository.getAll(),
         moodRepository.getLatest(),
+        settingsRepository.getSettings().catch(() => null),
       ]);
       setHabits(allHabits ?? []);
       setTodayCompletions(completions ?? {});
       setRecentJournals((journals ?? []).slice(0, 3));
       setLatestMood(mood ?? null);
+      setWelcomeVisible(!!settings && settings.welcomeCardDismissed !== true);
     } catch (error) {
       console.error('Failed to load home data:', error);
       setHabits([]);
@@ -73,6 +79,22 @@ export function HomeScreen() {
   const handleMoodCheckIn = () => navigation?.navigate?.('MoodCheckIn', { fromHome: true });
   const handleCalmDown = () => navigation?.navigate?.('Calm');
   const handleHabitPress = (habit: Habit) => navigation?.navigate?.('HabitDetail', { id: habit?.id });
+
+  const dismissWelcome = useCallback(async () => {
+    setWelcomeVisible(false);
+    try {
+      await settingsRepository.updateSettings({ welcomeCardDismissed: true });
+    } catch (error) {
+      console.warn('Failed to persist welcome dismissal:', error);
+    }
+  }, []);
+
+  const startFromWelcome = useCallback(async () => {
+    await dismissWelcome();
+    navigation?.navigate?.('MoodCheckIn', { fromHome: true });
+  }, [dismissWelcome, navigation]);
+
+  const dailyPrompt = getDailyPrompt();
 
   const toggleHabit = async (habit: Habit, completed: boolean) => {
     if (!habit?.id) return;
@@ -160,6 +182,13 @@ export function HomeScreen() {
         />
       </PopIn>
 
+      {/* First-run welcome card — shown once per install until dismissed */}
+      {welcomeVisible && (
+        <PopIn index={1}>
+          <WelcomeCard onStart={startFromWelcome} onDismiss={dismissWelcome} />
+        </PopIn>
+      )}
+
       {/* Hero Mindful Sanctuary Card — playful cream pop */}
       <PopIn index={1}>
       <Card variant="elevated" tone="cream" style={{ marginBottom: 20, borderRadius: 22, overflow: 'hidden' }}>
@@ -196,13 +225,13 @@ export function HomeScreen() {
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={{ fontSize: 18, lineHeight: 24, fontWeight: '800', color: heroTint.text, letterSpacing: -0.3 }}>
-                {latestMood?.mood ? `${latestMood.mood.charAt(0).toUpperCase()}${latestMood.mood.slice(1)} & Present` : 'Peaceful & Grounded'}
+              <Text style={{ fontSize: 18, lineHeight: 24, fontWeight: '800', color: heroTint.text, letterSpacing: -0.3 }} numberOfLines={3}>
+                {dailyPrompt}
               </Text>
               <Text style={{ fontSize: 13, color: heroTint.muted, lineHeight: 18 }}>
                 {latestMood
-                  ? `${latestMood.intensity ?? 7}/10 intensity · stress ${latestMood.stress ?? 2}/10. Keep going.`
-                  : '7/10 serenity · low stress today. Take a mindful breath.'}
+                  ? `Feeling ${latestMood.mood ?? 'present'} · ${latestMood.intensity ?? 7}/10 intensity · stress ${latestMood.stress ?? 2}/10`
+                  : 'A gentle thought for today'}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
                 <ProgressRing

@@ -11,6 +11,8 @@ import { settingsRepository } from '../../database/repositories/settingsReposito
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { TactilePressable } from '../../components';
+import { useTabBarOffset } from '../../utils/useTabBarOffset';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Onboarding'>['navigation'];
 
@@ -41,6 +43,7 @@ const STARTER_HABITS = [
 export function OnboardingScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useAppTheme();
+  const tabBarOffset = useTabBarOffset();
   const [step, setStep] = useState(0);
   const [goals, setGoals] = useState<string[]>([]);
   const [timeOfDay, setTimeOfDay] = useState<string>('');
@@ -151,7 +154,7 @@ export function OnboardingScreen() {
               {GOALS.map((g) => {
                 const isSelected = (goals ?? []).includes(g.id);
                 return (
-                  <TouchableOpacity
+                  <TactilePressable
                     key={g.id}
                     onPress={() => toggleGoal(g.id)}
                     style={[
@@ -159,7 +162,6 @@ export function OnboardingScreen() {
                       { backgroundColor: colors.surface.default, borderColor: colors.border.default },
                       isSelected && { borderColor: g.color, backgroundColor: g.color + '14', borderWidth: 2 },
                     ]}
-                    activeOpacity={0.75}
                   >
                     <View style={[styles.goalIcon, { backgroundColor: g.color + '20' }]}>
                       <Ionicons name={g.icon as any} size={24} color={g.color} />
@@ -173,7 +175,7 @@ export function OnboardingScreen() {
                     >
                       {g.label}
                     </Text>
-                  </TouchableOpacity>
+                  </TactilePressable>
                 );
               })}
             </View>
@@ -188,7 +190,7 @@ export function OnboardingScreen() {
               {TIME_OPTIONS.map((t) => {
                 const isSelected = timeOfDay === t.id;
                 return (
-                  <TouchableOpacity
+                  <TactilePressable
                     key={t.id}
                     onPress={() => setTimeOfDay(t.id)}
                     style={[
@@ -196,7 +198,6 @@ export function OnboardingScreen() {
                       { backgroundColor: colors.surface.default, borderColor: colors.border.default },
                       isSelected && { borderColor: colors.primary.default, backgroundColor: colors.primary.default + '14', borderWidth: 2 },
                     ]}
-                    activeOpacity={0.75}
                   >
                     <AppIcon name={t.icon} size={32} color={isSelected ? colors.primary.default : undefined} />
                     <View style={styles.timeInfo}>
@@ -216,7 +217,7 @@ export function OnboardingScreen() {
                       size={22}
                       color={isSelected ? colors.primary.default : colors.text.tertiary}
                     />
-                  </TouchableOpacity>
+                  </TactilePressable>
                 );
               })}
             </View>
@@ -231,7 +232,7 @@ export function OnboardingScreen() {
               {STARTER_HABITS.map((h) => {
                 const isSelected = (selectedHabits ?? []).includes(h.id);
                 return (
-                  <TouchableOpacity
+                  <TactilePressable
                     key={h.id}
                     onPress={() => toggleHabit(h.id)}
                     style={[
@@ -239,7 +240,6 @@ export function OnboardingScreen() {
                       { backgroundColor: colors.surface.default, borderColor: colors.border.default },
                       isSelected && { borderColor: h.color, backgroundColor: h.color + '14', borderWidth: 2 },
                     ]}
-                    activeOpacity={0.75}
                   >
                     <View style={[styles.habitIcon, { backgroundColor: h.color + '20' }]}>
                       <Ionicons name={h.icon as any} size={22} color={h.color} />
@@ -261,7 +261,7 @@ export function OnboardingScreen() {
                       size={22}
                       color={isSelected ? h.color : colors.text.tertiary}
                     />
-                  </TouchableOpacity>
+                  </TactilePressable>
                 );
               })}
             </View>
@@ -325,14 +325,14 @@ export function OnboardingScreen() {
       </Text>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {renderStep()}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { borderTopColor: colors.border.default, backgroundColor: colors.background.default }]}>
+      <View style={[styles.bottomBar, { bottom: tabBarOffset, borderTopColor: colors.border.default, backgroundColor: colors.background.default }]}>
         <TouchableOpacity
           onPress={handleBack}
           disabled={step === 0}
@@ -433,7 +433,6 @@ const styles = StyleSheet.create({
   privacyText: { fontSize: 14, lineHeight: 21, flex: 1 },
   bottomBar: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 20,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -9,7 +9,6 @@ import { Card, CardContent, AppIcon, moodIcon, ScreenHeader, TactilePressable } 
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
@@ -141,7 +140,6 @@ export function MoodCalendarScreen() {
   };
 
   const handleDayPress = (day: number) => {
-    hapticFeedback.selection();
     if ((moodData ?? {})?.[day]) {
       setSelectedDay(day);
     }
@@ -168,15 +166,16 @@ export function MoodCalendarScreen() {
 
     return (
       <View key={day} style={styles.dayCellContainer}>
-        <Pressable
+        <TactilePressable
           onPress={() => handleDayPress(day)}
           disabled={!hasData}
-          style={({ pressed }) => [
+          scaleDownTo={0.92}
+          hapticStyle="selection"
+          style={[
             styles.dayCell,
             isSelected && { backgroundColor: sageTint.accent },
             isTodayDay && !isSelected && { borderWidth: 2, borderColor: sageTint.accent },
             !hasData && { opacity: 0.35 },
-            { transform: [{ scale: pressed ? 0.92 : 1 }] },
           ]}
         >
           <Text
@@ -194,7 +193,7 @@ export function MoodCalendarScreen() {
               <AppIcon name={moodIconName} size={10} loop={false} />
             </View>
           )}
-        </Pressable>
+        </TactilePressable>
       </View>
     );
   };

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { ScreenHeader } from '../../components';
+import { ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -200,12 +200,12 @@ export function ThoughtReframingScreen() {
       <View style={[styles.bottomBar, { borderTopColor: colors.border.default, backgroundColor: colors.background.default }]}>
         <View style={styles.buttonRow}>
           {currentStep > 0 && (
-            <TouchableOpacity
+            <TactilePressable
               onPress={handleBack}
               style={[styles.bottomBackButton, { borderColor: colors.border.default, backgroundColor: colors.surface.default }]}
             >
               <Text style={[styles.backButtonText, { color: colors.text.primary }]}>Back</Text>
-            </TouchableOpacity>
+            </TactilePressable>
           )}
           <View style={{ flex: 1 }}>
             <PrimaryButton

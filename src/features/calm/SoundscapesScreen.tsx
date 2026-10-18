@@ -7,6 +7,7 @@ import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
+import { useTabBarOffset } from '../../utils/useTabBarOffset';
 
 interface TrackConfig {
   id: 'rain' | 'ocean' | 'birds' | 'night';
@@ -50,6 +51,7 @@ const TRACKS: TrackConfig[] = [
 export function SoundscapesScreen() {
   const { colors, isDark } = useAppTheme();
   const skyTint = resolveTint(!!isDark, 'sky');
+  const tabBarOffset = useTabBarOffset();
 
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [selectedTimer, setSelectedTimer] = useState<string>('Off');
@@ -85,7 +87,10 @@ export function SoundscapesScreen() {
     <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Soundscapes Sanctuary" subtitle="Acoustic Rest & Masking" bordered />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, activeSound ? styles.scrollContentPlaying : null]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Full-Page Hero Illustration Card */}
         <PopIn index={0}>
         <Card variant="elevated" style={styles.heroCard}>
@@ -160,24 +165,23 @@ export function SoundscapesScreen() {
                       />
                     </View>
                     <View style={styles.trackInfo}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text
-                          style={[
-                            styles.trackTitle,
-                            { color: isPlaying ? colors.primary.default : colors.text.primary },
-                          ]}
-                        >
-                          {track.title}
-                        </Text>
-                        <View style={[styles.atmosphereBadge, { backgroundColor: colors.primary.subtle }]}>
-                          <Text style={[styles.atmosphereText, { color: colors.primary.default }]}>
-                            {track.atmosphere}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={[styles.trackSub, { color: colors.text.tertiary }]}>
+                      <Text
+                        style={[
+                          styles.trackTitle,
+                          { color: isPlaying ? colors.primary.default : colors.text.primary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {track.title}
+                      </Text>
+                      <Text style={[styles.trackSub, { color: colors.text.tertiary }]} numberOfLines={2}>
                         {track.subtitle}
                       </Text>
+                      <View style={[styles.atmosphereBadge, { backgroundColor: colors.primary.subtle }]}>
+                        <Text style={[styles.atmosphereText, { color: colors.primary.default }]} numberOfLines={1}>
+                          {track.atmosphere}
+                        </Text>
+                      </View>
                     </View>
                     <View
                       style={[
@@ -289,7 +293,16 @@ export function SoundscapesScreen() {
 
       {/* Floating Bottom Bar */}
       {activeSound && (
-        <View style={[styles.bottomBar, { backgroundColor: colors.surface.default, borderTopColor: colors.border.default }]}>
+        <View
+          style={[
+            styles.bottomBar,
+            {
+              bottom: tabBarOffset,
+              backgroundColor: colors.surface.default,
+              borderTopColor: colors.border.default,
+            },
+          ]}
+        >
           <View style={{ flex: 1 }}>
             <Text style={[styles.bottomBarTitle, { color: colors.text.primary }]}>
               Playing: {TRACKS.find((t) => t.id === activeSound)?.title}
@@ -325,6 +338,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 120,
     gap: 20,
+  },
+  scrollContentPlaying: {
+    paddingBottom: 200,
   },
   heroCard: {
     borderRadius: 24,
@@ -392,6 +408,8 @@ const styles = StyleSheet.create({
   trackInfo: { flex: 1, gap: 4 },
   trackTitle: { fontSize: 16, fontWeight: '700' },
   atmosphereBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 2,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -434,7 +452,6 @@ const styles = StyleSheet.create({
   volumePillText: { fontSize: 12, fontWeight: '600' },
   bottomBar: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 20,

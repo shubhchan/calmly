@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import './src/theme/fontPatcher';
 import './global.css';
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View, StatusBar as RNStatusBar, Platform } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, StatusBar as RNStatusBar, Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -11,6 +11,8 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { ThemeProvider, useThemeColors } from './src/theme/ThemeContext';
 import { AppIcon } from './src/components/AppIcon';
 import { RootNavigator } from './src/routing/navigation';
+import { useAppLock } from './src/services/appLock';
+import { AppLockScreen } from './src/features/settings/AppLockScreen';
 import {
   ErrorBoundary,
   GlobalErrorShield,
@@ -239,6 +241,22 @@ function NavChildrenProbe({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Full-screen lock overlay. AppLockService flips `isLocked` on launch (when a
+ * PIN or biometric lock is enabled), after the auto-lock timeout, and when the
+ * app resumes past the timeout — so rendering the lock screen here covers every
+ * navigation state, including modals and deep links.
+ */
+function AppLockGate() {
+  const { isLocked } = useAppLock();
+  if (!isLocked) return null;
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <AppLockScreen />
+    </View>
+  );
+}
+
 function AppShell({
   navReady,
   fontsLoaded,
@@ -332,6 +350,7 @@ function AppShell({
           onDismiss={() => setNavStalled(false)}
         />
       )}
+      <AppLockGate />
     </View>
   );
 }
@@ -367,6 +386,26 @@ export default function App() {
     // Re-apply the persisted app-wide font choice (bundled or downloaded).
     restoreSavedFont();
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (!navReady) return;
+    // The OS can drop scheduled alarms after reboots/app updates, so reminders
+    // are re-armed once per launch. Only when permission is already granted —
+    // the system prompt must never appear unprompted.
+    const timer = setTimeout(async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { notificationService } = require('./src/services/notifications');
+        const status = await notificationService?.getPermissionStatus?.();
+        if (status === 'granted') {
+          await notificationService?.scheduleAll?.();
+        }
+      } catch (error) {
+        console.warn('Notification reschedule on launch failed:', error);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [navReady]);
 
   useEffect(() => {
     bootLog('app-mounted');

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Switch, StyleSheet } from 'react-native';
+import { View, Text, Switch, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, AccentColor } from '../../types/navigation';
@@ -8,6 +8,7 @@ import { Card, CardContent } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { AppIcon } from '../../components/AppIcon';
 import type { AppIconName } from '../../components/AppIcon';
+import { TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useFontStore } from '../../theme/fontStore';
 import { useMotionPrefs } from '../../theme/motion';
@@ -72,12 +73,11 @@ export function SettingsScreen() {
               <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Typography</Text>
             </View>
 
-            <Pressable
+            <TactilePressable
               onPress={() => navigation.navigate('FontBrowser')}
-              style={({ pressed }) => [
+              style={[
                 styles.menuRow,
                 { borderBottomWidth: 0 },
-                pressed && { opacity: 0.7 },
               ]}
               accessibilityRole="button"
               accessibilityLabel={`App font, currently ${activeFont.label}. Browse Google Fonts.`}
@@ -90,7 +90,7 @@ export function SettingsScreen() {
               </View>
               <Text style={[styles.fontPreviewGlyph, { color: colors.primary.default }]}>Aa</Text>
               <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </Pressable>
+            </TactilePressable>
           </CardContent>
         </Card>
       </PopIn>
@@ -111,7 +111,7 @@ export function SettingsScreen() {
             {(themeOptions ?? []).map((option) => {
               const isSelected = theme === option.value;
               return (
-                <Pressable
+                <TactilePressable
                   key={option.value}
                   onPress={() => setTheme(option.value)}
                   style={[
@@ -133,7 +133,7 @@ export function SettingsScreen() {
                   >
                     {option.label}
                   </Text>
-                </Pressable>
+                </TactilePressable>
               );
             })}
           </View>
@@ -144,7 +144,7 @@ export function SettingsScreen() {
               const isSelected = accent === option.value;
               const swatchColor = ACCENT_COLORS_PREVIEW[option.value];
               return (
-                <Pressable
+                <TactilePressable
                   key={option.value}
                   onPress={() => setAccent(option.value)}
                   style={[
@@ -166,7 +166,7 @@ export function SettingsScreen() {
                   >
                     {option.label}
                   </Text>
-                </Pressable>
+                </TactilePressable>
               );
             })}
           </View>
@@ -186,12 +186,11 @@ export function SettingsScreen() {
           </View>
 
           <View style={styles.menuList}>
-            <Pressable
+            <TactilePressable
               onPress={() => navigation.navigate('AppLockSettings')}
-              style={({ pressed }) => [
+              style={[
                 styles.menuRow,
                 { borderBottomColor: colors.border.default },
-                pressed && { opacity: 0.7 },
               ]}
             >
               <View style={styles.menuTextWrap}>
@@ -199,14 +198,13 @@ export function SettingsScreen() {
                 <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Biometrics, PIN protection, and auto-lock</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </Pressable>
+            </TactilePressable>
 
-            <Pressable
+            <TactilePressable
               onPress={() => navigation.navigate('Notifications')}
-              style={({ pressed }) => [
+              style={[
                 styles.menuRow,
                 { borderBottomColor: colors.border.default },
-                pressed && { opacity: 0.7 },
               ]}
             >
               <View style={styles.menuTextWrap}>
@@ -214,14 +212,13 @@ export function SettingsScreen() {
                 <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Morning, journal, and evening notifications</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </Pressable>
+            </TactilePressable>
 
-            <Pressable
+            <TactilePressable
               onPress={() => navigation.navigate('DataManagement')}
-              style={({ pressed }) => [
+              style={[
                 styles.menuRow,
                 { borderBottomWidth: 0 },
-                pressed && { opacity: 0.7 },
               ]}
             >
               <View style={styles.menuTextWrap}>
@@ -229,7 +226,7 @@ export function SettingsScreen() {
                 <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Export JSON, import, or cloud-free backup</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </Pressable>
+            </TactilePressable>
           </View>
         </CardContent>
       </Card>
@@ -311,12 +308,11 @@ export function SettingsScreen() {
             textStyle={{ color: colors.primary.default, fontSize: 13 }}
             fullWidth={false}
           />
-          <Pressable
+          <TactilePressable
             onPress={() => navigation.navigate('DesignSystem')}
-            style={({ pressed }) => [
+            style={[
               styles.menuRow,
               { borderBottomWidth: 0, marginTop: 16 },
-              pressed && { opacity: 0.7 },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Open the design system reference"
@@ -328,7 +324,7 @@ export function SettingsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-          </Pressable>
+          </TactilePressable>
         </CardContent>
       </Card>
       </PopIn>

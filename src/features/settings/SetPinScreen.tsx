@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, BackHandler } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { View, Text, StyleSheet, Alert, BackHandler } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,16 +8,13 @@ import { settingsRepository } from '../../database/repositories/settingsReposito
 import { appLockService } from '../../services/appLock';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ScreenHeader } from '../../components';
+import { ScreenHeader, TactilePressable } from '../../components';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['navigation'];
-type RouteProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['route'];
 
 export function SetPinScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<RouteProp>();
   const { colors } = useAppTheme();
-  const { onComplete } = ((route as any)?.params ?? {}) as { onComplete?: () => void };
 
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -61,7 +58,6 @@ export function SetPinScreen() {
     try {
       await settingsRepository?.setPin?.(enteredConfirm);
       appLockService?.lock?.();
-      if (onComplete) onComplete();
       (navigation as any)?.goBack?.();
     } catch (err) {
       console.error('Failed to set PIN:', err);
@@ -157,16 +153,17 @@ export function SetPinScreen() {
           ].map((row, rowIndex) => (
             <View key={rowIndex} style={styles.keypadRow}>
               {(row ?? []).map((key, keyIndex) => (
-                <TouchableOpacity
+                <TactilePressable
                   key={keyIndex}
                   onPress={() => (key === '⌫' ? handleDelete() : key && handlePinPress(key))}
+                  scaleDownTo={0.9}
+                  disabled={key === ''}
                   style={[
                     styles.keypadButton,
                     { backgroundColor: colors.surface.default, borderColor: colors.border.default },
                     key === '' && styles.keypadButtonEmpty,
                     key === '⌫' && styles.keypadButtonDelete,
                   ]}
-                  activeOpacity={0.7}
                   accessibilityLabel={key === '⌫' ? 'Delete' : key}
                 >
                   {key === '⌫' ? (
@@ -182,7 +179,7 @@ export function SetPinScreen() {
                       {key}
                     </Text>
                   )}
-                </TouchableOpacity>
+                </TactilePressable>
               ))}
             </View>
           ))}

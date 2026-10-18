@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { habitRepository } from '../../database/repositories/habitRepository';
+import { notificationService } from '../../services/notifications';
 import Habit from '../../database/models/Habit';
 import { HabitCompletion } from '../../database/models';
 import { getHabitEncouragement } from '../../utils/encouragement';
 import { getIconName } from '../../utils/iconMap';
 import { Card } from '../../components/Card';
-import { ScreenHeader } from '../../components';
-import { StatPill } from '../../components/StatPill';
+import { AppText, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { useAppTheme } from '../../theme/ThemeContext';
@@ -134,6 +134,7 @@ export function HabitDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             await habitRepository.delete(id);
+            await notificationService?.syncHabitReminders?.();
             navigation.goBack();
           },
         },
@@ -198,18 +199,18 @@ export function HabitDetailScreen() {
       <ScreenHeader
         right={
           <View style={styles.headerActions}>
-            <TouchableOpacity
+            <TactilePressable
               onPress={handleEdit}
               style={[styles.actionButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
             >
               <Ionicons name="create-outline" size={20} color={colors.primary.default} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </TactilePressable>
+            <TactilePressable
               onPress={handleDelete}
               style={[styles.actionButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
             >
               <Ionicons name="trash-outline" size={20} color={colors.accents.rose} />
-            </TouchableOpacity>
+            </TactilePressable>
           </View>
         }
       />
@@ -238,31 +239,28 @@ export function HabitDetailScreen() {
 
       <PopIn index={2}>
       <View style={styles.statsRow}>
-        <StatPill
-          label="Current Streak"
-          value={`${streak?.current ?? 0} days`}
-          accentColor={habitAccentColor}
-          icon={<Ionicons name="flame-outline" size={16} color={habitAccentColor} />}
-        />
-        <StatPill
-          label="Best Streak"
-          value={`${streak?.longest ?? 0} days`}
-          accentColor={colors.accents.lavender}
-          icon={<Ionicons name="trophy-outline" size={16} color={colors.accents.lavender} />}
-        />
-        <StatPill
-          label="Rate"
-          value={`${completionRate}%`}
-          accentColor={colors.accents.sky}
-          icon={<Ionicons name="pie-chart-outline" size={16} color={colors.accents.sky} />}
-        />
+        <Card variant="outlined" style={styles.statTile}>
+          <Ionicons name="flame-outline" size={16} color={habitAccentColor} />
+          <AppText variant="h3">{`${streak?.current ?? 0}`}</AppText>
+          <AppText variant="caption" tone="tertiary" numberOfLines={1}>Day streak</AppText>
+        </Card>
+        <Card variant="outlined" style={styles.statTile}>
+          <Ionicons name="trophy-outline" size={16} color={colors.accents.lavender} />
+          <AppText variant="h3">{`${streak?.longest ?? 0}`}</AppText>
+          <AppText variant="caption" tone="tertiary" numberOfLines={1}>Best streak</AppText>
+        </Card>
+        <Card variant="outlined" style={styles.statTile}>
+          <Ionicons name="pie-chart-outline" size={16} color={colors.accents.sky} />
+          <AppText variant="h3">{`${completionRate}%`}</AppText>
+          <AppText variant="caption" tone="tertiary" numberOfLines={1}>Completion</AppText>
+        </Card>
       </View>
       </PopIn>
 
       <PopIn index={3}>
       <Card style={styles.calendarCard}>
         <View style={styles.calendarHeader}>
-          <TouchableOpacity
+          <TactilePressable
             onPress={() => {
               try {
                 setCurrentMonth(subMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1));
@@ -271,9 +269,9 @@ export function HabitDetailScreen() {
             style={styles.navButton}
           >
             <Ionicons name="chevron-back" size={22} color={colors.text.primary} />
-          </TouchableOpacity>
+          </TactilePressable>
           <Text style={[styles.calendarTitle, { color: colors.text.primary }]}>{calendarTitle}</Text>
-          <TouchableOpacity
+          <TactilePressable
             onPress={() => {
               try {
                 setCurrentMonth(addMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1));
@@ -282,7 +280,7 @@ export function HabitDetailScreen() {
             style={styles.navButton}
           >
             <Ionicons name="chevron-forward" size={22} color={colors.text.primary} />
-          </TouchableOpacity>
+          </TactilePressable>
         </View>
 
         <View style={styles.calendarWeekdays}>
@@ -309,17 +307,17 @@ export function HabitDetailScreen() {
             const isFuture = day > today;
 
             return (
-              <TouchableOpacity
+              <TactilePressable
                 key={dayStr}
                 onPress={() => !isFuture && toggleCompletion(day)}
                 disabled={isFuture}
+                hapticStyle="none"
                 style={[
                   styles.calendarDay,
                   isCompleted && { backgroundColor: habitAccentColor },
                   isTodayDay && !isCompleted && { borderWidth: 2, borderColor: habitAccentColor },
                   isFuture && { opacity: 0.3 },
                 ]}
-                activeOpacity={0.7}
               >
                 <Text
                   style={[
@@ -332,7 +330,7 @@ export function HabitDetailScreen() {
                 >
                   {day.getDate()}
                 </Text>
-              </TouchableOpacity>
+              </TactilePressable>
             );
           })}
         </View>
@@ -437,6 +435,12 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: 10,
+  },
+  statTile: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 4,
   },
   calendarCard: {
     borderRadius: 20,

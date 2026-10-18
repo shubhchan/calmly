@@ -36,7 +36,7 @@ export type RootStackParamList = {
   ThoughtReframing: undefined;
   Notifications: undefined;
   AppLockSettings: undefined;
-  SetPin?: { onComplete?: () => void };
+  SetPin: undefined;
   DataManagement: undefined;
   FontBrowser: undefined;
   DesignSystem: undefined;

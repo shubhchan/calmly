@@ -7,12 +7,14 @@ import { useAppTheme } from '../../theme/ThemeContext';
 import { Card, CardContent, PrimaryButton, SensoryGroundingIllustration, AppIcon, ScreenHeader } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { useTabBarOffset } from '../../utils/useTabBarOffset';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function SensoryGroundingScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useAppTheme();
+  const tabBarOffset = useTabBarOffset();
 
   const handleStartExercise = () => {
     navigation.navigate('GroundingExercise', { type: '5-4-3-2-1' });
@@ -22,7 +24,7 @@ export function SensoryGroundingScreen() {
     <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="5-4-3-2-1 Grounding" subtitle="Sensory Presence Anchor" bordered />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>
         {/* Full-Page Hero Illustration Card */}
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
@@ -81,7 +83,7 @@ export function SensoryGroundingScreen() {
       </ScrollView>
 
       {/* Floating Bottom Action */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
+      <View style={[styles.bottomBar, { bottom: tabBarOffset, backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
         <PrimaryButton
           title="Start Guided 5-4-3-2-1 Guide"
           variant="primary"
@@ -184,7 +186,6 @@ const styles = StyleSheet.create({
   stepDesc: { fontSize: 12, lineHeight: 17 },
   bottomBar: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 20,

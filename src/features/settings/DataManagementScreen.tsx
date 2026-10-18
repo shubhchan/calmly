@@ -1,13 +1,15 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Share } from 'react-native';
+import { View, Text, StyleSheet, Alert, ActivityIndicator, Share } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ScreenHeader } from '../../components';
+import { ScreenHeader, TactilePressable } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
+import { deleteSettingsFileStore } from '../../database/repositories/settingsRepository';
 
 const DATA_TYPES = [
   { key: 'moods', label: 'Mood Check-ins', icon: 'happy-outline' },
@@ -85,10 +87,47 @@ export function DataManagementScreen() {
         },
       };
 
-      await Share.share({
-        title: 'Calmly Encrypted Backup',
-        message: JSON.stringify(exportData, null, 2),
-      });
+      const json = JSON.stringify(exportData, null, 2);
+
+      // Hand the backup over as a file. Sharing a multi-megabyte string through
+      // the Android share sheet used to blow the Binder transaction limit and
+      // crash the app natively (TransactionTooLargeException).
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { File: BackupFile, Paths } = require('expo-file-system');
+        const file = new BackupFile(Paths.cache, `calmly-backup-${Date.now()}.json`);
+        try {
+          file.create({ overwrite: true });
+        } catch {}
+        file.write(json);
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Sharing = require('expo-sharing');
+        const canShare = (await Sharing?.isAvailableAsync?.()) ?? false;
+        if (canShare) {
+          await Sharing.shareAsync(file.uri, {
+            mimeType: 'application/json',
+            dialogTitle: 'Calmly Backup',
+            UTI: 'public.json',
+          });
+          return;
+        }
+      } catch (error) {
+        console.warn('File export unavailable, falling back to text share:', error);
+      }
+
+      // Fallbacks for environments without the file-sharing modules: small
+      // payloads are safe to pass through the share sheet as text, larger ones
+      // go to the clipboard instead of risking another native crash.
+      if (json.length <= 100000) {
+        await Share.share({
+          title: 'Calmly Backup',
+          message: json,
+        });
+      } else {
+        await Clipboard.setStringAsync(json);
+        Alert.alert('Backup Copied', 'Your backup is large, so it was copied to the clipboard instead of the share sheet.');
+      }
     } catch (error) {
       console.error('Export failed:', error);
       Alert.alert('Export Failed', 'Could not prepare export file.');
@@ -170,6 +209,7 @@ export function DataManagementScreen() {
                   )
                 );
               });
+              deleteSettingsFileStore();
               Alert.alert('Reset Complete', 'All local data was erased.');
             } catch (err) {
               console.error('Wipe failed:', err);
@@ -211,7 +251,7 @@ export function DataManagementScreen() {
         </Text>
         <View style={styles.typeList}>
           {(DATA_TYPES ?? []).map((type) => (
-            <TouchableOpacity
+            <TactilePressable
               key={type.key}
               onPress={() => handleDeleteType(type.key)}
               disabled={!!deleting}
@@ -219,7 +259,6 @@ export function DataManagementScreen() {
                 styles.typeItem,
                 { backgroundColor: colors.background.secondary, borderColor: colors.border.default },
               ]}
-              activeOpacity={0.75}
             >
               <View style={[styles.typeIcon, { backgroundColor: colors.primary.default + '14' }]}>
                 <Ionicons name={type.icon as any} size={20} color={colors.primary.default} />
@@ -232,7 +271,7 @@ export function DataManagementScreen() {
                   <Ionicons name="trash-outline" size={18} color={colors.text.tertiary} />
                 )}
               </View>
-            </TouchableOpacity>
+            </TactilePressable>
           ))}
         </View>
         </Card>

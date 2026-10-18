@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { settingsRepository } from '../database/repositories/settingsRepository';
-import { Platform } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 
 export interface LockState {
   isLocked: boolean;
@@ -14,6 +14,7 @@ class AppLockService {
   private autoLockTimer: ReturnType<typeof setTimeout> | null = null;
   private lastActiveTime: number = Date.now();
   private initialized = false;
+  private appStateSubscription: { remove: () => void } | null = null;
 
   constructor() {
     // Never throw from the constructor: settingsRepository touches WatermelonDB,
@@ -22,7 +23,40 @@ class AppLockService {
     this.init().catch((error) => {
       console.warn('AppLock init failed, continuing unlocked:', error);
     });
+    // Auto-lock is driven by app state: JS timers are suspended while the app
+    // is backgrounded, so elapsed time is evaluated again on resume.
+    try {
+      this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
+    } catch (error) {
+      console.warn('AppLock could not subscribe to AppState:', error);
+    }
   }
+
+  private handleAppStateChange = async (nextState: AppStateStatus) => {
+    try {
+      if (nextState === 'active') {
+        const settings = await settingsRepository.getSettings();
+        const lockEnabled = settings.pinEnabled || settings.biometricEnabled;
+        if (!lockEnabled) return;
+        const minutes = Number.isFinite(settings.autoLockMinutes) ? settings.autoLockMinutes : 5;
+        if (minutes === 0) {
+          if (!this.lockState.isLocked) await this.lock();
+        } else if (!this.lockState.isLocked && Date.now() - this.lastActiveTime >= minutes * 60 * 1000) {
+          await this.lock();
+        }
+        this.lastActiveTime = Date.now();
+        this.startAutoLockTimer(minutes);
+      } else if (nextState === 'background') {
+        const settings = await settingsRepository.getSettings();
+        const lockEnabled = settings.pinEnabled || settings.biometricEnabled;
+        if (lockEnabled && (settings.autoLockMinutes ?? 5) === 0 && !this.lockState.isLocked) {
+          await this.lock();
+        }
+      }
+    } catch (error) {
+      console.warn('AppLock AppState handling failed:', error);
+    }
+  };
 
   private async init() {
     try {
@@ -32,6 +66,7 @@ class AppLockService {
         requiresAuth: settings.pinEnabled || settings.biometricEnabled,
       };
       this.startAutoLockTimer(settings.autoLockMinutes);
+      await this.setSwitcherProtection(settings.hideContentInSwitcher !== false);
     } catch (error) {
       console.warn('AppLock init failed, continuing unlocked:', error);
     } finally {
@@ -78,6 +113,20 @@ class AppLockService {
     }
   }
 
+  async refresh() {
+    try {
+      const settings = await settingsRepository.getSettings();
+      const lockEnabled = settings.pinEnabled || settings.biometricEnabled;
+      if (!lockEnabled && (this.lockState.isLocked || this.lockState.requiresAuth)) {
+        this.lockState = { isLocked: false, requiresAuth: false };
+        this.notify();
+      }
+      this.startAutoLockTimer(settings.autoLockMinutes);
+    } catch (error) {
+      console.warn('AppLock refresh failed:', error);
+    }
+  }
+
   async lock() {
     try {
       const settings = await settingsRepository.getSettings();
@@ -90,28 +139,49 @@ class AppLockService {
     }
   }
 
-  async unlock(authMethod: 'pin' | 'biometric' = 'pin') {
+  private async completeUnlock() {
+    this.lockState = { isLocked: false, requiresAuth: false };
+    this.lastActiveTime = Date.now();
     try {
       const settings = await settingsRepository.getSettings();
-
-      if (authMethod === 'biometric' && settings.biometricEnabled) {
-        if (Platform.OS === 'web') return false;
-        const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: 'Unlock Calmly',
-          fallbackLabel: 'Use PIN',
-          cancelLabel: 'Cancel',
-        });
-        if (result.success) {
-          this.lockState = { isLocked: false, requiresAuth: false };
-          this.notify();
-          return true;
-        }
-      }
+      this.startAutoLockTimer(settings.autoLockMinutes);
     } catch (error) {
-      console.warn('AppLock unlock failed:', error);
+      console.warn('AppLock unlock timer reset failed:', error);
     }
+    this.notify();
+  }
 
-    return false;
+  async unlockWithPin(pin: string): Promise<boolean> {
+    try {
+      const valid = await this.verifyPin(pin);
+      if (!valid) return false;
+      await this.completeUnlock();
+      return true;
+    } catch (error) {
+      console.warn('AppLock PIN unlock failed:', error);
+      return false;
+    }
+  }
+
+  async unlockWithBiometric(): Promise<boolean> {
+    try {
+      if (Platform.OS === 'web') return false;
+      const settings = await settingsRepository.getSettings();
+      if (!settings.biometricEnabled) return false;
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Unlock Calmly',
+        fallbackLabel: 'Use PIN',
+        cancelLabel: 'Cancel',
+      });
+      if (result.success) {
+        await this.completeUnlock();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.warn('AppLock biometric unlock failed:', error);
+      return false;
+    }
   }
 
   async verifyPin(pin: string): Promise<boolean> {
@@ -120,6 +190,29 @@ class AppLockService {
     } catch (error) {
       console.warn('AppLock verifyPin failed:', error);
       return false;
+    }
+  }
+
+  async setSwitcherProtection(enabled: boolean): Promise<void> {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const ScreenCapture = require('expo-screen-capture');
+      if (!ScreenCapture) return;
+      if (Platform.OS === 'ios' && ScreenCapture.enableAppSwitcherProtectionAsync) {
+        if (enabled) {
+          await ScreenCapture.enableAppSwitcherProtectionAsync(0.6);
+        } else if (ScreenCapture.disableAppSwitcherProtectionAsync) {
+          await ScreenCapture.disableAppSwitcherProtectionAsync();
+        }
+        return;
+      }
+      if (enabled) {
+        await ScreenCapture.preventScreenCaptureAsync?.('calmly-privacy');
+      } else {
+        await ScreenCapture.allowScreenCaptureAsync?.('calmly-privacy');
+      }
+    } catch (error) {
+      console.warn('AppLock switcher protection unavailable:', error);
     }
   }
 
@@ -135,6 +228,12 @@ class AppLockService {
     if (this.autoLockTimer) {
       clearTimeout(this.autoLockTimer);
     }
+    try {
+      this.appStateSubscription?.remove?.();
+    } catch (error) {
+      console.warn('AppLock AppState unsubscribe failed:', error);
+    }
+    this.appStateSubscription = null;
   }
 }
 
@@ -151,7 +250,8 @@ export function useAppLock() {
   return {
     ...state,
     lock: () => appLockService.lock(),
-    unlock: (method?: 'pin' | 'biometric') => appLockService.unlock(method),
+    unlockWithPin: (pin: string) => appLockService.unlockWithPin(pin),
+    unlockWithBiometric: () => appLockService.unlockWithBiometric(),
     verifyPin: (pin: string) => appLockService.verifyPin(pin),
     recordActivity: () => appLockService.recordActivity(),
   };

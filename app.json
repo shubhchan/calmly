@@ -11,13 +11,16 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#6FA078",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.calmly"
+      "package": "com.anonymous.calmly",
+      "permissions": [
+        "SCHEDULE_EXACT_ALARM"
+      ]
     },
     "androidStatusBar": {
       "barStyle": "dark-content",
@@ -39,8 +42,15 @@
     "owner": "shubbyy",
     "plugins": [
       "expo-font",
-      "expo-audio",
-      "expo-sqlite"
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true,
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-sqlite",
+      "expo-sharing"
     ]
   }
 }

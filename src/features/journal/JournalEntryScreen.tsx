@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, Alert } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
 import { Card, CardContent, PrimaryButton, AppIcon, JournalReflectionIllustration, ScreenHeader, TactilePressable } from '../../components';
 import type { AppIconName } from '../../components';
@@ -256,19 +256,17 @@ export function JournalEntryScreen() {
                 justifyContent: 'flex-end',
               }}
             >
-              <Pressable
+              <TactilePressable
                 onPress={() => setIsFavorite(!isFavorite)}
-                style={({ pressed }) => [
-                  {
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    borderRadius: 9999,
-                    backgroundColor: isFavorite ? '#FDF1F4' : colors.primary.subtle,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
+                hapticStyle="selection"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 9999,
+                  backgroundColor: isFavorite ? '#FDF1F4' : colors.primary.subtle,
+                }}
               >
                 <Ionicons
                   name={isFavorite ? 'heart' : 'heart-outline'}
@@ -285,7 +283,7 @@ export function JournalEntryScreen() {
                 >
                   {isFavorite ? 'Favorited' : 'Favorite'}
                 </Text>
-              </Pressable>
+              </TactilePressable>
             </View>
           </CardContent>
         </Card>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, Alert, Share } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -9,7 +9,7 @@ import { Card } from '../../components/Card';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ScreenHeader } from '../../components';
+import { ScreenHeader, TactilePressable } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
@@ -169,7 +169,7 @@ export function AffirmationDetailScreen() {
 
       <PopIn index={2}>
       <View style={styles.actions}>
-        <TouchableOpacity
+        <TactilePressable
           onPress={handleToggleFavorite}
           style={[
             styles.actionButton,
@@ -185,22 +185,22 @@ export function AffirmationDetailScreen() {
           <Text style={[styles.actionLabel, { color: colors.text.primary }]}>
             {affirmation?.favorite ? 'Favorited' : 'Favorite'}
           </Text>
-        </TouchableOpacity>
+        </TactilePressable>
 
-        <TouchableOpacity
+        <TactilePressable
           onPress={handleShare}
           style={[styles.actionButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
         >
           <Ionicons name="share-outline" size={20} color={colors.primary.default} />
           <Text style={[styles.actionLabel, { color: colors.text.primary }]}>Share</Text>
-        </TouchableOpacity>
+        </TactilePressable>
       </View>
       </PopIn>
 
       <PopIn index={3}>
-      <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+      <TactilePressable onPress={handleDelete} style={styles.deleteButton}>
         <Text style={[styles.deleteButtonText, { color: colors.accents.rose }]}>Delete Affirmation</Text>
-      </TouchableOpacity>
+      </TactilePressable>
       </PopIn>
     </ScreenContainer>
   );

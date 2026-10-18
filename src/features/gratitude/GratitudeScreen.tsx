@@ -146,13 +146,14 @@ export function GratitudeScreen() {
             const tint = resolveTint(!!isDark, tintForIndex(idx));
             return (
             <PopIn key={entry?.id ?? String(idx)} index={Math.min(idx + 1, 8)}>
-            <TouchableOpacity
+            <TactilePressable
               onPress={() => entry?.id && handleEdit(entry)}
+              scaleDownTo={0.98}
+              hapticStyle="none"
               style={[
                 styles.entryCard,
                 { backgroundColor: tint.bg, borderColor: tint.border },
               ]}
-              activeOpacity={0.75}
             >
               <View style={styles.entryContent}>
                 <Text style={[styles.entryText, { color: tint.text }]} numberOfLines={3}>
@@ -194,7 +195,7 @@ export function GratitudeScreen() {
                   />
                 </TouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </TactilePressable>
             </PopIn>
             );
           })}

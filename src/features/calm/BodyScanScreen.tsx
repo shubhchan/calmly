@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, BodyScanIllustration, ScreenHeader } from '../../components';
+import { Card, CardContent, PrimaryButton, BodyScanIllustration, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { useTabBarOffset } from '../../utils/useTabBarOffset';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -69,6 +70,7 @@ export function BodyScanScreen() {
 
   const [selectedZone, setSelectedZone] = useState<string>('shoulders');
   const activeZone = BODY_ZONES.find((z) => z.id === selectedZone) || BODY_ZONES[1];
+  const tabBarOffset = useTabBarOffset();
 
   const handleStartFullScan = () => {
     navigation.navigate('GroundingExercise', { type: 'body-scan' });
@@ -78,7 +80,7 @@ export function BodyScanScreen() {
     <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Somatic Body Scan" subtitle="Muscle Tension Reliever" bordered />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>
         {/* Hero Card with SVG Illustration */}
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
@@ -114,16 +116,16 @@ export function BodyScanScreen() {
             {BODY_ZONES.map((zone) => {
               const isSelected = selectedZone === zone.id;
               return (
-                <Pressable
+                <TactilePressable
                   key={zone.id}
                   onPress={() => setSelectedZone(zone.id)}
-                  style={({ pressed }) => [
+                  scaleDownTo={0.94}
+                  hapticStyle="selection"
+                  style={[
                     styles.zoneChip,
                     {
                       backgroundColor: isSelected ? colors.primary.default : colors.surface.default,
                       borderColor: isSelected ? colors.primary.default : colors.border.default,
-                      transform: [{ scale: pressed ? 0.94 : 1 }],
-                      opacity: pressed ? 0.88 : 1,
                     },
                   ]}
                 >
@@ -136,7 +138,7 @@ export function BodyScanScreen() {
                   >
                     {zone.name}
                   </Text>
-                </Pressable>
+                </TactilePressable>
               );
             })}
           </ScrollView>
@@ -169,7 +171,7 @@ export function BodyScanScreen() {
       </ScrollView>
 
       {/* Floating Bottom Primary Action Bar */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
+      <View style={[styles.bottomBar, { bottom: tabBarOffset, backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
         <PrimaryButton
           title="Start Full 8-Minute Body Scan"
           variant="primary"
@@ -282,7 +284,6 @@ const styles = StyleSheet.create({
   cueText: { fontSize: 14, lineHeight: 21 },
   bottomBar: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 20,

@@ -1,29 +1,36 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, BackHandler } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types/navigation';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, BackHandler } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { appLockService } from '../../services/appLock';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { TactilePressable } from '../../components';
 
-type NavigationProp = NativeStackScreenProps<RootStackParamList, 'AppLock'>['navigation'];
-
-export function AppLockScreen() {
-  const navigation = useNavigation<NavigationProp>();
+export function AppLockScreen({ onUnlocked }: { onUnlocked?: () => void }) {
   const { colors } = useAppTheme();
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [settings, setSettings] = useState<any>(null);
+  const autoPromptedRef = useRef(false);
+
+  const handleBiometric = useCallback(async () => {
+    try {
+      const unlocked = await appLockService?.unlockWithBiometric?.();
+      if (unlocked) {
+        onUnlocked?.();
+      }
+    } catch {}
+  }, [onUnlocked]);
 
   const checkBiometric = useCallback(async () => {
+    let hardwareOk = false;
     try {
       const LocalAuthentication = require('expo-local-authentication');
       const available = (await LocalAuthentication?.hasHardwareAsync?.()) ?? false;
       const enrolled = (await LocalAuthentication?.isEnrolledAsync?.()) ?? false;
-      setBiometricAvailable(available && enrolled);
+      hardwareOk = available && enrolled;
+      setBiometricAvailable(hardwareOk);
     } catch {
       setBiometricAvailable(false);
     }
@@ -31,10 +38,14 @@ export function AppLockScreen() {
       const { settingsRepository } = require('../../database/repositories/settingsRepository');
       const s = await settingsRepository?.getSettings?.();
       setSettings(s ?? null);
+      if (hardwareOk && s?.biometricEnabled && !autoPromptedRef.current) {
+        autoPromptedRef.current = true;
+        handleBiometric();
+      }
     } catch {
       setSettings(null);
     }
-  }, []);
+  }, [handleBiometric]);
 
   useEffect(() => {
     checkBiometric();
@@ -66,10 +77,9 @@ export function AppLockScreen() {
 
   const verify = async (candidatePin: string) => {
     try {
-      const valid = await appLockService?.verifyPin?.(candidatePin);
+      const valid = await appLockService?.unlockWithPin?.(candidatePin);
       if (valid) {
-        appLockService?.unlock?.('pin');
-        (navigation as any)?.goBack?.();
+        onUnlocked?.();
       } else {
         setError(true);
         setPin('');
@@ -82,15 +92,6 @@ export function AppLockScreen() {
       setError(true);
       setPin('');
     }
-  };
-
-  const handleBiometric = async () => {
-    try {
-      const unlocked = await appLockService?.unlock?.('biometric');
-      if (unlocked) {
-        (navigation as any)?.goBack?.();
-      }
-    } catch {}
   };
 
   return (
@@ -123,10 +124,10 @@ export function AppLockScreen() {
         ) : null}
 
         {biometricAvailable && settings?.biometricEnabled ? (
-          <TouchableOpacity onPress={handleBiometric} style={styles.biometricButton} activeOpacity={0.8}>
+          <TactilePressable onPress={handleBiometric} style={styles.biometricButton}>
             <Ionicons name="finger-print" size={24} color={colors.primary.default} />
             <Text style={[styles.biometricText, { color: colors.primary.default }]}>Unlock with Biometrics</Text>
-          </TouchableOpacity>
+          </TactilePressable>
         ) : null}
 
         <View style={styles.keypad}>
@@ -138,16 +139,17 @@ export function AppLockScreen() {
           ].map((row, rowIndex) => (
             <View key={rowIndex} style={styles.keypadRow}>
               {(row ?? []).map((key, keyIndex) => (
-                <TouchableOpacity
+                <TactilePressable
                   key={keyIndex}
                   onPress={() => (key === '⌫' ? handleDelete() : key && handlePinPress(key))}
+                  scaleDownTo={0.9}
+                  disabled={key === ''}
                   style={[
                     styles.keypadButton,
                     { backgroundColor: colors.surface.default, borderColor: colors.border.default },
                     key === '' && styles.keypadButtonEmpty,
                     key === '⌫' && styles.keypadButtonDelete,
                   ]}
-                  activeOpacity={0.7}
                   accessibilityLabel={key === '⌫' ? 'Delete' : key}
                 >
                   {key === '⌫' ? (
@@ -163,7 +165,7 @@ export function AppLockScreen() {
                       {key}
                     </Text>
                   )}
-                </TouchableOpacity>
+                </TactilePressable>
               ))}
             </View>
           ))}

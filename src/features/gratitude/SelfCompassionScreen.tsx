@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, ScrollView, StyleSheet } from 'react-native';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { ScreenHeader, SelfCompassionIllustration } from '../../components';
+import { ScreenHeader, SelfCompassionIllustration, TactilePressable } from '../../components';
 import { getCalmEncouragement } from '../../utils/encouragement';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -140,12 +140,12 @@ export function SelfCompassionScreen() {
       <View style={[styles.bottomBar, { borderTopColor: colors.border.default, backgroundColor: colors.background.default }]}>
         <View style={styles.buttonRow}>
           {currentStep > 0 && (
-            <TouchableOpacity
+            <TactilePressable
               onPress={handleBack}
               style={[styles.bottomBackButton, { borderColor: colors.border.default, backgroundColor: colors.surface.default }]}
             >
               <Text style={[styles.backButtonText, { color: colors.text.primary }]}>Back</Text>
-            </TouchableOpacity>
+            </TactilePressable>
           )}
           <View style={{ flex: 1 }}>
             <PrimaryButton

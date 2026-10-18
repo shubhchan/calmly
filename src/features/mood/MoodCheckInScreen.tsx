@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TextInput, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressRing } from '../../components/ProgressRing';
@@ -179,15 +179,16 @@ export function MoodCheckInScreen() {
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => {
               const isSelected = safeValue === v;
               return (
-                <Pressable
+                <TactilePressable
                   key={v}
                   onPress={() => onChange?.(v)}
-                  style={({ pressed }) => [
+                  scaleDownTo={0.88}
+                  hapticStyle="selection"
+                  style={[
                     styles.levelPill,
                     {
                       backgroundColor: colors.surface.default,
                       borderColor: colors.border.default,
-                      transform: [{ scale: pressed ? 0.88 : 1 }],
                     },
                     isSelected && { backgroundColor: accentColor, borderColor: accentColor },
                   ]}
@@ -201,7 +202,7 @@ export function MoodCheckInScreen() {
                   >
                     {v}
                   </Text>
-                </Pressable>
+                </TactilePressable>
               );
             })}
           </View>

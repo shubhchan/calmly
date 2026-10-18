@@ -10,6 +10,7 @@ import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
+import { useTabBarOffset } from '../../utils/useTabBarOffset';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -85,13 +86,14 @@ export function BreathworkStudioScreen() {
 
   const coralTint = resolveTint(!!isDark, 'coral');
   const sageTint = resolveTint(!!isDark, 'sage');
+  const tabBarOffset = useTabBarOffset();
 
   return (
     <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Breathwork Studio" subtitle="Parasympathetic Cadence" bordered />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Full-Page Hero Illustration Card */}
@@ -302,7 +304,7 @@ export function BreathworkStudioScreen() {
       </ScrollView>
 
       {/* Floating Bottom Primary Action Bar */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
+      <View style={[styles.bottomBar, { bottom: tabBarOffset, backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
         <PrimaryButton
           title={`Start ${selectedDuration}-Minute Session`}
           variant="primary"
@@ -444,7 +446,6 @@ const styles = StyleSheet.create({
   ambientPillText: { fontSize: 12, fontWeight: '600' },
   bottomBar: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 20,

@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Pressable, ScrollView, StyleSheet, Alert, Keyboard } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Keyboard } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { habitRepository } from '../../database/repositories/habitRepository';
+import { notificationService } from '../../services/notifications';
 import { getIconName } from '../../utils/iconMap';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { HabitPlantingIllustration, ScreenHeader } from '../../components';
+import { HabitPlantingIllustration, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -139,6 +140,7 @@ export function HabitFormScreen() {
           notes: (notes ?? '').trim(),
         });
       }
+      await notificationService?.syncHabitReminders?.();
       navigation.goBack();
     } catch (error) {
       console.error('Failed to save habit:', error);
@@ -160,6 +162,7 @@ export function HabitFormScreen() {
           style: 'destructive',
           onPress: async () => {
             await habitRepository.delete(id!);
+            await notificationService?.syncHabitReminders?.();
             navigation.goBack();
           },
         },
@@ -179,12 +182,14 @@ export function HabitFormScreen() {
       <Text style={[styles.pickerTitle, { color: colors.text.primary }]}>Choose Icon</Text>
       <ScrollView horizontal style={styles.iconScroll} showsHorizontalScrollIndicator={false}>
         {(ICONS ?? []).map((i) => (
-          <TouchableOpacity
+          <TactilePressable
             key={i}
             onPress={() => {
               setIcon(i);
               setShowIconPicker(false);
             }}
+            scaleDownTo={0.94}
+            hapticStyle="selection"
             style={[
               styles.iconOption,
               { backgroundColor: colors.background.default, borderColor: colors.border.default },
@@ -192,7 +197,7 @@ export function HabitFormScreen() {
             ]}
           >
             <Ionicons name={getIconName(i) as any} size={26} color={icon === i ? '#FFFFFF' : colors.text.primary} />
-          </TouchableOpacity>
+          </TactilePressable>
         ))}
       </ScrollView>
     </View>
@@ -203,19 +208,21 @@ export function HabitFormScreen() {
       <Text style={[styles.pickerTitle, { color: colors.text.primary }]}>Choose Color</Text>
       <View style={styles.colorGrid}>
         {(COLORS ?? []).map((c) => (
-          <TouchableOpacity
+          <TactilePressable
             key={c}
             onPress={() => {
               setColor(c);
               setShowColorPicker(false);
             }}
+            scaleDownTo={0.94}
+            hapticStyle="selection"
             style={[
               styles.colorOption,
               color === c && { borderColor: colors.primary.default },
             ]}
           >
             <View style={[styles.colorCircle, { backgroundColor: c }]} />
-          </TouchableOpacity>
+          </TactilePressable>
         ))}
       </View>
     </View>
@@ -268,16 +275,16 @@ export function HabitFormScreen() {
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Icon & Color Identity</Text>
           <View style={styles.iconColorRow}>
-            <TouchableOpacity onPress={() => setShowIconPicker(true)} style={styles.iconPreview}>
+            <TactilePressable onPress={() => setShowIconPicker(true)} style={styles.iconPreview}>
               <View style={[styles.iconPreviewCircle, { backgroundColor: color }]}>
                 <Ionicons name={getIconName(icon) as any} size={28} color="#FFFFFF" />
               </View>
               <Text style={[styles.iconPreviewLabel, { color: colors.text.secondary }]}>Select Icon</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowColorPicker(true)} style={styles.colorPreview}>
+            </TactilePressable>
+            <TactilePressable onPress={() => setShowColorPicker(true)} style={styles.colorPreview}>
               <View style={[styles.colorPreviewCircle, { backgroundColor: color }]} />
               <Text style={[styles.iconPreviewLabel, { color: colors.text.secondary }]}>Select Color</Text>
-            </TouchableOpacity>
+            </TactilePressable>
           </View>
         </Card>
         </PopIn>
@@ -288,9 +295,10 @@ export function HabitFormScreen() {
           {(FREQUENCY_OPTIONS ?? []).map((opt, index) => {
             const isSelected = frequency === opt?.value;
             return (
-              <TouchableOpacity
+              <TactilePressable
                 key={opt?.value ?? 'ph-' + index}
                 onPress={() => opt?.value && setFrequency(opt.value as 'daily' | 'weekdays' | 'custom')}
+                hapticStyle="selection"
                 style={[
                   styles.frequencyOption,
                   { backgroundColor: colors.background.secondary, borderColor: isSelected ? colors.primary.default : colors.border.default },
@@ -309,7 +317,7 @@ export function HabitFormScreen() {
                   color={isSelected ? colors.primary.default : colors.text.tertiary}
                   style={{ marginTop: 2 }}
                 />
-              </TouchableOpacity>
+              </TactilePressable>
             );
           })}
 
@@ -320,9 +328,11 @@ export function HabitFormScreen() {
                 {(DAYS ?? []).map((day, index) => {
                   const isDaySelected = (customDays ?? []).includes(day?.value);
                   return (
-                    <TouchableOpacity
+                    <TactilePressable
                       key={day?.value ?? 'ph-' + index}
                       onPress={() => day?.value && toggleDay(day.value)}
+                      scaleDownTo={0.92}
+                      hapticStyle="selection"
                       style={[
                         styles.dayButton,
                         { backgroundColor: colors.surface.default, borderColor: colors.border.default },
@@ -338,7 +348,7 @@ export function HabitFormScreen() {
                       >
                         {day?.short ?? ''}
                       </Text>
-                    </TouchableOpacity>
+                    </TactilePressable>
                   );
                 })}
               </View>
@@ -350,7 +360,7 @@ export function HabitFormScreen() {
         <PopIn index={4}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Daily Reminder</Text>
-          <TouchableOpacity
+          <TactilePressable
             onPress={() => setShowTimePicker(true)}
             style={[styles.reminderButton, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}
           >
@@ -362,7 +372,7 @@ export function HabitFormScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} style={{ marginTop: 2 }} />
-          </TouchableOpacity>
+          </TactilePressable>
         </Card>
         </PopIn>
 
@@ -370,19 +380,19 @@ export function HabitFormScreen() {
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Daily Repetitions</Text>
           <View style={styles.goalRow}>
-            <TouchableOpacity
+            <TactilePressable
               onPress={() => setGoal(Math.max(1, (goal ?? 1) - 1))}
               style={[styles.goalButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
             >
               <Ionicons name="remove" size={20} color={colors.text.primary} />
-            </TouchableOpacity>
+            </TactilePressable>
             <Text style={[styles.goalValue, { color: colors.text.primary }]}>{goal ?? 1}</Text>
-            <TouchableOpacity
+            <TactilePressable
               onPress={() => setGoal((goal ?? 1) + 1)}
               style={[styles.goalButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
             >
               <Ionicons name="add" size={20} color={colors.text.primary} />
-            </TouchableOpacity>
+            </TactilePressable>
             <Text style={[styles.goalLabel, { color: colors.text.secondary }]}>
               time{(goal ?? 1) !== 1 ? 's' : ''} per day
             </Text>
@@ -417,12 +427,12 @@ export function HabitFormScreen() {
             />
           </View>
           {isEditing && (
-            <TouchableOpacity
+            <TactilePressable
               onPress={handleDelete}
               style={[styles.deleteButton, { borderColor: colors.accents.rose }]}
             >
               <Text style={[styles.deleteButtonText, { color: colors.accents.rose }]}>Delete</Text>
-            </TouchableOpacity>
+            </TactilePressable>
           )}
         </View>
         </PopIn>
@@ -451,12 +461,13 @@ export function HabitFormScreen() {
               <Text style={[styles.timeDisplay, { color: colors.primary.default }]}>{reminderTime || '--:--'}</Text>
               <View style={styles.timeButtons}>
                 {['06:00', '07:00', '08:00', '09:00', '12:00', '17:00', '18:00', '20:00', '21:00', '22:00'].map((t) => (
-                  <TouchableOpacity
+                  <TactilePressable
                     key={t}
                     onPress={() => {
                       setReminderTime(t);
                       setShowTimePicker(false);
                     }}
+                    hapticStyle="selection"
                     style={[
                       styles.timeButton,
                       { backgroundColor: colors.background.default, borderColor: colors.border.default },
@@ -472,10 +483,10 @@ export function HabitFormScreen() {
                     >
                       {t}
                     </Text>
-                  </TouchableOpacity>
+                  </TactilePressable>
                 ))}
               </View>
-              <TouchableOpacity
+              <TactilePressable
                 onPress={() => {
                   setReminderTime('');
                   setShowTimePicker(false);
@@ -483,7 +494,7 @@ export function HabitFormScreen() {
                 style={[styles.clearTimeButton, { borderColor: colors.border.default }]}
               >
                 <Text style={[styles.clearTimeButtonText, { color: colors.text.secondary }]}>Clear</Text>
-              </TouchableOpacity>
+              </TactilePressable>
             </View>
           </View>
         </View>

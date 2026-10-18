@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, Share } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert, Share } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -218,15 +218,15 @@ export function InsightsScreen() {
 
       {/* Segmented Time Range Picker */}
       <View style={[styles.segmentedControl, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-        <Pressable
+        <TactilePressable
           onPress={() => {
-            hapticFeedback.selection();
             setTimeRange('week');
           }}
-          style={({ pressed }) => [
+          scaleDownTo={0.97}
+          hapticStyle="selection"
+          style={[
             styles.segmentButton,
             timeRange === 'week' && [styles.segmentButtonActive, { backgroundColor: colors.primary.default }],
-            { transform: [{ scale: pressed ? 0.97 : 1 }], opacity: pressed ? 0.9 : 1 },
           ]}
         >
           <Text
@@ -238,16 +238,16 @@ export function InsightsScreen() {
           >
             Past 7 Days
           </Text>
-        </Pressable>
-        <Pressable
+        </TactilePressable>
+        <TactilePressable
           onPress={() => {
-            hapticFeedback.selection();
             setTimeRange('month');
           }}
-          style={({ pressed }) => [
+          scaleDownTo={0.97}
+          hapticStyle="selection"
+          style={[
             styles.segmentButton,
             timeRange === 'month' && [styles.segmentButtonActive, { backgroundColor: colors.primary.default }],
-            { transform: [{ scale: pressed ? 0.97 : 1 }], opacity: pressed ? 0.9 : 1 },
           ]}
         >
           <Text
@@ -259,7 +259,7 @@ export function InsightsScreen() {
           >
             Past 30 Days
           </Text>
-        </Pressable>
+        </TactilePressable>
       </View>
 
       {/* 2x2 Metric Grid (Symmetrical 2-row layout) */}
@@ -592,21 +592,17 @@ export function InsightsScreen() {
               />
             </View>
           </View>
-          <Pressable
+          <TactilePressable
             onPress={handleDeleteAll}
-            style={({ pressed }) => [
-              styles.deleteLink,
-              {
-                transform: [{ scale: pressed ? 0.96 : 1 }],
-                opacity: pressed ? 0.75 : 1,
-              },
-            ]}
+            scaleDownTo={0.96}
+            hapticStyle="none"
+            style={styles.deleteLink}
           >
             <Ionicons name="trash-outline" size={15} color={colors.accents.rose} />
             <Text style={[styles.deleteLinkText, { color: colors.accents.rose }]}>
               Clear all app records
             </Text>
-          </Pressable>
+          </TactilePressable>
         </CardContent>
       </Card>
       </PopIn>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Keyboard } from 'react-native';
+import { View, Text, TextInput, ScrollView, StyleSheet, Alert, Keyboard } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -10,7 +10,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ScreenHeader } from '../../components';
+import { ScreenHeader, TactilePressable } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'GratitudeForm'>['navigation'];
@@ -198,7 +198,7 @@ export function GratitudeFormScreen() {
             {(MOODS ?? []).map((m) => {
               const isSelected = mood === m;
               return (
-                <TouchableOpacity
+                <TactilePressable
                   key={m}
                   onPress={() => setMood(isSelected ? '' : m)}
                   style={[
@@ -216,7 +216,7 @@ export function GratitudeFormScreen() {
                   >
                     {m}
                   </Text>
-                </TouchableOpacity>
+                </TactilePressable>
               );
             })}
           </ScrollView>
@@ -238,7 +238,7 @@ export function GratitudeFormScreen() {
 
         <PopIn index={3}>
         <Card style={styles.section}>
-          <TouchableOpacity onPress={() => setFavorite(!favorite)} style={styles.favoriteToggle}>
+          <TactilePressable onPress={() => setFavorite(!favorite)} style={styles.favoriteToggle}>
             <View style={styles.favoriteToggleLeft}>
               <Ionicons
                 name={favorite ? 'heart' : 'heart-outline'}
@@ -264,7 +264,7 @@ export function GratitudeFormScreen() {
             >
               <View style={[styles.favoriteToggleThumb, favorite && styles.favoriteToggleThumbOn]} />
             </View>
-          </TouchableOpacity>
+          </TactilePressable>
         </Card>
         </PopIn>
 
@@ -279,12 +279,12 @@ export function GratitudeFormScreen() {
             />
           </View>
           {isEditing && (
-            <TouchableOpacity
+            <TactilePressable
               onPress={handleDelete}
               style={[styles.deleteButton, { borderColor: colors.accents.rose }]}
             >
               <Text style={[styles.deleteButtonText, { color: colors.accents.rose }]}>Delete</Text>
-            </TouchableOpacity>
+            </TactilePressable>
           )}
         </View>
         </PopIn>

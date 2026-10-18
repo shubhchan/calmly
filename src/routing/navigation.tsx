@@ -462,6 +462,10 @@ export function AppNavigator() {
 }
 
 
+function AppLockRoute({ navigation }: any) {
+  return <AppLockScreen onUnlocked={() => navigation?.goBack?.()} />;
+}
+
 export function RootNavigator() {
   useRenderLog('root-navigator-render');
   const reducedMotion = useAppReducedMotion();
@@ -492,7 +496,7 @@ export function RootNavigator() {
 
       {/* Pushed Sanctuaries (horizontal slide) */}
       <RootStack.Screen name="Onboarding" component={OnboardingScreen} options={push} />
-      <RootStack.Screen name="AppLock" component={AppLockScreen} options={push} />
+      <RootStack.Screen name="AppLock" component={AppLockRoute} options={push} />
       <RootStack.Screen name="Habits" component={HabitListScreen} options={push} />
       <RootStack.Screen name="HabitDetail" component={HabitDetailScreen} options={push} />
       <RootStack.Screen name="Routines" component={RoutinesScreen} options={push} />
