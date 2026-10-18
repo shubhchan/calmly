@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Path, Circle, Rect, G, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { StyleProp, ViewStyle, View } from 'react-native';
 
 interface IllustrationProps {
@@ -10,10 +10,9 @@ interface IllustrationProps {
 }
 
 export function HabitPlantingIllustration({ width = 150, height = 130, style }: IllustrationProps) {
-  const colors = useThemeColors();
-  const isDark = colors.isDark;
+  const { colors, isDark } = useAppTheme();
 
-  const primaryAccent = colors.accentPrimary;
+  const primaryAccent = colors.primary.default;
   const leafTone = isDark ? '#7BD495' : '#3E7B52';
   const leafHighlight = isDark ? '#9AE6B4' : '#5A955A';
   const potTone = isDark ? '#2D3E56' : '#E8DED1';

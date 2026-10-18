@@ -8,9 +8,9 @@ import { Q } from '@nozbe/watermelondb';
 import Affirmation from '../../database/models/Affirmation';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { StaggeredEntry, TactilePressable } from '../../components';
+import { StaggeredEntry, TactilePressable, ScreenHeader } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
@@ -105,7 +105,7 @@ const STATIC_AFFIRMATIONS: Record<string, string[]> = {
 
 export function AffirmationsScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const [affirmations, setAffirmations] = useState<AffirmationItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [dailyAffirmation, setDailyAffirmation] = useState<string>('');
@@ -202,7 +202,7 @@ export function AffirmationsScreen() {
 
   const renderItem = ({ item, idx }: { item: AffirmationItem; idx: number }) => {
     if (!item) return null;
-    const tint = resolveTint(!!colors.isDark, tintForIndex(idx));
+    const tint = resolveTint(!!isDark, tintForIndex(idx));
     return (
       <TactilePressable
         onPress={() => item?.id && navigation.navigate('AffirmationDetail', { id: item.id })}
@@ -229,7 +229,7 @@ export function AffirmationsScreen() {
             <Ionicons
               name={item?.favorite ? 'heart' : 'heart-outline'}
               size={20}
-              color={item?.favorite ? (colors.accentPeach || '#EB876D') : tint.muted}
+              color={item?.favorite ? (colors.accents.peach) : tint.muted}
             />
           </TactilePressable>
         </View>
@@ -238,23 +238,21 @@ export function AffirmationsScreen() {
   };
 
   return (
-    <ScreenContainer contentContainerStyle={styles.content}>
-      <PopIn index={0}>
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Affirmations</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Anchor positive truths in your everyday consciousness</Text>
-        </View>
-      </View>
-      </PopIn>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader
+        title="Affirmations"
+        subtitle="Anchor positive truths in your everyday consciousness"
+      />
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
       <PopIn index={1}>
       <Card style={styles.dailyCard}>
         <View style={styles.dailyHeader}>
-          <Ionicons name="sunny-outline" size={22} color={colors.accentPrimary} />
-          <Text style={[styles.dailyLabel, { color: colors.accentPrimary }]}>Daily Reflection</Text>
+          <Ionicons name="sunny-outline" size={22} color={colors.primary.default} />
+          <Text style={[styles.dailyLabel, { color: colors.primary.default }]}>Daily Reflection</Text>
         </View>
-        <Text style={[styles.dailyText, { color: colors.textPrimary }]}>"{dailyAffirmation ?? ''}"</Text>
+        <Text style={[styles.dailyText, { color: colors.text.primary }]}>"{dailyAffirmation ?? ''}"</Text>
         <TactilePressable
           onPress={() => {
             try {
@@ -269,8 +267,8 @@ export function AffirmationsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Show a new affirmation"
         >
-          <Ionicons name="refresh-outline" size={16} color={colors.accentPrimary} />
-          <Text style={[styles.refreshText, { color: colors.accentPrimary }]}>New affirmation</Text>
+          <Ionicons name="refresh-outline" size={16} color={colors.primary.default} />
+          <Text style={[styles.refreshText, { color: colors.primary.default }]}>New affirmation</Text>
         </TactilePressable>
       </Card>
       </PopIn>
@@ -289,14 +287,14 @@ export function AffirmationsScreen() {
               accessibilityState={{ selected: isSelected }}
               style={[
                 styles.categoryChip,
-                { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-                isSelected && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
+                { backgroundColor: colors.surface.default, borderColor: colors.border.default },
+                isSelected && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
               ]}
             >
               <Text
                 style={[
                   styles.categoryChipText,
-                  { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                  { color: isSelected ? '#FFFFFF' : colors.text.primary },
                   isSelected && { fontWeight: '700' },
                 ]}
               >
@@ -313,15 +311,15 @@ export function AffirmationsScreen() {
         <ListSkeleton rows={4} showHeader={false} />
       ) : (affirmations ?? []).length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="sparkles-outline" size={48} color={colors.textTertiary} />
-          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No affirmations yet</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Add your own personal truths or browse categories above</Text>
+          <Ionicons name="sparkles-outline" size={48} color={colors.text.tertiary} />
+          <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>No affirmations yet</Text>
+          <Text style={[styles.emptyText, { color: colors.text.secondary }]}>Add your own personal truths or browse categories above</Text>
           <PrimaryButton onPress={handleAddCustom} title="Add Affirmation" style={styles.emptyButton} />
         </View>
       ) : (
         <View style={{ gap: 12 }}>
           {(affirmations ?? []).map((item, idx) => (
-            <StaggeredEntry key={item?.id ?? String(idx)} index={Math.min(idx, 7)} delayStep={26}>
+            <StaggeredEntry key={item?.id ?? String(idx)} index={Math.min(idx, 7)}>
               {renderItem({ item, idx })}
             </StaggeredEntry>
           ))}
@@ -336,21 +334,19 @@ export function AffirmationsScreen() {
         hapticStyle="light"
         accessibilityRole="button"
         accessibilityLabel="Add custom affirmation"
-        style={[styles.addButton, { borderColor: colors.accentPrimary, backgroundColor: colors.bgCard }]}
+        style={[styles.addButton, { borderColor: colors.primary.default, backgroundColor: colors.surface.default }]}
       >
-        <Ionicons name="add" size={20} color={colors.accentPrimary} />
-        <Text style={[styles.addButtonText, { color: colors.accentPrimary }]}>Add Custom Affirmation</Text>
+        <Ionicons name="add" size={20} color={colors.primary.default} />
+        <Text style={[styles.addButtonText, { color: colors.primary.default }]}>Add Custom Affirmation</Text>
       </TactilePressable>
       </PopIn>
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 18 },
-  header: { marginBottom: 2 },
-  title: { fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, marginTop: 4 },
   dailyCard: {
     padding: 18,
     borderRadius: 20,

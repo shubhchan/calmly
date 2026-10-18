@@ -8,8 +8,9 @@ import { positiveMomentRepository } from '../../database/repositories/positiveMo
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { ScreenHeader } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'GratitudeForm'>['navigation'];
@@ -20,7 +21,7 @@ type EntryType = 'gratitude' | 'positive';
 export function GratitudeFormScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
   const { type = 'gratitude', id } = (route.params ?? {}) as { type: EntryType; id?: string };
   const isEditing = !!id;
 
@@ -163,18 +164,8 @@ export function GratitudeFormScreen() {
     : 'What went well today? A kind word, personal milestone, or peaceful moment?...';
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{title}</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title={title} />
 
       <ScrollView
         style={styles.scrollView}
@@ -185,13 +176,13 @@ export function GratitudeFormScreen() {
       >
         <PopIn index={0}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Your Reflection</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Your Reflection</Text>
           <TextInput
-            style={[styles.textArea, { color: colors.textPrimary }]}
+            style={[styles.textArea, { color: colors.text.primary }]}
             placeholder={placeholder}
             value={text}
             onChangeText={setText}
-            placeholderTextColor={colors.textTertiary}
+            placeholderTextColor={colors.text.tertiary}
             multiline
             numberOfLines={5}
             maxLength={1000}
@@ -202,7 +193,7 @@ export function GratitudeFormScreen() {
 
         <PopIn index={1}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Associated Emotion</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Associated Emotion</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moodScroll}>
             {(MOODS ?? []).map((m) => {
               const isSelected = mood === m;
@@ -212,14 +203,14 @@ export function GratitudeFormScreen() {
                   onPress={() => setMood(isSelected ? '' : m)}
                   style={[
                     styles.moodChip,
-                    { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-                    isSelected && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
+                    { backgroundColor: colors.surface.default, borderColor: colors.border.default },
+                    isSelected && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
                   ]}
                 >
                   <Text
                     style={[
                       styles.moodChipText,
-                      { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                      { color: isSelected ? '#FFFFFF' : colors.text.primary },
                       isSelected && { fontWeight: '700' },
                     ]}
                   >
@@ -234,13 +225,13 @@ export function GratitudeFormScreen() {
 
         <PopIn index={2}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Tags (Optional)</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Tags (Optional)</Text>
           <TextInput
-            style={[styles.input, { color: colors.textPrimary, borderBottomColor: colors.borderLight }]}
+            style={[styles.input, { color: colors.text.primary, borderBottomColor: colors.border.default }]}
             placeholder="e.g. morning, nature, friends (comma separated)"
             value={(tags ?? []).join(', ')}
             onChangeText={(t) => setTags((t ?? '').split(',').map((s) => s.trim()).filter(Boolean))}
-            placeholderTextColor={colors.textTertiary}
+            placeholderTextColor={colors.text.tertiary}
           />
         </Card>
         </PopIn>
@@ -252,12 +243,12 @@ export function GratitudeFormScreen() {
               <Ionicons
                 name={favorite ? 'heart' : 'heart-outline'}
                 size={24}
-                color={favorite ? (colors.accentPeach || '#EB876D') : colors.textTertiary}
+                color={favorite ? (colors.accents.peach) : colors.text.tertiary}
                 style={{ marginTop: 2 }}
               />
               <View style={styles.favoriteToggleInfo}>
-                <Text style={[styles.favoriteToggleLabel, { color: colors.textPrimary }]}>Star as Favorite</Text>
-                <Text style={[styles.favoriteToggleDesc, { color: colors.textTertiary }]}>
+                <Text style={[styles.favoriteToggleLabel, { color: colors.text.primary }]}>Star as Favorite</Text>
+                <Text style={[styles.favoriteToggleDesc, { color: colors.text.tertiary }]}>
                   {type === 'gratitude'
                     ? 'Featured in your mindful gratitude collection'
                     : 'May resurface in gentle "Remember this?" reminders'}
@@ -267,8 +258,8 @@ export function GratitudeFormScreen() {
             <View
               style={[
                 styles.favoriteToggleSwitch,
-                { backgroundColor: colors.borderLight, marginTop: 2 },
-                favorite && { backgroundColor: colors.accentPrimary },
+                { backgroundColor: colors.border.default, marginTop: 2 },
+                favorite && { backgroundColor: colors.primary.default },
               ]}
             >
               <View style={[styles.favoriteToggleThumb, favorite && styles.favoriteToggleThumbOn]} />
@@ -290,9 +281,9 @@ export function GratitudeFormScreen() {
           {isEditing && (
             <TouchableOpacity
               onPress={handleDelete}
-              style={[styles.deleteButton, { borderColor: colors.accentRose || '#EB697F' }]}
+              style={[styles.deleteButton, { borderColor: colors.accents.rose }]}
             >
-              <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete</Text>
+              <Text style={[styles.deleteButtonText, { color: colors.accents.rose }]}>Delete</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -303,23 +294,6 @@ export function GratitudeFormScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110, gap: 16 },
   section: { gap: 10, padding: 16, borderRadius: 20 },

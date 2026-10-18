@@ -5,10 +5,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository } from '../../database/repositories/insightsRepository';
 import { MoodEntry } from '../../database/models';
-import { Card, CardContent, AppIcon, moodIcon } from '../../components';
+import { Card, CardContent, AppIcon, moodIcon, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -45,9 +45,9 @@ interface DayMoodData {
 
 export function MoodCalendarScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
-  const sageTint = resolveTint(!!colors.isDark, 'sage');
-  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
+  const { colors, isDark } = useAppTheme();
+  const sageTint = resolveTint(!!isDark, 'sage');
+  const lilacTint = resolveTint(!!isDark, 'lilac');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [moodData, setMoodData] = useState<Record<number, DayMoodData>>({});
@@ -133,12 +133,10 @@ export function MoodCalendarScreen() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const handlePrevMonth = () => {
-    hapticFeedback.light();
     setCurrentDate(new Date(year, month - 1, 1));
   };
 
   const handleNextMonth = () => {
-    hapticFeedback.light();
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
@@ -165,7 +163,7 @@ export function MoodCalendarScreen() {
 
     const dayData = hasData ? (moodData ?? {})[day] ?? null : null;
     const moodKey = (dayData as any)?.mood ?? '';
-    const moodColor = hasData ? MOOD_COLORS[moodKey] || colors.accentPrimary : colors.accentPrimary;
+    const moodColor = hasData ? MOOD_COLORS[moodKey] || colors.primary.default : colors.primary.default;
     const moodIconName = hasData ? moodIcon(moodKey) : moodIcon(null);
 
     return (
@@ -207,7 +205,7 @@ export function MoodCalendarScreen() {
     return (
       <ScreenContainer
         scroll={false}
-        backgroundColor={colors.bgPrimary}
+        backgroundColor={colors.background.default}
         style={{ paddingHorizontal: 20, paddingTop: 16 }}
       >
         <GridSkeleton cells={12} columns={3} />
@@ -216,61 +214,39 @@ export function MoodCalendarScreen() {
   }
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => {
-            hapticFeedback.light();
-            navigation.goBack();
-          }}
-          hitSlop={12}
-          style={({ pressed }) => [
-            styles.navButton,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              opacity: pressed ? 0.75 : 1,
-              transform: [{ scale: pressed ? 0.94 : 1 }],
-            },
-          ]}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.monthNav}>
-          <Pressable
-            onPress={handlePrevMonth}
-            hitSlop={10}
-            style={({ pressed }) => [
-              styles.arrowButton,
-              { opacity: pressed ? 0.6 : 1, transform: [{ scale: pressed ? 0.92 : 1 }] },
-            ]}
-          >
-            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-          </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            {monthName} {year}
-          </Text>
-          <Pressable
-            onPress={handleNextMonth}
-            hitSlop={10}
-            style={({ pressed }) => [
-              styles.arrowButton,
-              { opacity: pressed ? 0.6 : 1, transform: [{ scale: pressed ? 0.92 : 1 }] },
-            ]}
-          >
-            <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
-          </Pressable>
-        </View>
-        {/* Right balancing spacer so monthNav is centered on screen */}
-        <View style={{ width: 40 }} />
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader
+        center={
+          <View style={styles.monthNav}>
+            <TactilePressable
+              onPress={handlePrevMonth}
+              scaleDownTo={0.92}
+              hitSlop={10}
+              style={styles.arrowButton}
+            >
+              <Ionicons name="chevron-back" size={22} color={colors.text.primary} />
+            </TactilePressable>
+            <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
+              {monthName} {year}
+            </Text>
+            <TactilePressable
+              onPress={handleNextMonth}
+              scaleDownTo={0.92}
+              hitSlop={10}
+              style={styles.arrowButton}
+            >
+              <Ionicons name="chevron-forward" size={22} color={colors.text.primary} />
+            </TactilePressable>
+          </View>
+        }
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <PopIn index={0}>
         <Card variant="elevated" tone="sage" style={styles.calendarCard}>
           <View style={styles.weekdays}>
-            {(weekDays ?? []).map((day) => (
-              <Text key={day ?? Math.random().toString()} style={[styles.weekday, { color: sageTint.muted }]}>
+            {(weekDays ?? []).map((day, index) => (
+              <Text key={day ?? 'ph-' + index} style={[styles.weekday, { color: sageTint.muted }]}>
                 {day ?? ''}
               </Text>
             ))}
@@ -300,7 +276,7 @@ export function MoodCalendarScreen() {
                     styles.moodCircle,
                     {
                       backgroundColor:
-                        ((MOOD_COLORS[(selectedDayData as any)?.mood] || colors.accentPrimary) + '22'),
+                        ((MOOD_COLORS[(selectedDayData as any)?.mood] || colors.primary.default) + '22'),
                     },
                   ]}
                 >
@@ -341,9 +317,9 @@ export function MoodCalendarScreen() {
           <PopIn index={1}>
           <Card variant="outlined" style={styles.emptyCard}>
             <CardContent style={styles.emptyCardContent}>
-              <Ionicons name="calendar-outline" size={36} color={colors.textTertiary} />
-              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Tap an entry date</Text>
-              <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
+              <Ionicons name="calendar-outline" size={36} color={colors.text.tertiary} />
+              <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>Tap an entry date</Text>
+              <Text style={[styles.emptyText, { color: colors.text.tertiary }]}>
                 Days with logged moods have colored badges. Tap any highlighted date to inspect your state.
               </Text>
             </CardContent>
@@ -356,21 +332,6 @@ export function MoodCalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  navButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   monthNav: {
     flex: 1,
     flexDirection: 'row',

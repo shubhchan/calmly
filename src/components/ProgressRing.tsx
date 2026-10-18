@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { useThemeColors } from '../theme/ThemeContext';
+import { useAppTheme } from '../theme/ThemeContext';
 
 interface ProgressRingProps {
   progress: number;
@@ -31,9 +31,9 @@ export const ProgressRing = ({
   // SVG stroke props aren't touched by NativeWind's className compiler, so they
   // need literal resolved colors, not 'var(--x)' strings — pull them from the
   // live theme instead of hardcoding a CSS-variable default.
-  const colors = useThemeColors();
-  const resolvedTrackColor = trackColor ?? colors.borderLight;
-  const resolvedProgressColor = progressColor ?? colors.accentPrimary;
+  const { colors } = useAppTheme();
+  const resolvedTrackColor = trackColor ?? colors.border.default;
+  const resolvedProgressColor = progressColor ?? colors.primary.default;
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -97,9 +97,9 @@ export const MiniProgressRing = ({
   className = '',
   style,
 }: MiniProgressRingProps) => {
-  const colors = useThemeColors();
-  const resolvedTrackColor = trackColor ?? colors.borderLight;
-  const resolvedProgressColor = progressColor ?? colors.accentPrimary;
+  const { colors } = useAppTheme();
+  const resolvedTrackColor = trackColor ?? colors.border.default;
+  const resolvedProgressColor = progressColor ?? colors.primary.default;
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;

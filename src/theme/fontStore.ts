@@ -21,7 +21,7 @@ export interface FontFaces {
 }
 
 export interface ActiveFont {
-  /** Stable id: 'oddly-calming', 'plus-jakarta-sans', or 'google:Lora'. */
+  /** Stable id: 'plus-jakarta-sans', 'doto', or 'google:Lora'. */
   key: string;
   label: string;
   category: FontCategory;
@@ -29,18 +29,18 @@ export interface ActiveFont {
   faces: FontFaces;
 }
 
-/** The always-available handwritten font shipped inside the app bundle. */
+/** The always-available default font shipped inside the app bundle. */
 export const DEFAULT_FACES: FontFaces = {
-  regular: 'OddlyCalming',
-  medium: 'OddlyCalming',
-  bold: 'OddlyCalming',
-  italic: 'OddlyCalming',
+  regular: 'PlusJakartaSans_400Regular',
+  medium: 'PlusJakartaSans_500Medium',
+  bold: 'PlusJakartaSans_700Bold',
+  italic: 'PlusJakartaSans_400Regular_Italic',
 };
 
 export const DEFAULT_FONT: ActiveFont = {
-  key: 'oddly-calming',
-  label: 'Oddly Calming',
-  category: 'handwritten',
+  key: 'plus-jakarta-sans',
+  label: 'Plus Jakarta Sans',
+  category: 'sans',
   source: 'bundled',
   faces: DEFAULT_FACES,
 };
@@ -84,8 +84,6 @@ export function getActiveFont(): ActiveFont {
 /**
  * Face keys that the patcher must NOT override. Used so the font picker can
  * preview each family in its own typeface even while another font is active.
- * 'OddlyCalming' itself is intentionally NOT exempt: it is the legacy default
- * baked into old styles and must follow the active font.
  */
 const exemptFaceKeys = new Set<string>();
 

@@ -5,14 +5,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { appLockService } from '../../services/appLock';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'AppLock'>['navigation'];
 
 export function AppLockScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -94,14 +94,14 @@ export function AppLockScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={styles.container}>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default} style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.accentPrimary + '18' }]}>
-            <Ionicons name="lock-closed" size={36} color={colors.accentPrimary} />
+          <View style={[styles.iconWrap, { backgroundColor: colors.primary.default + '18' }]}>
+            <Ionicons name="lock-closed" size={36} color={colors.primary.default} />
           </View>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Calmly is Locked</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Enter your 6-digit security PIN</Text>
+          <Text style={[styles.title, { color: colors.text.primary }]}>Calmly is Locked</Text>
+          <Text style={[styles.subtitle, { color: colors.text.secondary }]}>Enter your 6-digit security PIN</Text>
         </View>
 
         <View style={styles.pinDots}>
@@ -110,22 +110,22 @@ export function AppLockScreen() {
               key={i}
               style={[
                 styles.pinDot,
-                { borderColor: colors.borderLight, backgroundColor: 'transparent' },
-                i < (pin ?? '').length && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
-                error && { borderColor: colors.accentRose || '#EB697F', backgroundColor: colors.accentRose || '#EB697F' },
+                { borderColor: colors.border.default, backgroundColor: 'transparent' },
+                i < (pin ?? '').length && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
+                error && { borderColor: colors.accents.rose, backgroundColor: colors.accents.rose },
               ]}
             />
           ))}
         </View>
 
         {error ? (
-          <Text style={[styles.errorText, { color: colors.accentRose || '#EB697F' }]}>Incorrect PIN. Please try again.</Text>
+          <Text style={[styles.errorText, { color: colors.accents.rose }]}>Incorrect PIN. Please try again.</Text>
         ) : null}
 
         {biometricAvailable && settings?.biometricEnabled ? (
           <TouchableOpacity onPress={handleBiometric} style={styles.biometricButton} activeOpacity={0.8}>
-            <Ionicons name="finger-print" size={24} color={colors.accentPrimary} />
-            <Text style={[styles.biometricText, { color: colors.accentPrimary }]}>Unlock with Biometrics</Text>
+            <Ionicons name="finger-print" size={24} color={colors.primary.default} />
+            <Text style={[styles.biometricText, { color: colors.primary.default }]}>Unlock with Biometrics</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -143,7 +143,7 @@ export function AppLockScreen() {
                   onPress={() => (key === '⌫' ? handleDelete() : key && handlePinPress(key))}
                   style={[
                     styles.keypadButton,
-                    { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                    { backgroundColor: colors.surface.default, borderColor: colors.border.default },
                     key === '' && styles.keypadButtonEmpty,
                     key === '⌫' && styles.keypadButtonDelete,
                   ]}
@@ -151,12 +151,12 @@ export function AppLockScreen() {
                   accessibilityLabel={key === '⌫' ? 'Delete' : key}
                 >
                   {key === '⌫' ? (
-                    <Ionicons name="backspace-outline" size={26} color={colors.textPrimary} />
+                    <Ionicons name="backspace-outline" size={26} color={colors.text.primary} />
                   ) : (
                     <Text
                       style={[
                         styles.keypadButtonText,
-                        { color: colors.textPrimary },
+                        { color: colors.text.primary },
                         key === '' && styles.keypadButtonTextEmpty,
                       ]}
                     >

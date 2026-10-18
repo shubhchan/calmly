@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Platform } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
-import { Card, PrimaryButton, ProgressRing, AppIcon, TactilePressable } from '../../components';
+import { Card, PrimaryButton, ProgressRing, AppIcon, ScreenHeader } from '../../components';
 import type { AppIconName } from '../../components';
 import { RootStackParamList, GroundingType } from '../../types/navigation';
-import { useThemeColors } from '../../theme/ThemeContext';
-import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { calmRepository } from '../../database/repositories/calmRepository';
 import { hapticFeedback } from '../../utils/haptics';
 import Animated, { FadeIn, FadeInRight, useReducedMotion } from 'react-native-reanimated';
@@ -61,24 +60,7 @@ export function GroundingExerciseScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 
-  let themeColors: ReturnType<typeof useThemeColors> | undefined;
-  try {
-    themeColors = useThemeColors();
-  } catch {
-    themeColors = undefined;
-  }
-  const colors = themeColors ?? {
-    bgPrimary: '#FBF9F5',
-    bgCard: '#FFFFFF',
-    borderLight: '#E6E0D4',
-    textPrimary: '#1A212D',
-    textSecondary: '#384455',
-    textTertiary: '#607085',
-    accentPrimary: '#3E7B52',
-    accentBg: '#EDF5EF',
-    accentBorder: '#C2DCBF',
-    isDark: false,
-  } as any;
+  const { colors, isDark } = useAppTheme();
 
   const reducedMotion = useReducedMotion();
   const safeCurrentStep = Math.max(0, Math.min(currentStep, Math.max(0, safeSteps.length - 1)));
@@ -109,36 +91,11 @@ export function GroundingExerciseScreen() {
     }
   };
 
-  const isDark = !!colors.isDark;
   const androidBarFallback = isDark ? 'rgba(24, 33, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)';
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      {/* Top Bar */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <TactilePressable
-          onPress={() => navigation.goBack()}
-          scaleDownTo={0.9}
-          hapticStyle="light"
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 21,
-            backgroundColor: colors.bgCard,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TactilePressable>
-        <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary }}>
-          {safeTitle}
-        </Text>
-        <View style={{ width: 42 }} />
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title={safeTitle} />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -152,7 +109,7 @@ export function GroundingExerciseScreen() {
             strokeWidth={5}
             showPercentage={false}
           >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accentPrimary }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.primary.default }}>
               {safeCurrentStep + 1}/{safeSteps.length}
             </Text>
           </ProgressRing>
@@ -167,7 +124,7 @@ export function GroundingExerciseScreen() {
                 width: index === currentStep ? 24 : 8,
                 height: 8,
                 borderRadius: 4,
-                backgroundColor: index <= currentStep ? colors.accentPrimary : colors.borderLight,
+                backgroundColor: index <= currentStep ? colors.primary.default : colors.border.default,
               }}
             />
           ))}
@@ -187,26 +144,26 @@ export function GroundingExerciseScreen() {
                     width: 52,
                     height: 52,
                     borderRadius: 26,
-                    backgroundColor: colors.accentBg,
+                    backgroundColor: colors.primary.subtle,
                     borderWidth: 1,
-                    borderColor: colors.accentBorder,
+                    borderColor: colors.primary.subtleBorder,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <AppIcon name={current?.icon ?? 'i-leaf'} size={26} color={colors.accentPrimary} />
+                  <AppIcon name={current?.icon ?? 'i-leaf'} size={26} color={colors.primary.default} />
                 </View>
                 <View style={{ marginLeft: 14, flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accentPrimary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary.default, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     Step {safeCurrentStep + 1}
                   </Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginTop: 2 }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, marginTop: 2 }}>
                     {current?.label ?? 'Grounding'}
                   </Text>
                 </View>
               </View>
 
-              <Text style={{ fontSize: 16, lineHeight: 26, color: colors.textSecondary }}>
+              <Text style={{ fontSize: 16, lineHeight: 26, color: colors.text.secondary }}>
                 {current?.instruction ?? ''}
               </Text>
             </View>
@@ -225,7 +182,7 @@ export function GroundingExerciseScreen() {
           paddingTop: 12,
           paddingBottom: 28,
           borderTopWidth: 1,
-          borderTopColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.borderLight,
+          borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : colors.border.default,
           overflow: 'hidden',
           flexDirection: 'row',
           gap: 12,

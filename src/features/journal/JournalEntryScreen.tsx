@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Alert } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, AppIcon, JournalReflectionIllustration } from '../../components';
+import { Card, CardContent, PrimaryButton, AppIcon, JournalReflectionIllustration, ScreenHeader, TactilePressable } from '../../components';
 import type { AppIconName } from '../../components';
 import { RootStackParamList, JournalType } from '../../types/navigation';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -50,24 +50,7 @@ export function JournalEntryScreen() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  let themeColors: ReturnType<typeof useThemeColors> | undefined;
-  try {
-    themeColors = useThemeColors();
-  } catch {
-    themeColors = undefined;
-  }
-  const colors = themeColors ?? {
-    bgPrimary: '#FBF9F5',
-    bgCard: '#FFFFFF',
-    borderLight: '#E6E0D4',
-    textPrimary: '#1A212D',
-    textSecondary: '#384455',
-    textTertiary: '#607085',
-    accentPrimary: '#3E7B52',
-    accentBg: '#EDF5EF',
-    accentBorder: '#C2DCBF',
-    isDark: false,
-  } as any;
+  const { colors } = useAppTheme();
 
   // Load entry if editing
   useEffect(() => {
@@ -156,38 +139,30 @@ export function JournalEntryScreen() {
   };
 
   return (
-    <ScreenContainer contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 }}>
-      {/* Top Bar */}
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <PopIn index={0}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-        <Pressable
-          onPress={() => navigation?.goBack?.()}
-          style={({ pressed }) => [
-            {
-              flexDirection: 'row',
-              alignItems: 'center',
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} style={{ marginRight: 8 }} />
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
-            {isEditing ? 'Edit Reflection' : 'New Reflection'}
-          </Text>
-        </Pressable>
-
-        {isEditing && (
-          <Pressable
-            onPress={handleDelete}
-            hitSlop={8}
-            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, padding: 4 }]}
-          >
-            <Ionicons name="trash-outline" size={22} color="#EB697F" />
-          </Pressable>
-        )}
-      </View>
+      <ScreenHeader
+        title={isEditing ? 'Edit Reflection' : 'New Reflection'}
+        right={
+          isEditing ? (
+            <TactilePressable
+              onPress={handleDelete}
+              hitSlop={8}
+              style={{ padding: 4 }}
+            >
+              <Ionicons name="trash-outline" size={22} color="#EB697F" />
+            </TactilePressable>
+          ) : undefined
+        }
+      />
       </PopIn>
 
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       {/* Visual Zen Header Card */}
       <PopIn index={1}>
       <View
@@ -215,20 +190,20 @@ export function JournalEntryScreen() {
                   width: 40,
                   height: 40,
                   borderRadius: 20,
-                  backgroundColor: colors.accentBg,
+                  backgroundColor: colors.primary.subtle,
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderWidth: 1,
-                  borderColor: colors.accentBorder,
+                  borderColor: colors.primary.subtleBorder,
                 }}
               >
-                <AppIcon name={typeIcon} size={20} color={colors.accentPrimary} />
+                <AppIcon name={typeIcon} size={20} color={colors.primary.default} />
               </View>
               <View style={{ marginLeft: 12 }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>
                   {typeLabel}
                 </Text>
-                <Text style={{ fontSize: 12, color: colors.textTertiary }}>
+                <Text style={{ fontSize: 12, color: colors.text.tertiary }}>
                   {isEditing ? 'Tap below to modify' : 'Safe & private offline notes'}
                 </Text>
               </View>
@@ -237,15 +212,15 @@ export function JournalEntryScreen() {
             {/* Title input */}
             <TextInput
               placeholder="Title (optional)"
-              placeholderTextColor={colors.textTertiary}
+              placeholderTextColor={colors.text.tertiary}
               value={title}
               onChangeText={setTitle}
               style={{
                 fontSize: 18,
                 fontWeight: '700',
-                color: colors.textPrimary,
+                color: colors.text.primary,
                 borderBottomWidth: 1,
-                borderBottomColor: colors.borderLight,
+                borderBottomColor: colors.border.default,
                 paddingBottom: 10,
                 marginBottom: 14,
               }}
@@ -256,13 +231,13 @@ export function JournalEntryScreen() {
               multiline
               numberOfLines={10}
               placeholder="What thoughts or feelings are present for you right now?"
-              placeholderTextColor={colors.textTertiary}
+              placeholderTextColor={colors.text.tertiary}
               value={content}
               onChangeText={setContent}
               style={{
                 fontSize: 16,
                 lineHeight: 24,
-                color: colors.textPrimary,
+                color: colors.text.primary,
                 minHeight: 180,
                 textAlignVertical: 'top',
                 paddingTop: 4,
@@ -275,7 +250,7 @@ export function JournalEntryScreen() {
                 marginTop: 16,
                 paddingTop: 14,
                 borderTopWidth: 1,
-                borderTopColor: colors.borderLight,
+                borderTopColor: colors.border.default,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'flex-end',
@@ -290,7 +265,7 @@ export function JournalEntryScreen() {
                     paddingHorizontal: 12,
                     paddingVertical: 7,
                     borderRadius: 9999,
-                    backgroundColor: isFavorite ? '#FDF1F4' : colors.accentBg,
+                    backgroundColor: isFavorite ? '#FDF1F4' : colors.primary.subtle,
                     opacity: pressed ? 0.7 : 1,
                   },
                 ]}
@@ -298,14 +273,14 @@ export function JournalEntryScreen() {
                 <Ionicons
                   name={isFavorite ? 'heart' : 'heart-outline'}
                   size={16}
-                  color={isFavorite ? '#DB3A60' : colors.textTertiary}
+                  color={isFavorite ? '#DB3A60' : colors.text.tertiary}
                   style={{ marginRight: 4 }}
                 />
                 <Text
                   style={{
                     fontSize: 12,
                     fontWeight: '600',
-                    color: isFavorite ? '#DB3A60' : colors.textTertiary,
+                    color: isFavorite ? '#DB3A60' : colors.text.tertiary,
                   }}
                 >
                   {isFavorite ? 'Favorited' : 'Favorite'}
@@ -340,6 +315,7 @@ export function JournalEntryScreen() {
         />
       </View>
       </PopIn>
+      </ScrollView>
     </ScreenContainer>
   );
 }

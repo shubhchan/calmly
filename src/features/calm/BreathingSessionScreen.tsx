@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, View, Text } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
-import { PrimaryButton, TactilePressable } from '../../components';
+import { PrimaryButton, ScreenHeader } from '../../components';
 import { RootStackParamList, BreathingPreset } from '../../types/navigation';
 import Svg, { Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +18,7 @@ import Animated, {
   Easing,
   useReducedMotion,
 } from 'react-native-reanimated';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { calmRepository } from '../../database/repositories/calmRepository';
 import { hapticFeedback } from '../../utils/haptics';
@@ -86,27 +86,7 @@ export function BreathingSessionScreen() {
 
   const reducedMotion = useReducedMotion();
 
-  let themeColors: ReturnType<typeof useThemeColors> | undefined;
-  try {
-    themeColors = useThemeColors();
-  } catch {
-    themeColors = undefined;
-  }
-  const colors = themeColors ?? {
-    bgPrimary: '#FBF9F5',
-    bgCard: '#FFFFFF',
-    borderLight: '#E6E0D4',
-    textPrimary: '#1A212D',
-    textSecondary: '#384455',
-    textTertiary: '#607085',
-    accentPrimary: '#3E7B52',
-    accentBg: '#EDF5EF',
-    accentBorder: '#C2DCBF',
-    accentLavender: '#6C5CE7',
-    info: '#2563EB',
-    warning: '#D96547',
-    isDark: false,
-  } as any;
+  const { colors, isDark } = useAppTheme();
 
   // Phase table: zero-second stages are dropped so 4-6 breathing flows straight
   // from inhale to exhale with no dead frames.
@@ -143,13 +123,13 @@ export function BreathingSessionScreen() {
 
   const phaseColors = useMemo(() => {
     const byKey: Record<PhaseKey, string> = {
-      inhale: colors.accentPrimary,
-      hold: colors.info ?? '#2563EB',
-      exhale: colors.accentLavender ?? '#6C5CE7',
-      holdExhale: colors.warning ?? '#D96547',
+      inhale: colors.primary.default,
+      hold: colors.status.info.default,
+      exhale: colors.accents.lavender,
+      holdExhale: colors.status.warning.default,
     };
     return phaseKeys.map((k) => byKey[k]);
-  }, [phaseKeys, colors.accentPrimary, colors.info, colors.accentLavender, colors.warning]);
+  }, [phaseKeys, colors.primary.default, colors.status.info.default, colors.accents.lavender, colors.status.warning.default]);
 
   // --- UI-thread session state -------------------------------------------------
   // The entire breathing clock lives on the UI thread: no JS interval, no
@@ -380,54 +360,11 @@ export function BreathingSessionScreen() {
   const safeTotalCycles = totalCycles > 0 ? totalCycles : 1;
   const currentPhaseKey = phaseKeys[phaseIdx] ?? 'inhale';
   const currentLabel = isComplete ? 'Session complete' : PHASE_LABELS[currentPhaseKey] ?? 'Breathe in';
-  const currentColor = isComplete ? colors.accentPrimary : phaseColors[phaseIdx] ?? colors.accentPrimary;
+  const currentColor = isComplete ? colors.primary.default : phaseColors[phaseIdx] ?? colors.primary.default;
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      {/* Top Header */}
-      <View
-        style={{
-          paddingHorizontal: 20,
-          paddingTop: 20,
-          paddingBottom: 10,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <TactilePressable
-          onPress={() => navigation?.goBack?.()}
-          scaleDownTo={0.9}
-          hapticStyle="light"
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 21,
-            backgroundColor: colors.bgCard,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TactilePressable>
-
-        <Text
-          style={{
-            fontFamily: fontFamilies.sans.bold,
-            fontSize: 17,
-            fontWeight: '700',
-            color: colors.textPrimary,
-          }}
-        >
-          {presetLabels[safePreset] ?? 'Breathing'}
-        </Text>
-
-        <View style={{ width: 42 }} />
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title={presetLabels[safePreset] ?? 'Breathing'} />
 
       {/* Somatic Multi-Layer Breathing Orb */}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
@@ -494,7 +431,7 @@ export function BreathingSessionScreen() {
             ]}
           >
             <LinearGradient
-              colors={[currentColor + (colors.isDark ? '38' : '22'), currentColor + (colors.isDark ? '14' : '08')]}
+              colors={[currentColor + (isDark ? '38' : '22'), currentColor + (isDark ? '14' : '08')]}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
@@ -509,7 +446,7 @@ export function BreathingSessionScreen() {
               cy={135}
               r={ARC_RADIUS}
               fill="none"
-              stroke={colors.borderLight}
+              stroke={colors.border.default}
               strokeWidth={5}
               opacity={0.6}
             />
@@ -549,7 +486,7 @@ export function BreathingSessionScreen() {
               fontSize: 48,
               fontWeight: '800',
               marginTop: 6,
-              color: colors.textPrimary,
+              color: colors.text.primary,
               letterSpacing: -1.5,
               fontVariant: ['tabular-nums'],
             }}
@@ -561,7 +498,7 @@ export function BreathingSessionScreen() {
               style={{
                 fontFamily: fontFamilies.sans.medium,
                 fontSize: 14,
-                color: colors.textTertiary,
+                color: colors.text.tertiary,
                 marginTop: 6,
               }}
             >
@@ -594,7 +531,7 @@ export function BreathingSessionScreen() {
           )}
         </View>
 
-        <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: 'center' }}>
+        <Text style={{ fontSize: 13, color: colors.text.tertiary, textAlign: 'center' }}>
           {safeDuration} min session · Mindful presence
         </Text>
       </View>

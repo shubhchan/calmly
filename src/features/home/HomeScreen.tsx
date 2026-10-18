@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration, TactilePressable, StaggeredEntry, CelebratoryCheckbox } from '../../components';
+import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, AppText, PageHeader, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration, TactilePressable, StaggeredEntry, CelebratoryCheckbox } from '../../components';
 import type { AppIconName } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
@@ -9,10 +9,9 @@ import { moodRepository } from '../../database/repositories/moodRepository';
 import Habit from '../../database/models/Habit';
 import { getIconName } from '../../utils/iconMap';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { bootLog } from '../../components/ErrorBoundary';
 import { format } from 'date-fns';
-import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
@@ -21,26 +20,7 @@ import { resolveTint } from '../../theme/tints';
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
-  let themeColors: ReturnType<typeof useThemeColors> | undefined;
-  try {
-    themeColors = useThemeColors();
-  } catch {
-    themeColors = undefined;
-  }
-  const colors = themeColors ?? {
-    bgPrimary: '#FBF9F5',
-    bgCard: '#FFFFFF',
-    borderLight: '#E6E0D4',
-    textPrimary: '#1A212D',
-    textSecondary: '#384455',
-    textTertiary: '#607085',
-    accentPrimary: '#3E7B52',
-    accentBg: '#EDF5EF',
-    accentBorder: '#C2DCBF',
-    success: '#3E7B52',
-    info: '#2563EB',
-    isDark: false,
-  } as any;
+  const { colors, isDark } = useAppTheme();
 
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
@@ -147,56 +127,37 @@ export function HomeScreen() {
 
   const dateLabel = format(new Date(), 'EEEE, MMMM d');
 
-  const heroTint = resolveTint(!!colors.isDark, 'cream');
-  const calmTint = resolveTint(!!colors.isDark, 'coral');
-  const journalTint = resolveTint(!!colors.isDark, 'sky');
+  const heroTint = resolveTint(!!isDark, 'cream');
+  const calmTint = resolveTint(!!isDark, 'coral');
+  const journalTint = resolveTint(!!isDark, 'sky');
 
   return (
     <ScreenContainer
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}
-      backgroundColor={colors.bgPrimary}
+      backgroundColor={colors.background.default}
     >
       {/* Header Greeting */}
       <PopIn index={0} style={{ marginBottom: 22, marginTop: 4 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View>
-            <Text
+        <PageHeader
+          title={greeting}
+          subtitle={dateLabel}
+          right={
+            <View
               style={{
-                fontSize: 34,
-                fontFamily: fontFamilies.calming.regular,
-                color: colors.textPrimary,
-                letterSpacing: 0.3,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: colors.primary.subtle,
+                borderWidth: 1,
+                borderColor: colors.primary.subtleBorder,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              {greeting}
-            </Text>
-            <Text
-              style={{
-                fontSize: 14,
-                fontFamily: fontFamilies.sans.medium,
-                fontWeight: '500',
-                color: colors.textTertiary,
-                marginTop: 2,
-              }}
-            >
-              {dateLabel}
-            </Text>
-          </View>
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: colors.accentBg,
-              borderWidth: 1,
-              borderColor: colors.accentBorder,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AppIcon name="l-calm" size={26} loop />
-          </View>
-        </View>
+              <AppIcon name="l-calm" size={26} />
+            </View>
+          }
+        />
       </PopIn>
 
       {/* Hero Mindful Sanctuary Card — playful cream pop */}
@@ -218,30 +179,24 @@ export function HomeScreen() {
                 Daily Mindset
               </Text>
             </View>
-            <Pressable
-              onPress={() => {
-                hapticFeedback.light();
-                handleMoodCheckIn();
+            <TactilePressable
+              onPress={handleMoodCheckIn}
+              scaleDownTo={0.94}
+              style={{
+                paddingVertical: 6,
+                paddingHorizontal: 14,
+                borderRadius: 9999,
+                backgroundColor: heroTint.plate,
+                borderWidth: 1,
+                borderColor: heroTint.border,
               }}
-              style={({ pressed }) => [
-                {
-                  paddingVertical: 6,
-                  paddingHorizontal: 14,
-                  borderRadius: 9999,
-                  backgroundColor: heroTint.plate,
-                  borderWidth: 1,
-                  borderColor: heroTint.border,
-                  opacity: pressed ? 0.75 : 1,
-                  transform: [{ scale: pressed ? 0.94 : 1 }],
-                },
-              ]}
             >
               <Text style={{ fontSize: 13, fontFamily: fontFamilies.sans.bold, fontWeight: '700', color: heroTint.accent }}>Check in</Text>
-            </Pressable>
+            </TactilePressable>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: heroTint.text, letterSpacing: -0.3 }}>
+              <Text style={{ fontSize: 18, lineHeight: 24, fontWeight: '800', color: heroTint.text, letterSpacing: -0.3 }}>
                 {latestMood?.mood ? `${latestMood.mood.charAt(0).toUpperCase()}${latestMood.mood.slice(1)} & Present` : 'Peaceful & Grounded'}
               </Text>
               <Text style={{ fontSize: 13, color: heroTint.muted, lineHeight: 18 }}>
@@ -249,7 +204,7 @@ export function HomeScreen() {
                   ? `${latestMood.intensity ?? 7}/10 intensity · stress ${latestMood.stress ?? 2}/10. Keep going.`
                   : '7/10 serenity · low stress today. Take a mindful breath.'}
               </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
                 <ProgressRing
                   progress={latestMood ? Math.min(Math.max((latestMood.intensity ?? 7) / 10, 0.1), 1) : 0.7}
                   size={34}
@@ -276,9 +231,9 @@ export function HomeScreen() {
       {/* Quick Mindful Actions — colorful popping tiles */}
       <View style={{ marginBottom: 22 }}>
         <PopIn index={2}>
-          <Text style={{ fontSize: 20, fontFamily: fontFamilies.serif.semiBold, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>
+          <AppText variant="h3" style={{ marginBottom: 12 }}>
             Quick Practices
-          </Text>
+          </AppText>
         </PopIn>
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <PopIn index={3} style={{ flex: 1 }}>
@@ -305,7 +260,7 @@ export function HomeScreen() {
                   marginBottom: 10,
                 }}
               >
-                <AppIcon name="l-breathe" size={22} loop />
+                <AppIcon name="l-breathe" size={22} />
               </View>
               <Text style={{ fontSize: 15, fontWeight: '700', color: calmTint.text }}>
                 Calm Space
@@ -340,7 +295,7 @@ export function HomeScreen() {
                   marginBottom: 10,
                 }}
               >
-                <AppIcon name="l-book" size={22} loop />
+                <AppIcon name="l-book" size={22} />
               </View>
               <Text style={{ fontSize: 15, fontWeight: '700', color: journalTint.text }}>
                 Daily Journal
@@ -356,12 +311,12 @@ export function HomeScreen() {
       {/* Today's Habits */}
       <View style={{ marginBottom: 22 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <Text style={{ fontSize: 20, fontFamily: fontFamilies.serif.semiBold, fontWeight: '700', color: colors.textPrimary }}>
+          <AppText variant="h3">
             Today&apos;s Habits
-          </Text>
-          <Pressable onPress={() => { hapticFeedback.light(); navigation?.navigate?.('Habits'); }}>
-            <Text style={{ fontSize: 14, fontFamily: fontFamilies.sans.semiBold, fontWeight: '600', color: colors.accentPrimary }}>View all</Text>
-          </Pressable>
+          </AppText>
+          <TactilePressable scaleDownTo={0.96} onPress={() => navigation?.navigate?.('Habits')}>
+            <Text style={{ fontSize: 14, fontFamily: fontFamilies.sans.semiBold, fontWeight: '600', color: colors.primary.default }}>View all</Text>
+          </TactilePressable>
         </View>
 
         {loading ? (
@@ -370,10 +325,10 @@ export function HomeScreen() {
           <Card variant="outlined" style={{ borderRadius: 20 }}>
             <CardContent style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 }}>
               <HabitPlantingIllustration width={130} height={105} style={{ marginBottom: 6 }} />
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginTop: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary, marginTop: 4 }}>
                 No habits scheduled today
               </Text>
-              <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: 'center', marginTop: 4, lineHeight: 18 }}>
+              <Text style={{ fontSize: 13, color: colors.text.tertiary, textAlign: 'center', marginTop: 4, lineHeight: 18 }}>
                 Build steady mindfulness one day at a time
               </Text>
               <PrimaryButton
@@ -391,7 +346,7 @@ export function HomeScreen() {
             {(dueHabits ?? []).slice(0, 3).map((habit, index) => {
               const isCompleted = !!(todayCompletions ?? {})?.[(habit as any)?.id];
               return (
-                <StaggeredEntry key={habit?.id ?? Math.random().toString()} index={index}>
+                <StaggeredEntry key={habit?.id ?? 'ph-' + index} index={index}>
                   <TactilePressable
                     onPress={() => habit && handleHabitPress(habit)}
                     scaleDownTo={0.98}
@@ -402,10 +357,10 @@ export function HomeScreen() {
                       justifyContent: 'space-between',
                       paddingHorizontal: 18,
                       paddingVertical: 14,
-                      backgroundColor: colors.bgCard,
+                      backgroundColor: colors.surface.default,
                       borderRadius: 20,
                       borderWidth: 1.2,
-                      borderColor: isCompleted ? colors.accentBorder : colors.borderLight,
+                      borderColor: isCompleted ? colors.primary.subtleBorder : colors.border.default,
                       gap: 12,
                     }}
                   >
@@ -417,7 +372,7 @@ export function HomeScreen() {
                           borderRadius: 14,
                           alignItems: 'center',
                           justifyContent: 'center',
-                          backgroundColor: (habit as any)?.color || colors.accentPrimary,
+                          backgroundColor: (habit as any)?.color || colors.primary.default,
                           marginTop: 2,
                         }}
                       >
@@ -429,14 +384,14 @@ export function HomeScreen() {
                             fontSize: 16,
                             fontWeight: '700',
                             lineHeight: 22,
-                            color: colors.textPrimary,
+                            color: colors.text.primary,
                             textDecorationLine: isCompleted ? 'line-through' : 'none',
                             opacity: isCompleted ? 0.7 : 1,
                           }}
                         >
                           {(habit as any)?.name ?? 'Untitled'}
                         </Text>
-                        <Text style={{ fontSize: 12, lineHeight: 16, color: isCompleted ? colors.accentPrimary : colors.textTertiary }}>
+                        <Text style={{ fontSize: 12, lineHeight: 16, color: isCompleted ? colors.primary.default : colors.text.tertiary }}>
                           {isCompleted ? 'Completed today ✓' : 'Tap to mark done'}
                         </Text>
                       </View>
@@ -444,29 +399,30 @@ export function HomeScreen() {
                     <CelebratoryCheckbox
                       checked={isCompleted}
                       onToggle={() => toggleHabit(habit, isCompleted)}
-                      activeColor={colors.accentPrimary}
-                      borderColor={colors.accentBorder || colors.accentPrimary}
+                      activeColor={colors.primary.default}
+                      borderColor={colors.primary.subtleBorder || colors.primary.default}
                     />
                   </TactilePressable>
                 </StaggeredEntry>
               );
             })}
             {(dueHabits ?? []).length > 3 && (
-              <Pressable
+              <TactilePressable
                 onPress={() => navigation?.navigate?.('Habits')}
+                scaleDownTo={0.97}
                 style={{
                   padding: 12,
                   alignItems: 'center',
-                  backgroundColor: colors.bgCard,
+                  backgroundColor: colors.surface.default,
                   borderRadius: 16,
                   borderWidth: 1,
-                  borderColor: colors.borderLight,
+                  borderColor: colors.border.default,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accentPrimary }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary.default }}>
                   +{(dueHabits ?? []).length - 3} more habit{(dueHabits ?? []).length - 3 > 1 ? 's' : ''}
                 </Text>
-              </Pressable>
+              </TactilePressable>
             )}
           </View>
         )}
@@ -476,12 +432,12 @@ export function HomeScreen() {
       <Card variant="outlined" style={{ marginBottom: 20 }}>
         <CardContent>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
+            <AppText variant="h3">
               Recent Journal Entries
-            </Text>
-            <Pressable onPress={() => navigation?.navigate?.('Journal')}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.accentPrimary }}>View all</Text>
-            </Pressable>
+            </AppText>
+            <TactilePressable scaleDownTo={0.96} onPress={() => navigation?.navigate?.('Journal')}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary.default }}>View all</Text>
+            </TactilePressable>
           </View>
           {(recentJournals ?? []).length === 0 ? (
             <EmptyState
@@ -495,34 +451,31 @@ export function HomeScreen() {
           ) : (
             <View style={{ gap: 10 }}>
               {(recentJournals ?? []).slice(0, 2).map((entry) => (
-                <Pressable
+                <TactilePressable
                   key={entry.id}
                   onPress={() => navigation?.navigate?.('JournalEntry', { id: entry.id, type: entry.type })}
-                  style={({ pressed }) => [
-                    {
-                      padding: 14,
-                      backgroundColor: colors.bgCard,
-                      borderRadius: 16,
-                      borderWidth: 1.2,
-                      borderColor: colors.borderLight,
-                      gap: 6,
-                      opacity: pressed ? 0.9 : 1,
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
-                    },
-                  ]}
+                  scaleDownTo={0.98}
+                  style={{
+                    padding: 14,
+                    backgroundColor: colors.surface.default,
+                    borderRadius: 16,
+                    borderWidth: 1.2,
+                    borderColor: colors.border.default,
+                    gap: 6,
+                  }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary, flex: 1, marginRight: 8 }} numberOfLines={1}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text.primary, flex: 1, marginRight: 8 }} numberOfLines={1}>
                       {entry.title || (entry.type ? String(entry.type).replace('_', ' ') : 'Reflection')}
                     </Text>
-                    <Text style={{ fontSize: 11, color: colors.textTertiary }}>
+                    <Text style={{ fontSize: 11, color: colors.text.tertiary }}>
                       {entry.createdAt ? format(new Date(entry.createdAt), 'MMM d') : ''}
                     </Text>
                   </View>
-                  <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18 }} numberOfLines={2}>
+                  <Text style={{ fontSize: 13, color: colors.text.secondary, lineHeight: 18 }} numberOfLines={2}>
                     {entry.body}
                   </Text>
-                </Pressable>
+                </TactilePressable>
               ))}
             </View>
           )}
@@ -531,22 +484,22 @@ export function HomeScreen() {
 
       {/* Weekly Insights */}
       <PopIn index={5}>
-        <Pressable onPress={() => navigation?.navigate?.('Insights')}>
+        <TactilePressable scaleDownTo={0.98} onPress={() => navigation?.navigate?.('Insights')}>
           <Card variant="outlined">
             <CardContent>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
+                <AppText variant="h3">
                   Weekly Insights
-                </Text>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accentPrimary }}>Open →</Text>
+                </AppText>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary.default }}>Open →</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <StatPill label="Avg Mood" value={latestMood?.intensity ? `${latestMood.intensity}/10` : '7.2/10'} trend="up" trendValue="+0.3" accentColor={colors?.success ?? '#3E7B52'} />
-                <StatPill label="Journaling" value={`${Math.max(recentJournals.length, 1)} entries`} trend="neutral" accentColor={colors?.info ?? '#2563EB'} />
+                <StatPill label="Avg Mood" value={latestMood?.intensity ? `${latestMood.intensity}/10` : '7.2/10'} trend="up" trendValue="+0.3" accentColor={colors.status.success.default} />
+                <StatPill label="Journaling" value={`${Math.max(recentJournals.length, 1)} entries`} trend="neutral" accentColor={colors.status.info.default} />
               </View>
             </CardContent>
           </Card>
-        </Pressable>
+        </TactilePressable>
       </PopIn>
     </ScreenContainer>
   );
@@ -565,10 +518,10 @@ function EmptyState({ title, subtitle, actionLabel, onAction, colors }: EmptySta
   return (
     <View style={{ alignItems: 'center', paddingVertical: 20, paddingHorizontal: 16 }}>
       <JournalReflectionIllustration width={130} height={105} style={{ marginBottom: 6 }} />
-      <Text style={{ fontSize: 16, fontWeight: '700', marginTop: 4, textAlign: 'center', color: colors.textPrimary }}>
+      <Text style={{ fontSize: 16, fontWeight: '700', marginTop: 4, textAlign: 'center', color: colors.text.primary }}>
         {title ?? 'Nothing here yet'}
       </Text>
-      <Text style={{ fontSize: 13, marginTop: 4, textAlign: 'center', color: colors.textTertiary, lineHeight: 18 }}>
+      <Text style={{ fontSize: 13, marginTop: 4, textAlign: 'center', color: colors.text.tertiary, lineHeight: 18 }}>
         {subtitle ?? ''}
       </Text>
       {actionLabel && onAction && (

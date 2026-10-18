@@ -3,11 +3,11 @@ import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from 'react-
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressRing } from '../../components/ProgressRing';
-import { AppIcon, moodIcon, MoodAuraIllustration } from '../../components';
+import { AppIcon, moodIcon, MoodAuraIllustration, ScreenHeader, TactilePressable } from '../../components';
 import type { AppIconName } from '../../components';
 import { RootStackParamList, MoodType } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { moodRepository } from '../../database/repositories/moodRepository';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
@@ -32,7 +32,7 @@ type Step = 'mood' | 'intensity' | 'stress' | 'energy' | 'context' | 'complete';
 export function MoodCheckInScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'MoodCheckIn'>>();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
 
   const [step, setStep] = useState<Step>('mood');
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
@@ -100,40 +100,40 @@ export function MoodCheckInScreen() {
   const renderMoodSelector = () => (
     <View style={styles.stepContainer}>
       <MoodAuraIllustration width={120} height={95} style={{ alignSelf: 'center', marginBottom: 2 }} />
-      <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>How are you feeling right now?</Text>
-      <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>Select the emotion closest to your inner state</Text>
+      <Text style={[styles.stepTitle, { color: colors.text.primary }]}>How are you feeling right now?</Text>
+      <Text style={[styles.stepSubtitle, { color: colors.text.secondary }]}>Select the emotion closest to your inner state</Text>
       <View style={styles.moodGrid}>
-        {(moods ?? []).map((mood) => {
+        {(moods ?? []).map((mood, index) => {
           const isSelected = selectedMood === mood?.id;
           return (
-            <Pressable
-              key={mood?.id ?? Math.random().toString()}
+            <TactilePressable
+              key={mood?.id ?? 'ph-' + index}
               onPress={() => {
                 if (!mood?.id) return;
                 setSelectedMood(mood.id);
                 setTimeout(() => goNext(), 180);
               }}
-              style={({ pressed }) => [
+              scaleDownTo={0.93}
+              style={[
                 styles.moodCard,
                 {
-                  backgroundColor: colors.bgCard,
-                  borderColor: colors.borderLight,
-                  transform: [{ scale: pressed ? 0.93 : 1 }],
+                  backgroundColor: colors.surface.default,
+                  borderColor: colors.border.default,
                 },
                 isSelected && { borderColor: mood.color, backgroundColor: mood.color + '18', borderWidth: 2 },
               ]}
             >
-              <AppIcon name={mood?.icon ?? 'm-happy'} size={32} color={mood?.color ?? colors.accentPrimary} />
+              <AppIcon name={mood?.icon ?? 'm-happy'} size={32} color={mood?.color ?? colors.primary.default} />
               <Text
                 style={[
                   styles.moodLabel,
-                  { color: isSelected ? mood.color : colors.textPrimary },
+                  { color: isSelected ? mood.color : colors.text.primary },
                   isSelected && { fontWeight: '700' },
                 ]}
               >
                 {mood?.label ?? 'Mood'}
               </Text>
-            </Pressable>
+            </TactilePressable>
           );
         })}
       </View>
@@ -157,9 +157,9 @@ export function MoodCheckInScreen() {
 
     return (
       <View style={styles.stepContainer}>
-        <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>{label}</Text>
+        <Text style={[styles.stepTitle, { color: colors.text.primary }]}>{label}</Text>
         <Text style={[styles.valueHighlight, { color: accentColor }]}>
-          {safeValue} <Text style={{ fontSize: 18, color: colors.textTertiary }}>/ {safeMax}</Text>
+          {safeValue} <Text style={{ fontSize: 18, color: colors.text.tertiary }}>/ {safeMax}</Text>
         </Text>
 
         <View style={styles.sliderIconWrapper}>
@@ -168,10 +168,10 @@ export function MoodCheckInScreen() {
 
         <View style={styles.trackWrapper}>
           <View style={styles.trackRangeLabels}>
-            <Text style={[styles.trackLabelText, { color: colors.textTertiary }]}>{safeMin} (Gentle)</Text>
-            <Text style={[styles.trackLabelText, { color: colors.textTertiary }]}>{safeMax} (Peak)</Text>
+            <Text style={[styles.trackLabelText, { color: colors.text.tertiary }]}>{safeMin} (Gentle)</Text>
+            <Text style={[styles.trackLabelText, { color: colors.text.tertiary }]}>{safeMax} (Peak)</Text>
           </View>
-          <View style={[styles.trackBase, { backgroundColor: colors.borderLight }]}>
+          <View style={[styles.trackBase, { backgroundColor: colors.border.default }]}>
             <View style={[styles.trackFill, { width: `${fillPct}%`, backgroundColor: accentColor }]} />
           </View>
 
@@ -185,8 +185,8 @@ export function MoodCheckInScreen() {
                   style={({ pressed }) => [
                     styles.levelPill,
                     {
-                      backgroundColor: colors.bgCard,
-                      borderColor: colors.borderLight,
+                      backgroundColor: colors.surface.default,
+                      borderColor: colors.border.default,
                       transform: [{ scale: pressed ? 0.88 : 1 }],
                     },
                     isSelected && { backgroundColor: accentColor, borderColor: accentColor },
@@ -195,7 +195,7 @@ export function MoodCheckInScreen() {
                   <Text
                     style={[
                       styles.levelPillText,
-                      { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                      { color: isSelected ? '#FFFFFF' : colors.text.primary },
                       isSelected && { fontWeight: '700' },
                     ]}
                   >
@@ -212,8 +212,8 @@ export function MoodCheckInScreen() {
 
   const renderEnergyStep = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>What's your energy level?</Text>
-      <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>Notice how awake and ready your body feels</Text>
+      <Text style={[styles.stepTitle, { color: colors.text.primary }]}>What's your energy level?</Text>
+      <Text style={[styles.stepSubtitle, { color: colors.text.secondary }]}>Notice how awake and ready your body feels</Text>
       <View style={styles.energyGrid}>
         {[
           { value: 'low' as const, label: 'Low', icon: 'i-battery' as AppIconName, desc: 'Quiet, slow, or resting' },
@@ -222,31 +222,31 @@ export function MoodCheckInScreen() {
         ].map((e) => {
           const isSelected = energy === e?.value;
           return (
-            <Pressable
+            <TactilePressable
               key={e?.value}
               onPress={() => e?.value && setEnergy(e.value)}
-              style={({ pressed }) => [
+              scaleDownTo={0.96}
+              style={[
                 styles.energyCard,
                 {
-                  backgroundColor: colors.bgCard,
-                  borderColor: isSelected ? colors.accentPrimary : colors.borderLight,
-                  transform: [{ scale: pressed ? 0.96 : 1 }],
+                  backgroundColor: colors.surface.default,
+                  borderColor: isSelected ? colors.primary.default : colors.border.default,
                 },
-                isSelected && { backgroundColor: colors.accentPrimary + '14', borderWidth: 2 },
+                isSelected && { backgroundColor: colors.primary.default + '14', borderWidth: 2 },
               ]}
             >
-              <AppIcon name={e?.icon} size={36} color={isSelected ? colors.accentPrimary : undefined} />
+              <AppIcon name={e?.icon} size={36} color={isSelected ? colors.primary.default : undefined} />
               <Text
                 style={[
                   styles.energyTitle,
-                  { color: isSelected ? colors.accentPrimary : colors.textPrimary },
+                  { color: isSelected ? colors.primary.default : colors.text.primary },
                   isSelected && { fontWeight: '700' },
                 ]}
               >
                 {e.label}
               </Text>
-              <Text style={[styles.energyDesc, { color: colors.textTertiary }]}>{e.desc}</Text>
-            </Pressable>
+              <Text style={[styles.energyDesc, { color: colors.text.tertiary }]}>{e.desc}</Text>
+            </TactilePressable>
           );
         })}
       </View>
@@ -255,32 +255,32 @@ export function MoodCheckInScreen() {
 
   const renderContextStep = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>What's on your mind?</Text>
-      <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>Optional context to anchor this moment in your journal</Text>
+      <Text style={[styles.stepTitle, { color: colors.text.primary }]}>What's on your mind?</Text>
+      <Text style={[styles.stepSubtitle, { color: colors.text.secondary }]}>Optional context to anchor this moment in your journal</Text>
       <View style={styles.inputsStack}>
         <View>
-          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>What's happening right now?</Text>
+          <Text style={[styles.inputLabel, { color: colors.text.secondary }]}>What's happening right now?</Text>
           <TextInput
             placeholder="A few words about what prompted this feeling..."
             value={context}
             onChangeText={setContext}
             multiline
             numberOfLines={3}
-            style={[styles.contextInput, { backgroundColor: colors.bgCard, borderColor: colors.borderLight, color: colors.textPrimary }]}
-            placeholderTextColor={colors.textTertiary}
+            style={[styles.contextInput, { backgroundColor: colors.surface.default, borderColor: colors.border.default, color: colors.text.primary }]}
+            placeholderTextColor={colors.text.tertiary}
           />
         </View>
 
         <View>
-          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>What does your mind/body need?</Text>
+          <Text style={[styles.inputLabel, { color: colors.text.secondary }]}>What does your mind/body need?</Text>
           <TextInput
             placeholder="A breath, quiet time, water, connection..."
             value={needs}
             onChangeText={setNeeds}
             multiline
             numberOfLines={3}
-            style={[styles.contextInput, { backgroundColor: colors.bgCard, borderColor: colors.borderLight, color: colors.textPrimary }]}
-            placeholderTextColor={colors.textTertiary}
+            style={[styles.contextInput, { backgroundColor: colors.surface.default, borderColor: colors.border.default, color: colors.text.primary }]}
+            placeholderTextColor={colors.text.tertiary}
           />
         </View>
       </View>
@@ -290,38 +290,25 @@ export function MoodCheckInScreen() {
   const renderCompleteStep = () => (
     <View style={[styles.stepContainer, { alignItems: 'center', paddingTop: 30 }]}>
       <MoodAuraIllustration width={150} height={125} style={{ marginBottom: 12 }} />
-      <View style={[styles.completeIconCircle, { backgroundColor: colors.accentPrimary + '20', width: 64, height: 64, borderRadius: 32 }]}>
-        <Ionicons name="checkmark-circle" size={42} color={colors.accentPrimary} />
+      <View style={[styles.completeIconCircle, { backgroundColor: colors.primary.default + '20', width: 64, height: 64, borderRadius: 32 }]}>
+        <Ionicons name="checkmark-circle" size={42} color={colors.primary.default} />
       </View>
-      <Text style={[styles.stepTitle, { color: colors.textPrimary, marginTop: 14 }]}>Check-in Complete!</Text>
-      <Text style={[styles.stepSubtitle, { color: colors.textSecondary, textAlign: 'center', marginTop: 8 }]}>
+      <Text style={[styles.stepTitle, { color: colors.text.primary, marginTop: 14 }]}>Check-in Complete!</Text>
+      <Text style={[styles.stepSubtitle, { color: colors.text.secondary, textAlign: 'center', marginTop: 8 }]}>
         Thank you for honoring how you feel right now.
       </Text>
     </View>
   );
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={goBack}
-          style={({ pressed }) => [
-            styles.navButton,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              transform: [{ scale: pressed ? 0.92 : 1 }],
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-          disabled={step === 'complete'}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </Pressable>
-        <ProgressRing progress={progress ?? 0} size={36} strokeWidth={3} showPercentage={false} />
-        <View style={{ width: 40 }} />
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader
+        center={<ProgressRing progress={progress ?? 0} size={36} strokeWidth={3} showPercentage={false} style={{ flex: 1 }} />}
+        onBack={() => {
+          if (step === 'complete') return;
+          goBack();
+        }}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {step === 'mood' && (
@@ -336,7 +323,7 @@ export function MoodCheckInScreen() {
               1,
               10,
               moodIcon(selectedMood),
-              colors.accentPrimary
+              colors.primary.default
             )}
           </PopIn>
         )}
@@ -349,7 +336,7 @@ export function MoodCheckInScreen() {
               1,
               10,
               'm-stressed',
-              colors.accentRose || '#EB697F'
+              colors.accents.rose
             )}
           </PopIn>
         )}
@@ -365,7 +352,7 @@ export function MoodCheckInScreen() {
       </ScrollView>
 
       {step !== 'complete' && step !== 'mood' && (
-        <View style={[styles.bottomBar, { borderTopColor: colors.borderLight }]}>
+        <View style={[styles.bottomBar, { borderTopColor: colors.border.default }]}>
           <View style={{ flex: 1 }}>
             <PrimaryButton title="Back" variant="outline" size="md" onPress={goBack} fullWidth />
           </View>
@@ -379,22 +366,6 @@ export function MoodCheckInScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 10,
-  },
-  navButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 110 },
   stepContainer: { gap: 12 },
   stepTitle: { fontSize: 24, fontWeight: '700', textAlign: 'center', letterSpacing: -0.3 },

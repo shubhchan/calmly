@@ -1,90 +1,58 @@
-import React, { useEffect } from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
-import LottieView from 'lottie-react-native';
+import React from 'react';
+import { StyleProp, View, ViewStyle } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withSequence,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
-import { useThemeColors } from '../theme/ThemeContext';
+import { useAppTheme } from '../theme/ThemeContext';
 
 type IonName = React.ComponentProps<typeof Ionicons>['name'];
 type MciName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-// Bundled Lordicon Lottie sources (free collection, see Lordicon credit in Settings).
-const LOTTIE = {
-  heart: require('../../assets/lordicons/heart.json'),
-  star: require('../../assets/lordicons/star.json'),
-  book: require('../../assets/lordicons/book.json'),
-  doc: require('../../assets/lordicons/doc.json'),
-  write: require('../../assets/lordicons/write.json'),
-  eye: require('../../assets/lordicons/eye.json'),
-  ear: require('../../assets/lordicons/ear.json'),
-  mic: require('../../assets/lordicons/mic.json'),
-  calm: require('../../assets/lordicons/calm.json'),
-  hands: require('../../assets/lordicons/hands.json'),
-  pin: require('../../assets/lordicons/pin.json'),
-  pulse: require('../../assets/lordicons/pulse.json'),
-  expand: require('../../assets/lordicons/expand.json'),
-  walk: require('../../assets/lordicons/walk.json'),
-  gift: require('../../assets/lordicons/gift.json'),
-  chart: require('../../assets/lordicons/chart.json'),
-  camera: require('../../assets/lordicons/camera.json'),
-  trash: require('../../assets/lordicons/trash.json'),
-  bell: require('../../assets/lordicons/bell.json'),
-  lock: require('../../assets/lordicons/lock.json'),
-  clock: require('../../assets/lordicons/clock.json'),
-} as const;
-
-type LottieName = keyof typeof LOTTIE;
-
 type RegistryEntry =
-  | { kind: 'lottie'; asset: LottieName }
   | { kind: 'ion'; name: IonName }
   | { kind: 'mci'; name: MciName };
 
+/**
+ * Static vector-only icon registry (design system). Ionicons is the primary
+ * set; MaterialCommunityIcons is used only for mood faces.
+ */
 const REGISTRY: Record<string, RegistryEntry> = {
-  // Lordicon animated
-  'l-heart': { kind: 'lottie', asset: 'heart' },
-  'l-star': { kind: 'lottie', asset: 'star' },
-  'l-book': { kind: 'lottie', asset: 'book' },
-  'l-doc': { kind: 'lottie', asset: 'doc' },
-  'l-write': { kind: 'lottie', asset: 'write' },
-  'l-eye': { kind: 'lottie', asset: 'eye' },
-  'l-ear': { kind: 'lottie', asset: 'ear' },
-  'l-mic': { kind: 'lottie', asset: 'mic' },
-  'l-calm': { kind: 'lottie', asset: 'calm' },
-  'l-hands': { kind: 'lottie', asset: 'hands' },
-  'l-pin': { kind: 'lottie', asset: 'pin' },
-  'l-pulse': { kind: 'lottie', asset: 'pulse' },
-  'l-expand': { kind: 'lottie', asset: 'expand' },
-  'l-walk': { kind: 'lottie', asset: 'walk' },
-  'l-gift': { kind: 'lottie', asset: 'gift' },
-  'l-chart': { kind: 'lottie', asset: 'chart' },
-  'l-camera': { kind: 'lottie', asset: 'camera' },
-  'l-trash': { kind: 'lottie', asset: 'trash' },
-  'l-bell': { kind: 'lottie', asset: 'bell' },
-  'l-lock': { kind: 'lottie', asset: 'lock' },
-  'l-clock': { kind: 'lottie', asset: 'clock' },
+  // Legacy 'l-' names — kept as aliases so older call sites keep working,
+  // now resolved to static design-system vectors (no animation).
+  'l-heart': { kind: 'ion', name: 'heart' },
+  'l-star': { kind: 'ion', name: 'star' },
+  'l-book': { kind: 'ion', name: 'book' },
+  'l-doc': { kind: 'ion', name: 'document-text' },
+  'l-write': { kind: 'ion', name: 'create' },
+  'l-eye': { kind: 'ion', name: 'eye' },
+  'l-ear': { kind: 'ion', name: 'ear' },
+  'l-mic': { kind: 'ion', name: 'mic' },
+  'l-calm': { kind: 'ion', name: 'leaf' },
+  'l-hands': { kind: 'ion', name: 'hand-left' },
+  'l-pin': { kind: 'ion', name: 'pin' },
+  'l-pulse': { kind: 'ion', name: 'pulse' },
+  'l-expand': { kind: 'ion', name: 'expand' },
+  'l-walk': { kind: 'ion', name: 'walk' },
+  'l-gift': { kind: 'ion', name: 'gift' },
+  'l-chart': { kind: 'ion', name: 'stats-chart' },
+  'l-camera': { kind: 'ion', name: 'camera' },
+  'l-trash': { kind: 'ion', name: 'trash' },
+  'l-bell': { kind: 'ion', name: 'notifications' },
+  'l-lock': { kind: 'ion', name: 'lock-closed' },
+  'l-clock': { kind: 'ion', name: 'time' },
 
   // Sensory & semantic aliases
-  'l-breathe': { kind: 'lottie', asset: 'expand' },
-  'l-meditate': { kind: 'lottie', asset: 'calm' },
-  'l-streak': { kind: 'lottie', asset: 'star' },
-  'l-stats': { kind: 'lottie', asset: 'chart' },
-  'l-time': { kind: 'lottie', asset: 'clock' },
-  'l-habits': { kind: 'lottie', asset: 'walk' },
-  'l-gratitude': { kind: 'lottie', asset: 'gift' },
-  'l-journal': { kind: 'lottie', asset: 'book' },
-  'l-love': { kind: 'lottie', asset: 'heart' },
-  'l-sound': { kind: 'lottie', asset: 'ear' },
-  'l-hear': { kind: 'lottie', asset: 'ear' },
-  'l-see': { kind: 'lottie', asset: 'eye' },
-  'l-touch': { kind: 'lottie', asset: 'hands' },
+  'l-breathe': { kind: 'mci', name: 'weather-windy' },
+  'l-meditate': { kind: 'ion', name: 'flower' },
+  'l-streak': { kind: 'ion', name: 'flame' },
+  'l-stats': { kind: 'ion', name: 'stats-chart' },
+  'l-time': { kind: 'ion', name: 'time' },
+  'l-habits': { kind: 'ion', name: 'repeat' },
+  'l-gratitude': { kind: 'ion', name: 'gift' },
+  'l-journal': { kind: 'ion', name: 'book' },
+  'l-love': { kind: 'ion', name: 'heart' },
+  'l-sound': { kind: 'ion', name: 'ear' },
+  'l-hear': { kind: 'ion', name: 'ear' },
+  'l-see': { kind: 'ion', name: 'eye' },
+  'l-touch': { kind: 'ion', name: 'hand-left' },
 
   // Ionicons
   'i-leaf': { kind: 'ion', name: 'leaf' },
@@ -154,14 +122,41 @@ const REGISTRY: Record<string, RegistryEntry> = {
 
 export type AppIconName = keyof typeof REGISTRY;
 
+/** Bare semantic names (legacy Lottie aliases) → design-system vectors. */
+const NAME_ALIASES: Record<string, RegistryEntry> = {
+  heart: { kind: 'ion', name: 'heart' },
+  star: { kind: 'ion', name: 'star' },
+  book: { kind: 'ion', name: 'book' },
+  journal: { kind: 'ion', name: 'book' },
+  doc: { kind: 'ion', name: 'document-text' },
+  write: { kind: 'ion', name: 'create' },
+  eye: { kind: 'ion', name: 'eye' },
+  ear: { kind: 'ion', name: 'ear' },
+  mic: { kind: 'ion', name: 'mic' },
+  calm: { kind: 'ion', name: 'leaf' },
+  meditate: { kind: 'ion', name: 'flower' },
+  breathe: { kind: 'mci', name: 'weather-windy' },
+  pulse: { kind: 'ion', name: 'pulse' },
+  walk: { kind: 'ion', name: 'walk' },
+  gift: { kind: 'ion', name: 'gift' },
+  gratitude: { kind: 'ion', name: 'gift' },
+  chart: { kind: 'ion', name: 'stats-chart' },
+  stats: { kind: 'ion', name: 'stats-chart' },
+  camera: { kind: 'ion', name: 'camera' },
+  trash: { kind: 'ion', name: 'trash' },
+  bell: { kind: 'ion', name: 'notifications' },
+  lock: { kind: 'ion', name: 'lock-closed' },
+  clock: { kind: 'ion', name: 'time' },
+  time: { kind: 'ion', name: 'time' },
+};
+
 interface AppIconProps {
   name: AppIconName | string;
   size?: number;
-  /** Applies to vector icons; Lottie colors are baked in. */
   color?: string;
-  /** Lottie looping. Default true. */
+  /** @deprecated No-op — the icon set is static vector-only. */
   loop?: boolean;
-  /** Gentle organic breathing animation for vector icons. Default true. */
+  /** @deprecated No-op — the icon set is static vector-only. */
   animated?: boolean;
   style?: StyleProp<ViewStyle>;
 }
@@ -172,134 +167,36 @@ function resolveEntry(name: string): RegistryEntry {
     return REGISTRY[name];
   }
 
-  // 2. Direct Lottie asset name
-  if (name in LOTTIE) {
-    return { kind: 'lottie', asset: name as LottieName };
+  // 2. Bare semantic alias
+  if (NAME_ALIASES[name]) {
+    return NAME_ALIASES[name];
   }
 
-  // 3. l- prefix matching a Lottie asset
-  if (name.startsWith('l-')) {
-    const assetKey = name.slice(2);
-    if (assetKey in LOTTIE) {
-      return { kind: 'lottie', asset: assetKey as LottieName };
-    }
-  }
-
-  // 4. i- prefix matching an Ionicons glyph
+  // 3. i- prefix matching an Ionicons glyph
   if (name.startsWith('i-')) {
     return { kind: 'ion', name: name.slice(2) as IonName };
   }
 
-  // 5. m- prefix matching MaterialCommunityIcons glyph
+  // 4. m- prefix matching MaterialCommunityIcons glyph
   if (name.startsWith('m-')) {
     return { kind: 'mci', name: name.slice(2) as MciName };
   }
 
-  // 6. Common semantic names to animated Lottie
-  const semanticLottie: Record<string, LottieName> = {
-    heart: 'heart',
-    star: 'star',
-    book: 'book',
-    journal: 'book',
-    doc: 'doc',
-    write: 'write',
-    eye: 'eye',
-    ear: 'ear',
-    mic: 'mic',
-    calm: 'calm',
-    meditate: 'calm',
-    breathe: 'expand',
-    pulse: 'pulse',
-    walk: 'walk',
-    gift: 'gift',
-    gratitude: 'gift',
-    chart: 'chart',
-    stats: 'chart',
-    camera: 'camera',
-    trash: 'trash',
-    bell: 'bell',
-    lock: 'lock',
-    clock: 'clock',
-    time: 'clock',
-  };
-  if (semanticLottie[name]) {
-    return { kind: 'lottie', asset: semanticLottie[name] };
-  }
-
-  // 7. Default to Ionicons using safe name
+  // 5. Default to Ionicons using safe name
   const safeName = (name && typeof name === 'string' && name.trim()) ? name.trim() : 'leaf-outline';
   return { kind: 'ion', name: safeName as IonName };
-}
-
-function AnimatedVectorWrapper({
-  children,
-  size,
-  animated = true,
-  style,
-}: {
-  children: React.ReactNode;
-  size?: number;
-  animated?: boolean;
-  style?: StyleProp<ViewStyle>;
-}) {
-  const scale = useSharedValue(1);
-
-  useEffect(() => {
-    if (animated) {
-      scale.value = withRepeat(
-        withSequence(
-          withTiming(1.09, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1.0, { duration: 1800, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        true
-      );
-    } else {
-      scale.value = 1;
-    }
-  }, [animated, scale]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const containerStyle: ViewStyle = {
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(size ? { width: size, height: size } : {}),
-  };
-
-  if (!animated) {
-    return <Animated.View style={[containerStyle, style]}>{children}</Animated.View>;
-  }
-
-  return (
-    <Animated.View style={[animatedStyle, containerStyle, style]}>
-      {children}
-    </Animated.View>
-  );
 }
 
 export function AppIcon({
   name,
   size = 24,
   color,
-  loop = true,
-  animated = true,
   style,
 }: AppIconProps) {
-  let themeColors: any;
-  let isDark = false;
-  try {
-    themeColors = useThemeColors();
-    isDark = !!themeColors?.isDark;
-  } catch {
-    themeColors = null;
-  }
+  const { colors, isDark } = useAppTheme();
 
   // Contrast protection: calculate high-contrast color for light vs dark mode
-  const defaultContrast = isDark ? '#EDE8E1' : '#272421';
-  let resolvedColor = color ?? themeColors?.textPrimary ?? defaultContrast;
+  let resolvedColor = color ?? colors.text.primary;
 
   // If a caller passed dark low-contrast colors in dark mode, elevate them to visible light tone
   if (isDark && (resolvedColor === '#425474' || resolvedColor === '#1E2522' || resolvedColor === '#1A212D' || resolvedColor === '#000000')) {
@@ -308,47 +205,37 @@ export function AppIcon({
 
   const entry = resolveEntry(name);
 
-  if (entry.kind === 'lottie') {
-    return (
-      <LottieView
-        source={LOTTIE[entry.asset]}
-        autoPlay
-        loop={loop}
-        style={[{ width: size, height: size }, style] as any}
-      />
-    );
-  }
-
-  if (entry.kind === 'ion') {
-    return (
-      <AnimatedVectorWrapper size={size} animated={animated} style={style}>
-        <Ionicons name={entry.name} size={size} color={resolvedColor} />
-      </AnimatedVectorWrapper>
-    );
-  }
-
   return (
-    <AnimatedVectorWrapper size={size} animated={animated} style={style}>
-      <MaterialCommunityIcons name={entry.name} size={size} color={resolvedColor} />
-    </AnimatedVectorWrapper>
+    <View
+      style={[
+        { width: size, height: size, alignItems: 'center', justifyContent: 'center' },
+        style,
+      ]}
+    >
+      {entry.kind === 'ion' ? (
+        <Ionicons name={entry.name} size={size} color={resolvedColor} />
+      ) : (
+        <MaterialCommunityIcons name={entry.name} size={size} color={resolvedColor} />
+      )}
+    </View>
   );
 }
 
-/** Mood id (as stored in the DB) → registry key for its face or animated icon. */
+/** Mood id (as stored in the DB) → registry key for its static face. */
 export function moodIcon(moodId: string | undefined | null): AppIconName {
   switch (moodId) {
     case 'happy': return 'm-happy';
     case 'peaceful': return 'm-peaceful';
-    case 'grateful': return 'l-heart';
+    case 'grateful': return 'm-grateful';
     case 'content': return 'm-content';
     case 'hopeful': return 'm-hopeful';
-    case 'excited': return 'l-star';
+    case 'excited': return 'm-excited';
     case 'stressed': return 'm-stressed';
     case 'anxious': return 'm-anxious';
     case 'overwhelmed': return 'm-overwhelmed';
     case 'sad': return 'm-sad';
     case 'angry': return 'm-angry';
     case 'exhausted': return 'm-exhausted';
-    default: return 'l-heart';
+    default: return 'm-happy';
   }
 }

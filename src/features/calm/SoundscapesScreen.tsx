@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useThemeColors } from '../../theme/ThemeContext';
-import { Card, CardContent, NatureSoundscapeIllustration } from '../../components';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { useAppTheme } from '../../theme/ThemeContext';
+import { Card, CardContent, NatureSoundscapeIllustration, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -49,10 +48,8 @@ const TRACKS: TrackConfig[] = [
 ];
 
 export function SoundscapesScreen() {
-  const navigation = useNavigation();
-  const colors = useThemeColors();
-  const isDark = colors.isDark;
-  const skyTint = resolveTint(!!colors.isDark, 'sky');
+  const { colors, isDark } = useAppTheme();
+  const skyTint = resolveTint(!!isDark, 'sky');
 
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [selectedTimer, setSelectedTimer] = useState<string>('Off');
@@ -85,59 +82,23 @@ export function SoundscapesScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      {/* Top Bar */}
-      <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            styles.backButton,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              transform: [{ scale: pressed ? 0.92 : 1 }],
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.navTitleCol}>
-          <Text style={[styles.navTitle, { color: colors.textPrimary }]}>Soundscapes Sanctuary</Text>
-          <Text style={[styles.navSubtitle, { color: colors.textTertiary }]}>Acoustic Rest & Masking</Text>
-        </View>
-        <View
-          style={[
-            styles.liveIndicator,
-            {
-              backgroundColor: activeSound ? colors.accentBg : colors.bgCard,
-              borderColor: activeSound ? colors.accentPrimary : colors.borderLight,
-            },
-          ]}
-        >
-          <Ionicons
-            name={activeSound ? 'volume-medium' : 'volume-mute-outline'}
-            size={16}
-            color={activeSound ? colors.accentPrimary : colors.textTertiary}
-          />
-        </View>
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title="Soundscapes Sanctuary" subtitle="Acoustic Rest & Masking" bordered />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Full-Page Hero Illustration Card */}
         <PopIn index={0}>
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
-            <View style={[styles.heroAuraGlow, { backgroundColor: (colors.accentSky || '#6B9BCD') + '15' }]}>
+            <View style={[styles.heroAuraGlow, { backgroundColor: (colors.accents.sky) + '15' }]}>
               <NatureSoundscapeIllustration width={190} height={155} />
             </View>
             <View style={styles.heroBadgeRow}>
-              <View style={[styles.heroBadge, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}>
-                <Ionicons name="infinite" size={13} color={colors.accentPrimary} />
-                <Text style={[styles.heroBadgeText, { color: colors.accentPrimary }]}>Continuous Bio-Acoustics</Text>
+              <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
+                <Ionicons name="infinite" size={13} color={colors.primary.default} />
+                <Text style={[styles.heroBadgeText, { color: colors.primary.default }]}>Continuous Bio-Acoustics</Text>
               </View>
-              <Text style={[styles.heroStatusText, { color: activeSound ? colors.accentPrimary : colors.textTertiary }]}>
+              <Text style={[styles.heroStatusText, { color: activeSound ? colors.primary.default : colors.text.tertiary }]}>
                 {activeSound ? 'Streaming now' : 'Ready to play'}
               </Text>
             </View>
@@ -148,10 +109,10 @@ export function SoundscapesScreen() {
         {/* Header Cue */}
         <PopIn index={1}>
         <View style={{ marginBottom: 4 }}>
-          <Text style={[styles.headline, { color: colors.textPrimary }]}>
+          <Text style={[styles.headline, { color: colors.text.primary }]}>
             Organic Ambient Audio
           </Text>
-          <Text style={[styles.subheadline, { color: colors.textSecondary }]}>
+          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
             Select an acoustic landscape for focus, calm, or restful sleep.
           </Text>
         </View>
@@ -160,25 +121,24 @@ export function SoundscapesScreen() {
         {/* Soundscape Tiles */}
         <PopIn index={2}>
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Nature Soundscape Library
           </Text>
           <View style={styles.tracksList}>
             {TRACKS.map((track) => {
               const isPlaying = activeSound === track.id;
               return (
-                <Pressable
+                <TactilePressable
                   key={track.id}
                   onPress={() => handleToggleSound(track.id)}
-                  style={({ pressed }) => [
+                  scaleDownTo={0.98}
+                  style={[
                     styles.trackCard,
                     {
                       backgroundColor: isPlaying
                         ? (isDark ? 'rgba(94, 190, 123, 0.16)' : '#EEF6F0')
-                        : colors.bgCard,
-                      borderColor: isPlaying ? colors.accentPrimary : colors.borderLight,
-                      opacity: pressed ? 0.9 : 1,
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                        : colors.surface.default,
+                      borderColor: isPlaying ? colors.primary.default : colors.border.default,
                     },
                   ]}
                 >
@@ -188,15 +148,15 @@ export function SoundscapesScreen() {
                         styles.trackIconOrb,
                         {
                           backgroundColor: isPlaying
-                            ? colors.accentPrimary
-                            : (isDark ? 'rgba(255,255,255,0.08)' : colors.bgSecondary ?? '#F4EFE6'),
+                            ? colors.primary.default
+                            : (isDark ? 'rgba(255,255,255,0.08)' : colors.background.secondary),
                         },
                       ]}
                     >
                       <Ionicons
                         name={track.icon as any}
                         size={22}
-                        color={isPlaying ? '#FFFFFF' : colors.accentPrimary}
+                        color={isPlaying ? '#FFFFFF' : colors.primary.default}
                       />
                     </View>
                     <View style={styles.trackInfo}>
@@ -204,18 +164,18 @@ export function SoundscapesScreen() {
                         <Text
                           style={[
                             styles.trackTitle,
-                            { color: isPlaying ? colors.accentPrimary : colors.textPrimary },
+                            { color: isPlaying ? colors.primary.default : colors.text.primary },
                           ]}
                         >
                           {track.title}
                         </Text>
-                        <View style={[styles.atmosphereBadge, { backgroundColor: colors.accentBg }]}>
-                          <Text style={[styles.atmosphereText, { color: colors.accentPrimary }]}>
+                        <View style={[styles.atmosphereBadge, { backgroundColor: colors.primary.subtle }]}>
+                          <Text style={[styles.atmosphereText, { color: colors.primary.default }]}>
                             {track.atmosphere}
                           </Text>
                         </View>
                       </View>
-                      <Text style={[styles.trackSub, { color: colors.textTertiary }]}>
+                      <Text style={[styles.trackSub, { color: colors.text.tertiary }]}>
                         {track.subtitle}
                       </Text>
                     </View>
@@ -223,19 +183,19 @@ export function SoundscapesScreen() {
                       style={[
                         styles.playToggleBtn,
                         {
-                          backgroundColor: isPlaying ? colors.accentPrimary : 'transparent',
-                          borderColor: isPlaying ? colors.accentPrimary : colors.borderLight,
+                          backgroundColor: isPlaying ? colors.primary.default : 'transparent',
+                          borderColor: isPlaying ? colors.primary.default : colors.border.default,
                         },
                       ]}
                     >
                       <Ionicons
                         name={isPlaying ? 'pause' : 'play'}
                         size={16}
-                        color={isPlaying ? '#FFFFFF' : colors.textPrimary}
+                        color={isPlaying ? '#FFFFFF' : colors.text.primary}
                       />
                     </View>
                   </View>
-                </Pressable>
+                </TactilePressable>
               );
             })}
           </View>
@@ -256,16 +216,15 @@ export function SoundscapesScreen() {
                 {['Off', '15m', '30m', '60m', '90m'].map((timer) => {
                   const isTimerActive = selectedTimer === timer;
                   return (
-                    <Pressable
+                    <TactilePressable
                       key={timer}
                       onPress={() => handleSelectTimer(timer)}
-                      style={({ pressed }) => [
+                      scaleDownTo={0.93}
+                      style={[
                         styles.timerPill,
                         {
                           backgroundColor: isTimerActive ? skyTint.accent : skyTint.plate,
                           borderColor: isTimerActive ? skyTint.accent : skyTint.border,
-                          transform: [{ scale: pressed ? 0.93 : 1 }],
-                          opacity: pressed ? 0.88 : 1,
                         },
                       ]}
                     >
@@ -277,7 +236,7 @@ export function SoundscapesScreen() {
                       >
                         {timer}
                       </Text>
-                    </Pressable>
+                    </TactilePressable>
                   );
                 })}
               </View>
@@ -298,16 +257,15 @@ export function SoundscapesScreen() {
                 ].map((vol) => {
                   const isVolActive = Math.abs(volumeLevel - vol.val) < 0.05;
                   return (
-                    <Pressable
+                    <TactilePressable
                       key={vol.label}
                       onPress={() => handleSetVolume(vol.val)}
-                      style={({ pressed }) => [
+                      scaleDownTo={0.93}
+                      style={[
                         styles.volumePill,
                         {
                           backgroundColor: isVolActive ? skyTint.accent : skyTint.plate,
                           borderColor: isVolActive ? skyTint.accent : skyTint.border,
-                          transform: [{ scale: pressed ? 0.93 : 1 }],
-                          opacity: pressed ? 0.88 : 1,
                         },
                       ]}
                     >
@@ -319,7 +277,7 @@ export function SoundscapesScreen() {
                       >
                         {vol.label}
                       </Text>
-                    </Pressable>
+                    </TactilePressable>
                   );
                 })}
               </View>
@@ -331,30 +289,29 @@ export function SoundscapesScreen() {
 
       {/* Floating Bottom Bar */}
       {activeSound && (
-        <View style={[styles.bottomBar, { backgroundColor: colors.bgCard, borderTopColor: colors.borderLight }]}>
+        <View style={[styles.bottomBar, { backgroundColor: colors.surface.default, borderTopColor: colors.border.default }]}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.bottomBarTitle, { color: colors.textPrimary }]}>
+            <Text style={[styles.bottomBarTitle, { color: colors.text.primary }]}>
               Playing: {TRACKS.find((t) => t.id === activeSound)?.title}
             </Text>
-            <Text style={[styles.bottomBarSub, { color: colors.textTertiary }]}>
+            <Text style={[styles.bottomBarSub, { color: colors.text.tertiary }]}>
               {selectedTimer !== 'Off' ? `Timer active: ${selectedTimer}` : 'Continuous loop'}
             </Text>
           </View>
-          <Pressable
+          <TactilePressable
             onPress={() => soundService.stop()}
-            style={({ pressed }) => [
+            scaleDownTo={0.94}
+            style={[
               styles.stopBtn,
               {
-                backgroundColor: colors.accentBg,
-                borderColor: colors.accentBorder,
-                transform: [{ scale: pressed ? 0.94 : 1 }],
-                opacity: pressed ? 0.85 : 1,
+                backgroundColor: colors.primary.subtle,
+                borderColor: colors.primary.subtleBorder,
               },
             ]}
           >
-            <Ionicons name="stop" size={16} color={colors.accentPrimary} />
-            <Text style={[styles.stopBtnText, { color: colors.accentPrimary }]}>Stop</Text>
-          </Pressable>
+            <Ionicons name="stop" size={16} color={colors.primary.default} />
+            <Text style={[styles.stopBtnText, { color: colors.primary.default }]}>Stop</Text>
+          </TactilePressable>
         </View>
       )}
     </ScreenContainer>
@@ -363,34 +320,6 @@ export function SoundscapesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navTitleCol: { alignItems: 'center' },
-  navTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  navSubtitle: { fontSize: 12, fontWeight: '500', marginTop: 1 },
-  liveIndicator: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,

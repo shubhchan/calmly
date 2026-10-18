@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleProp, ViewStyle, TextStyle } from 'react-native';
-import { useThemeColors } from '../theme/ThemeContext';
+import { useAppTheme } from '../theme/ThemeContext';
 import { fontFamilies } from '../theme/typography';
 
 interface StatPillProps {
@@ -28,29 +28,14 @@ export const StatPill = ({
   labelStyle,
   valueStyle,
 }: StatPillProps) => {
-  let colors: any;
-  try {
-    colors = useThemeColors();
-  } catch {
-    colors = {
-      accentPrimary: '#3E7B52',
-      bgCard: '#FFFFFF',
-      borderLight: '#E6E0D4',
-      textPrimary: '#1A212D',
-      textSecondary: '#384455',
-      textTertiary: '#607085',
-      success: '#3E7B52',
-      error: '#DB3A60',
-      isDark: false,
-    };
-  }
+  const { colors, isDark } = useAppTheme();
 
-  const resolvedAccent = accentColor ?? colors.accentPrimary;
+  const resolvedAccent = accentColor ?? colors.primary.default;
 
   const trendColors = {
-    up: colors.success,
-    down: colors.error,
-    neutral: colors.textTertiary,
+    up: colors.status.success.default,
+    down: colors.status.error.default,
+    neutral: colors.text.tertiary,
   };
 
   const trendIcons = {
@@ -69,12 +54,12 @@ export const StatPill = ({
           paddingHorizontal: 16,
           paddingVertical: 14,
           borderRadius: 20,
-          backgroundColor: colors.bgCard,
+          backgroundColor: colors.surface.default,
           borderWidth: 1,
-          borderColor: colors.borderLight,
-          shadowColor: colors.textPrimary,
+          borderColor: colors.border.default,
+          shadowColor: colors.text.primary,
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: colors.isDark ? 0.2 : 0.04,
+          shadowOpacity: isDark ? 0.2 : 0.04,
           shadowRadius: 6,
           elevation: 1.5,
           flex: 1,
@@ -104,7 +89,7 @@ export const StatPill = ({
               fontFamily: fontFamilies.sans.medium,
               fontSize: 12,
               fontWeight: '500',
-              color: colors.textTertiary,
+              color: colors.text.tertiary,
               letterSpacing: 0.1,
             },
             labelStyle,
@@ -119,7 +104,7 @@ export const StatPill = ({
                 fontFamily: fontFamilies.sans.bold,
                 fontSize: 17,
                 fontWeight: '700',
-                color: colors.textPrimary,
+                color: colors.text.primary,
                 letterSpacing: -0.2,
               },
               valueStyle,
@@ -162,19 +147,7 @@ export const MoodStatPill = ({
   className = '',
   style,
 }: MoodStatPillProps) => {
-  let colors: any;
-  try {
-    colors = useThemeColors();
-  } catch {
-    colors = {
-      bgCard: '#FFFFFF',
-      borderLight: '#E6E0D4',
-      textPrimary: '#1A212D',
-      textSecondary: '#384455',
-      textTertiary: '#607085',
-      isDark: false,
-    };
-  }
+  const { colors, isDark } = useAppTheme();
 
   return (
     <View
@@ -186,12 +159,12 @@ export const MoodStatPill = ({
           paddingHorizontal: 16,
           paddingVertical: 12,
           borderRadius: 18,
-          backgroundColor: colors.bgCard,
+          backgroundColor: colors.surface.default,
           borderWidth: 1,
           borderColor: color + '30',
-          shadowColor: colors.textPrimary,
+          shadowColor: colors.text.primary,
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: colors.isDark ? 0.2 : 0.04,
+          shadowOpacity: isDark ? 0.2 : 0.04,
           shadowRadius: 6,
           elevation: 1.5,
         },
@@ -212,11 +185,11 @@ export const MoodStatPill = ({
         <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: color }} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: fontFamilies.sans.medium, fontSize: 13, fontWeight: '500', color: colors.textSecondary }}>
+        <Text style={{ fontFamily: fontFamilies.sans.medium, fontSize: 13, fontWeight: '500', color: colors.text.secondary }}>
           {mood}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-          <Text style={{ fontFamily: fontFamilies.sans.bold, fontSize: 16, fontWeight: '700', color: colors.textPrimary, minWidth: 42 }}>
+          <Text style={{ fontFamily: fontFamilies.sans.bold, fontSize: 16, fontWeight: '700', color: colors.text.primary, minWidth: 42 }}>
             {Math.round(percentage)}%
           </Text>
           <View
@@ -226,7 +199,7 @@ export const MoodStatPill = ({
               flex: 1,
               maxWidth: 90,
               borderRadius: 3,
-              backgroundColor: colors.borderLight,
+              backgroundColor: colors.border.default,
               overflow: 'hidden',
             }}
           >
@@ -244,4 +217,3 @@ export const MoodStatPill = ({
     </View>
   );
 };
-

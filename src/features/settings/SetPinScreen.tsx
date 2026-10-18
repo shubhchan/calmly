@@ -6,8 +6,9 @@ import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { appLockService } from '../../services/appLock';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { ScreenHeader } from '../../components';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['route'];
@@ -15,7 +16,7 @@ type RouteProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['route'];
 export function SetPinScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
   const { onComplete } = ((route as any)?.params ?? {}) as { onComplete?: () => void };
 
   const [pin, setPin] = useState('');
@@ -91,39 +92,32 @@ export function SetPinScreen() {
   }, [stage]);
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={styles.container}>
-      <View style={styles.topNav}>
-        <TouchableOpacity
-          onPress={() => {
-            if (stage === 'confirm') {
-              setStage('enter');
-              setConfirmPin('');
-              setError(false);
-            } else {
-              navigation.goBack();
-            }
-          }}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ width: 40 }} />
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default} style={styles.container}>
+      <ScreenHeader
+        onBack={() => {
+          if (stage === 'confirm') {
+            setStage('enter');
+            setConfirmPin('');
+            setError(false);
+          } else {
+            navigation.goBack();
+          }
+        }}
+      />
 
       <View style={styles.content}>
         <View style={styles.header}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.accentPrimary + '18' }]}>
+          <View style={[styles.iconWrap, { backgroundColor: colors.primary.default + '18' }]}>
             <Ionicons
               name={stage === 'enter' ? 'lock-closed-outline' : 'shield-checkmark-outline'}
               size={36}
-              color={colors.accentPrimary}
+              color={colors.primary.default}
             />
           </View>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>
+          <Text style={[styles.title, { color: colors.text.primary }]}>
             {stage === 'enter' ? 'Create Security PIN' : 'Confirm Security PIN'}
           </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
             {stage === 'enter' ? 'Enter a memorable 6-digit passcode' : 'Re-enter your 6 digits to verify'}
           </Text>
         </View>
@@ -134,14 +128,14 @@ export function SetPinScreen() {
               key={i}
               style={[
                 styles.pinDot,
-                { borderColor: colors.borderLight, backgroundColor: 'transparent' },
+                { borderColor: colors.border.default, backgroundColor: 'transparent' },
                 (stage === 'enter' ? i < (pin ?? '').length : i < (confirmPin ?? '').length) && {
-                  backgroundColor: colors.accentPrimary,
-                  borderColor: colors.accentPrimary,
+                  backgroundColor: colors.primary.default,
+                  borderColor: colors.primary.default,
                 },
                 error && {
-                  borderColor: colors.accentRose || '#EB697F',
-                  backgroundColor: colors.accentRose || '#EB697F',
+                  borderColor: colors.accents.rose,
+                  backgroundColor: colors.accents.rose,
                 },
               ]}
             />
@@ -149,7 +143,7 @@ export function SetPinScreen() {
         </View>
 
         {error ? (
-          <Text style={[styles.errorText, { color: colors.accentRose || '#EB697F' }]}>
+          <Text style={[styles.errorText, { color: colors.accents.rose }]}>
             {stage === 'confirm' ? 'PINs do not match. Please try again.' : 'Enter 6 digits'}
           </Text>
         ) : null}
@@ -168,7 +162,7 @@ export function SetPinScreen() {
                   onPress={() => (key === '⌫' ? handleDelete() : key && handlePinPress(key))}
                   style={[
                     styles.keypadButton,
-                    { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                    { backgroundColor: colors.surface.default, borderColor: colors.border.default },
                     key === '' && styles.keypadButtonEmpty,
                     key === '⌫' && styles.keypadButtonDelete,
                   ]}
@@ -176,12 +170,12 @@ export function SetPinScreen() {
                   accessibilityLabel={key === '⌫' ? 'Delete' : key}
                 >
                   {key === '⌫' ? (
-                    <Ionicons name="backspace-outline" size={26} color={colors.textPrimary} />
+                    <Ionicons name="backspace-outline" size={26} color={colors.text.primary} />
                   ) : (
                     <Text
                       style={[
                         styles.keypadButtonText,
-                        { color: colors.textPrimary },
+                        { color: colors.text.primary },
                         key === '' && styles.keypadButtonTextEmpty,
                       ]}
                     >
@@ -200,20 +194,6 @@ export function SetPinScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  topNav: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   content: { flex: 1, paddingHorizontal: 32, justifyContent: 'center', gap: 20 },
   header: { alignItems: 'center', gap: 10 },
   iconWrap: {

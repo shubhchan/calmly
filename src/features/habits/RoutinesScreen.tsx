@@ -1,17 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { routineRepository, TimeOfDay } from '../../database/repositories/routineRepository';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ScreenHeader } from '../../components';
 import { TactilePressable } from '../../components/interactive/TactilePressable';
 import { StaggeredEntry } from '../../components/interactive/StaggeredEntry';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint, tintForIndex } from '../../theme/tints';
 
@@ -25,7 +25,7 @@ const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; icon: any; color: s
 
 export function RoutinesScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const [routines, setRoutines] = useState<Record<TimeOfDay, any[]>>({
     morning: [],
     afternoon: [],
@@ -102,43 +102,24 @@ export function RoutinesScreen() {
     (safeRoutines?.evening ?? []).length > 0;
 
   return (
-    <ScreenContainer contentContainerStyle={styles.content}>
-      <PopIn index={0}>
-      <View style={styles.topNav}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            styles.backButton,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              transform: [{ scale: pressed ? 0.92 : 1 }],
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Mindful Routines</Text>
-        <View style={{ width: 40 }} />
-      </View>
-      </PopIn>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title="Mindful Routines" />
 
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {(['morning', 'afternoon', 'evening'] as TimeOfDay[]).map((timeOfDay, sectionIndex) => {
         const config = TIME_OF_DAY_CONFIG[timeOfDay];
         const list = safeRoutines[timeOfDay] ?? [];
 
         return (
-          <StaggeredEntry key={timeOfDay} index={sectionIndex} baseDelay={60}>
+          <StaggeredEntry key={timeOfDay} index={sectionIndex}>
             <Card style={styles.sectionCard}>
               <View style={styles.timeOfDayHeader}>
                 <View style={[styles.timeOfDayIcon, { backgroundColor: config.color + '20' }]}>
                   <Ionicons name={config.icon} size={22} color={config.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.timeOfDayLabel, { color: colors.textPrimary }]}>{config.label}</Text>
-                  <Text style={{ fontSize: 12, color: colors.textTertiary }}>
+                  <Text style={[styles.timeOfDayLabel, { color: colors.text.primary }]}>{config.label}</Text>
+                  <Text style={{ fontSize: 12, color: colors.text.tertiary }}>
                     {list.length} {list.length === 1 ? 'routine' : 'routines'}
                   </Text>
                 </View>
@@ -149,19 +130,19 @@ export function RoutinesScreen() {
                   style={[
                     styles.addRoutineButton,
                     {
-                      backgroundColor: colors.bgCard,
-                      borderColor: colors.borderLight,
+                      backgroundColor: colors.surface.default,
+                      borderColor: colors.border.default,
                     },
                   ]}
                   hitSlop={8}
                 >
-                  <Ionicons name="add" size={20} color={colors.accentPrimary} />
+                  <Ionicons name="add" size={20} color={colors.primary.default} />
                 </TactilePressable>
               </View>
 
               {list.length === 0 ? (
                 <View style={styles.emptyRoutine}>
-                  <Text style={[styles.emptyRoutineText, { color: colors.textTertiary }]}>
+                  <Text style={[styles.emptyRoutineText, { color: colors.text.tertiary }]}>
                     No {config.label.toLowerCase()} routine defined
                   </Text>
                   <TactilePressable
@@ -182,9 +163,9 @@ export function RoutinesScreen() {
               ) : (
                 <View style={styles.routineList}>
                   {list.map((routine, routineIdx) => {
-                    const routineTint = resolveTint(!!colors.isDark, tintForIndex(routineIdx));
+                    const routineTint = resolveTint(!!isDark, tintForIndex(routineIdx));
                     return (
-                    <StaggeredEntry key={routine.id} index={routineIdx} delayStep={30}>
+                    <StaggeredEntry key={routine.id} index={routineIdx}>
                       <TactilePressable
                         onPress={() => handleEditRoutine(routine)}
                         scaleDownTo={0.98}
@@ -211,7 +192,7 @@ export function RoutinesScreen() {
                             style={styles.deleteIcon}
                             hitSlop={8}
                           >
-                            <Ionicons name="trash-outline" size={18} color={colors.accentRose || '#EB697F'} />
+                            <Ionicons name="trash-outline" size={18} color={colors.accents.rose} />
                           </TactilePressable>
                           <Ionicons name="chevron-forward" size={18} color={routineTint.muted} />
                         </View>
@@ -225,6 +206,7 @@ export function RoutinesScreen() {
           </StaggeredEntry>
         );
       })}
+      </ScrollView>
     </ScreenContainer>
   );
 }
@@ -232,21 +214,6 @@ export function RoutinesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
-  topNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3 },
   sectionCard: {
     padding: 16,
     borderRadius: 20,

@@ -1,28 +1,25 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useThemeColors } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, PanicAnchorIllustration } from '../../components';
+import { useAppTheme } from '../../theme/ThemeContext';
+import { Card, CardContent, PrimaryButton, PanicAnchorIllustration, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
-import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 export function PanicAnchorScreen() {
   const navigation = useNavigation();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
 
   const [sighCount, setSighCount] = useState<number>(0);
   const [isPlayingRain, setIsPlayingRain] = useState<boolean>(false);
 
   const handleSighPress = () => {
-    hapticFeedback.medium();
     setSighCount((prev) => (prev >= 3 ? 1 : prev + 1));
   };
 
   const handleToggleRain = async () => {
-    hapticFeedback.light();
     if (isPlayingRain) {
       await soundService.stop();
       setIsPlayingRain(false);
@@ -33,66 +30,37 @@ export function PanicAnchorScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      {/* Top Bar */}
-      <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            styles.backButton,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              transform: [{ scale: pressed ? 0.92 : 1 }],
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.navTitleCol}>
-          <Text style={[styles.navTitle, { color: colors.textPrimary }]}>Acute Panic Anchor</Text>
-          <Text style={[styles.navSubtitle, { color: colors.accentRose || '#EB697F' }]}>Biological SOS Aid</Text>
-        </View>
-        <View
-          style={[
-            styles.badgeOrb,
-            { backgroundColor: (colors.accentRose || '#EB697F') + '18', borderColor: (colors.accentRose || '#EB697F') + '50' },
-          ]}
-        >
-          <Ionicons name="shield-checkmark" size={16} color={colors.accentRose || '#EB697F'} />
-        </View>
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title="Acute Panic Anchor" subtitle="Biological SOS Aid" bordered />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Hero Card with SVG Illustration */}
-        <Card variant="elevated" style={[styles.heroCard, { borderColor: (colors.accentRose || '#EB697F') + '50' }]}>
+        <Card variant="elevated" style={[styles.heroCard, { borderColor: (colors.accents.rose) + '50' }]}>
           <CardContent style={styles.heroCardContent}>
-            <View style={[styles.heroAuraGlow, { backgroundColor: (colors.accentRose || '#EB697F') + '12' }]}>
+            <View style={[styles.heroAuraGlow, { backgroundColor: (colors.accents.rose) + '12' }]}>
               <PanicAnchorIllustration width={190} height={155} />
             </View>
             <View style={styles.heroBadgeRow}>
               <View
                 style={[
                   styles.heroBadge,
-                  { backgroundColor: (colors.accentRose || '#EB697F') + '15', borderColor: (colors.accentRose || '#EB697F') + '40' },
+                  { backgroundColor: (colors.accents.rose) + '15', borderColor: (colors.accents.rose) + '40' },
                 ]}
               >
-                <Ionicons name="heart" size={12} color={colors.accentRose || '#EB697F'} />
-                <Text style={[styles.heroBadgeText, { color: colors.accentRose || '#EB697F' }]}>You Are Safe</Text>
+                <Ionicons name="heart" size={12} color={colors.accents.rose} />
+                <Text style={[styles.heroBadgeText, { color: colors.accents.rose }]}>You Are Safe</Text>
               </View>
-              <Text style={[styles.heroEstText, { color: colors.textTertiary }]}>Surge will pass shortly</Text>
+              <Text style={[styles.heroEstText, { color: colors.text.tertiary }]}>Surge will pass shortly</Text>
             </View>
           </CardContent>
         </Card>
 
         {/* Value Proposition */}
         <View style={styles.section}>
-          <Text style={[styles.headline, { color: colors.textPrimary }]}>
+          <Text style={[styles.headline, { color: colors.text.primary }]}>
             This physiological surge will pass in minutes
           </Text>
-          <Text style={[styles.subheadline, { color: colors.textSecondary }]}>
+          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
             Panic is a temporary surge of adrenaline that feels terrifying but is biologically harmless. You cannot stay in panic indefinitely—your body is already working to metabolize it.
           </Text>
         </View>
@@ -101,42 +69,42 @@ export function PanicAnchorScreen() {
         <Card variant="elevated" style={styles.stepCard}>
           <CardContent style={styles.stepContent}>
             <View style={styles.stepHeaderRow}>
-              <View style={[styles.stepNumOrb, { backgroundColor: colors.accentPrimary }]}>
+              <View style={[styles.stepNumOrb, { backgroundColor: colors.primary.default }]}>
                 <Text style={styles.stepNumText}>1</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>
+                <Text style={[styles.stepTitle, { color: colors.text.primary }]}>
                   Double Inhale Physiological Sigh
                 </Text>
-                <Text style={[styles.stepSubtitle, { color: colors.accentPrimary }]}>
+                <Text style={[styles.stepSubtitle, { color: colors.primary.default }]}>
                   Fastest way to reinflate collapsed alveoli & dump CO₂
                 </Text>
               </View>
             </View>
-            <Text style={[styles.stepBody, { color: colors.textSecondary }]}>
+            <Text style={[styles.stepBody, { color: colors.text.secondary }]}>
               Take two consecutive deep inhales through your nose back-to-back without exhaling, then one long, audible, slow exhale through open mouth.
             </Text>
-            <Pressable
+            <TactilePressable
               onPress={handleSighPress}
-              style={({ pressed }) => [
+              scaleDownTo={0.97}
+              hapticStyle="medium"
+              style={[
                 styles.sighButton,
                 {
-                  backgroundColor: colors.accentBg,
-                  borderColor: colors.accentBorder,
-                  transform: [{ scale: pressed ? 0.97 : 1 }],
-                  opacity: pressed ? 0.9 : 1,
+                  backgroundColor: colors.primary.subtle,
+                  borderColor: colors.primary.subtleBorder,
                 },
               ]}
             >
-              <Ionicons name="sparkles" size={18} color={colors.accentPrimary} />
-              <Text style={[styles.sighButtonText, { color: colors.accentPrimary }]}>
+              <Ionicons name="sparkles" size={18} color={colors.primary.default} />
+              <Text style={[styles.sighButtonText, { color: colors.primary.default }]}>
                 {sighCount === 0
                   ? 'Tap to complete 1st sigh (Target: 3)'
                   : sighCount < 3
                   ? `Completed ${sighCount} of 3 sighs — Tap for next`
                   : '✓ 3 Sighs completed! Heart rate dropping.'}
               </Text>
-            </Pressable>
+            </TactilePressable>
           </CardContent>
         </Card>
 
@@ -144,19 +112,19 @@ export function PanicAnchorScreen() {
         <Card variant="outlined" style={styles.stepCard}>
           <CardContent style={styles.stepContent}>
             <View style={styles.stepHeaderRow}>
-              <View style={[styles.stepNumOrb, { backgroundColor: colors.accentSky || '#6B9BCD' }]}>
+              <View style={[styles.stepNumOrb, { backgroundColor: colors.accents.sky }]}>
                 <Text style={styles.stepNumText}>2</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>
+                <Text style={[styles.stepTitle, { color: colors.text.primary }]}>
                   Cold Water Shock Reflex
                 </Text>
-                <Text style={[styles.stepSubtitle, { color: colors.accentSky || '#6B9BCD' }]}>
+                <Text style={[styles.stepSubtitle, { color: colors.accents.sky }]}>
                   Activates the mammalian dive reflex
                 </Text>
               </View>
             </View>
-            <Text style={[styles.stepBody, { color: colors.textSecondary }]}>
+            <Text style={[styles.stepBody, { color: colors.text.secondary }]}>
               Splash ice-cold water onto your eyelids, cheeks, and forehead, or hold a cold beverage can to your neck. This reflex biochemically forces heart rate downward in 10 seconds.
             </Text>
           </CardContent>
@@ -166,19 +134,19 @@ export function PanicAnchorScreen() {
         <Card variant="outlined" style={styles.stepCard}>
           <CardContent style={styles.stepContent}>
             <View style={styles.stepHeaderRow}>
-              <View style={[styles.stepNumOrb, { backgroundColor: colors.accentPeach || '#EB876D' }]}>
+              <View style={[styles.stepNumOrb, { backgroundColor: colors.accents.peach }]}>
                 <Text style={styles.stepNumText}>3</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>
+                <Text style={[styles.stepTitle, { color: colors.text.primary }]}>
                   Tactile Hand-on-Heart
                 </Text>
-                <Text style={[styles.stepSubtitle, { color: colors.accentPeach || '#EB876D' }]}>
+                <Text style={[styles.stepSubtitle, { color: colors.accents.peach }]}>
                   Releases soothing oxytocin
                 </Text>
               </View>
             </View>
-            <Text style={[styles.stepBody, { color: colors.textSecondary }]}>
+            <Text style={[styles.stepBody, { color: colors.text.secondary }]}>
               Place one firm, warm palm directly over the center of your chest. Feel the solid weight of your hand. Whisper silently: “I am safe in this room. My body knows how to handle this.”
             </Text>
           </CardContent>
@@ -186,41 +154,40 @@ export function PanicAnchorScreen() {
 
         {/* Instant Nature Soundscape Anchor */}
         <View style={styles.soundRow}>
-          <Text style={[styles.soundPromptText, { color: colors.textSecondary }]}>
+          <Text style={[styles.soundPromptText, { color: colors.text.secondary }]}>
             Need soothing acoustics right now?
           </Text>
-          <Pressable
+          <TactilePressable
             onPress={handleToggleRain}
-            style={({ pressed }) => [
+            scaleDownTo={0.94}
+            style={[
               styles.soundToggleBtn,
               {
-                backgroundColor: isPlayingRain ? colors.accentPrimary : colors.bgCard,
-                borderColor: isPlayingRain ? colors.accentPrimary : colors.borderLight,
-                transform: [{ scale: pressed ? 0.94 : 1 }],
-                opacity: pressed ? 0.88 : 1,
+                backgroundColor: isPlayingRain ? colors.primary.default : colors.surface.default,
+                borderColor: isPlayingRain ? colors.primary.default : colors.border.default,
               },
             ]}
           >
             <Ionicons
               name={isPlayingRain ? 'pause' : 'volume-medium'}
               size={16}
-              color={isPlayingRain ? '#FFFFFF' : colors.accentPrimary}
+              color={isPlayingRain ? '#FFFFFF' : colors.primary.default}
             />
-            <Text style={[styles.soundToggleBtnText, { color: isPlayingRain ? '#FFFFFF' : colors.textPrimary }]}>
+            <Text style={[styles.soundToggleBtnText, { color: isPlayingRain ? '#FFFFFF' : colors.text.primary }]}>
               {isPlayingRain ? 'Pause Rain' : 'Play Gentle Rain'}
             </Text>
-          </Pressable>
+          </TactilePressable>
         </View>
       </ScrollView>
 
       {/* Floating Bottom Action */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.bgPrimary, borderTopColor: colors.borderLight }]}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
         <PrimaryButton
           title="Return to Calm Sanctuary"
           variant="secondary"
           size="lg"
           onPress={() => navigation.goBack()}
-          leftIcon={<Ionicons name="checkmark-circle-outline" size={20} color={colors.accentPrimary} />}
+          leftIcon={<Ionicons name="checkmark-circle-outline" size={20} color={colors.primary.default} />}
         />
       </View>
     </ScreenContainer>
@@ -229,34 +196,6 @@ export function PanicAnchorScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navTitleCol: { alignItems: 'center' },
-  navTitle: { fontFamily: fontFamilies.sans.bold, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  navSubtitle: { fontFamily: fontFamilies.sans.semiBold, fontSize: 12, fontWeight: '700', marginTop: 1 },
-  badgeOrb: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,

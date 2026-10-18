@@ -479,7 +479,7 @@ export function applyBundledFont(key: string): boolean {
 
 /**
  * Restores the persisted font choice at boot. Runs after bundled fonts load.
- * Failures fall back silently to the bundled handwritten default.
+ * Failures fall back silently to the bundled default (Plus Jakarta Sans).
  */
 export async function restoreSavedFont(): Promise<void> {
   try {
@@ -487,6 +487,7 @@ export async function restoreSavedFont(): Promise<void> {
     if (!savedKey) {
       savedKey = (await AsyncStorage.getItem(FONT_PREFERENCE_KEY)) ?? undefined;
     }
+    // 'oddly-calming' is the removed legacy default — fall through to the new default.
     if (!savedKey || savedKey === 'oddly-calming') return;
 
     const bundled = getBundledFont(savedKey);

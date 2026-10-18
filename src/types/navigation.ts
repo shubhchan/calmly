@@ -39,6 +39,7 @@ export type RootStackParamList = {
   SetPin?: { onComplete?: () => void };
   DataManagement: undefined;
   FontBrowser: undefined;
+  DesignSystem: undefined;
 };
 
 export type TabParamList = {

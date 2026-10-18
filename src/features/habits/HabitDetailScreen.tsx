@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -9,10 +9,11 @@ import { HabitCompletion } from '../../database/models';
 import { getHabitEncouragement } from '../../utils/encouragement';
 import { getIconName } from '../../utils/iconMap';
 import { Card } from '../../components/Card';
+import { ScreenHeader } from '../../components';
 import { StatPill } from '../../components/StatPill';
 import { Ionicons } from '@expo/vector-icons';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
@@ -30,7 +31,7 @@ const FREQUENCY_LABELS: Record<string, string> = {
 export function HabitDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const { id } = route.params ?? {};
 
   const [habit, setHabit] = useState<Habit | null>(null);
@@ -142,8 +143,8 @@ export function HabitDetailScreen() {
 
   if (!id) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Not found</Text>
+      <View style={[styles.container, { backgroundColor: colors.background.default, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Not found</Text>
       </View>
     );
   }
@@ -158,8 +159,8 @@ export function HabitDetailScreen() {
 
   if (!habit) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Habit not found</Text>
+      <View style={[styles.container, { backgroundColor: colors.background.default, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Habit not found</Text>
       </View>
     );
   }
@@ -189,37 +190,31 @@ export function HabitDetailScreen() {
     calendarTitle = '';
   }
 
-  const habitAccentColor = habit?.color || colors.accentPrimary;
-  const sageTint = resolveTint(!!colors.isDark, 'sage');
+  const habitAccentColor = habit?.color || colors.primary.default;
+  const sageTint = resolveTint(!!isDark, 'sage');
 
   return (
-    <ScreenContainer contentContainerStyle={styles.content}>
-      <PopIn index={0}>
-      <View style={styles.topNav}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={handleEdit}
-            style={[styles.actionButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          >
-            <Ionicons name="create-outline" size={20} color={colors.accentPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleDelete}
-            style={[styles.actionButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          >
-            <Ionicons name="trash-outline" size={20} color={colors.accentRose || '#EB697F'} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      </PopIn>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader
+        right={
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={handleEdit}
+              style={[styles.actionButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
+            >
+              <Ionicons name="create-outline" size={20} color={colors.primary.default} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={[styles.actionButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
+            >
+              <Ionicons name="trash-outline" size={20} color={colors.accents.rose} />
+            </TouchableOpacity>
+          </View>
+        }
+      />
 
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <PopIn index={1}>
       <Card tone="sage" style={styles.habitHero}>
         <View style={[styles.habitIconLarge, { backgroundColor: habitAccentColor }]}>
@@ -252,14 +247,14 @@ export function HabitDetailScreen() {
         <StatPill
           label="Best Streak"
           value={`${streak?.longest ?? 0} days`}
-          accentColor={colors.accentLavender || '#877FC5'}
-          icon={<Ionicons name="trophy-outline" size={16} color={colors.accentLavender || '#877FC5'} />}
+          accentColor={colors.accents.lavender}
+          icon={<Ionicons name="trophy-outline" size={16} color={colors.accents.lavender} />}
         />
         <StatPill
           label="Rate"
           value={`${completionRate}%`}
-          accentColor={colors.accentSky || '#6B9BCD'}
-          icon={<Ionicons name="pie-chart-outline" size={16} color={colors.accentSky || '#6B9BCD'} />}
+          accentColor={colors.accents.sky}
+          icon={<Ionicons name="pie-chart-outline" size={16} color={colors.accents.sky} />}
         />
       </View>
       </PopIn>
@@ -275,9 +270,9 @@ export function HabitDetailScreen() {
             }}
             style={styles.navButton}
           >
-            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={22} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={[styles.calendarTitle, { color: colors.textPrimary }]}>{calendarTitle}</Text>
+          <Text style={[styles.calendarTitle, { color: colors.text.primary }]}>{calendarTitle}</Text>
           <TouchableOpacity
             onPress={() => {
               try {
@@ -286,13 +281,13 @@ export function HabitDetailScreen() {
             }}
             style={styles.navButton}
           >
-            <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
+            <Ionicons name="chevron-forward" size={22} color={colors.text.primary} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.calendarWeekdays}>
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
-            <Text key={`${day}-${idx}`} style={[styles.calendarWeekday, { color: colors.textTertiary }]}>
+            <Text key={`${day}-${idx}`} style={[styles.calendarWeekday, { color: colors.text.tertiary }]}>
               {day}
             </Text>
           ))}
@@ -329,10 +324,10 @@ export function HabitDetailScreen() {
                 <Text
                   style={[
                     styles.calendarDayText,
-                    { color: colors.textPrimary },
+                    { color: colors.text.primary },
                     isCompleted && { color: '#FFFFFF', fontWeight: '700' },
                     isTodayDay && !isCompleted && { color: habitAccentColor, fontWeight: '700' },
-                    isFuture && { color: colors.textTertiary },
+                    isFuture && { color: colors.text.tertiary },
                   ]}
                 >
                   {day.getDate()}
@@ -345,11 +340,11 @@ export function HabitDetailScreen() {
         <View style={styles.calendarLegend}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: habitAccentColor }]} />
-            <Text style={[styles.legendText, { color: colors.textSecondary }]}>Completed</Text>
+            <Text style={[styles.legendText, { color: colors.text.secondary }]}>Completed</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { borderWidth: 2, borderColor: habitAccentColor }]} />
-            <Text style={[styles.legendText, { color: colors.textSecondary }]}>Today</Text>
+            <Text style={[styles.legendText, { color: colors.text.secondary }]}>Today</Text>
           </View>
         </View>
       </Card>
@@ -358,8 +353,8 @@ export function HabitDetailScreen() {
       {habit?.notes ? (
         <PopIn index={4}>
         <Card style={styles.notesCard}>
-          <Text style={[styles.notesLabel, { color: colors.textSecondary }]}>Mindful Intention</Text>
-          <Text style={[styles.notesText, { color: colors.textPrimary }]}>{habit.notes}</Text>
+          <Text style={[styles.notesLabel, { color: colors.text.secondary }]}>Mindful Intention</Text>
+          <Text style={[styles.notesText, { color: colors.text.primary }]}>{habit.notes}</Text>
         </Card>
         </PopIn>
       ) : null}
@@ -367,11 +362,12 @@ export function HabitDetailScreen() {
       <PopIn index={5}>
       <View style={[styles.encouragementCard, { backgroundColor: habitAccentColor + '14', borderColor: habitAccentColor + '30' }]}>
         <Ionicons name="sparkles" size={20} color={habitAccentColor} style={{ marginBottom: 6 }} />
-        <Text style={[styles.encouragementText, { color: colors.textPrimary }]}>
+        <Text style={[styles.encouragementText, { color: colors.text.primary }]}>
           {getHabitEncouragement('streak', streak?.current ?? 0)}
         </Text>
       </View>
       </PopIn>
+      </ScrollView>
     </ScreenContainer>
   );
 }
@@ -379,19 +375,6 @@ export function HabitDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 18 },
-  topNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerActions: {
     flexDirection: 'row',
     gap: 10,

@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import { useThemeColors } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, SensoryGroundingIllustration, AppIcon } from '../../components';
+import { useAppTheme } from '../../theme/ThemeContext';
+import { Card, CardContent, PrimaryButton, SensoryGroundingIllustration, AppIcon, ScreenHeader } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
@@ -12,70 +12,46 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function SensoryGroundingScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
 
   const handleStartExercise = () => {
     navigation.navigate('GroundingExercise', { type: '5-4-3-2-1' });
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      {/* Top Bar */}
-      <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            styles.backButton,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              transform: [{ scale: pressed ? 0.92 : 1 }],
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.navTitleCol}>
-          <Text style={[styles.navTitle, { color: colors.textPrimary }]}>5-4-3-2-1 Grounding</Text>
-          <Text style={[styles.navSubtitle, { color: colors.textTertiary }]}>Sensory Presence Anchor</Text>
-        </View>
-        <View style={[styles.badgeOrb, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}>
-          <Ionicons name="compass-outline" size={16} color={colors.accentPrimary} />
-        </View>
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title="5-4-3-2-1 Grounding" subtitle="Sensory Presence Anchor" bordered />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Full-Page Hero Illustration Card */}
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
-            <View style={[styles.heroAuraGlow, { backgroundColor: colors.accentBg }]}>
+            <View style={[styles.heroAuraGlow, { backgroundColor: colors.primary.subtle }]}>
               <SensoryGroundingIllustration width={190} height={155} />
             </View>
             <View style={styles.heroBadgeRow}>
-              <View style={[styles.heroBadge, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}>
-                <Ionicons name="eye" size={12} color={colors.accentPrimary} />
-                <Text style={[styles.heroBadgeText, { color: colors.accentPrimary }]}>Somatic Sensory Deck</Text>
+              <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
+                <Ionicons name="eye" size={12} color={colors.primary.default} />
+                <Text style={[styles.heroBadgeText, { color: colors.primary.default }]}>Somatic Sensory Deck</Text>
               </View>
-              <Text style={[styles.heroEstText, { color: colors.textTertiary }]}>3–5 min exercise</Text>
+              <Text style={[styles.heroEstText, { color: colors.text.tertiary }]}>3–5 min exercise</Text>
             </View>
           </CardContent>
         </Card>
 
         {/* Header Cue */}
         <View style={{ marginBottom: 4 }}>
-          <Text style={[styles.headline, { color: colors.textPrimary }]}>
+          <Text style={[styles.headline, { color: colors.text.primary }]}>
             Reconnect With Your Senses
           </Text>
-          <Text style={[styles.subheadline, { color: colors.textSecondary }]}>
+          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
             Engage your physical surroundings to gently quiet racing thoughts.
           </Text>
         </View>
 
         {/* 5-Step Senses Blueprint */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             The 5 Sensory Gateways
           </Text>
           <View style={styles.stepsList}>
@@ -88,14 +64,14 @@ export function SensoryGroundingScreen() {
             ].map((step) => (
               <View
                 key={step.count}
-                style={[styles.stepCard, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+                style={[styles.stepCard, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
               >
-                <View style={[styles.stepNumBadge, { backgroundColor: colors.accentPrimary }]}>
+                <View style={[styles.stepNumBadge, { backgroundColor: colors.primary.default }]}>
                   <Text style={styles.stepNumText}>{step.count}</Text>
                 </View>
                 <View style={styles.stepInfo}>
-                  <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>{step.label}</Text>
-                  <Text style={[styles.stepDesc, { color: colors.textTertiary }]}>{step.desc}</Text>
+                  <Text style={[styles.stepTitle, { color: colors.text.primary }]}>{step.label}</Text>
+                  <Text style={[styles.stepDesc, { color: colors.text.tertiary }]}>{step.desc}</Text>
                 </View>
                 <AppIcon name={step.icon as any} size={24} loop />
               </View>
@@ -105,7 +81,7 @@ export function SensoryGroundingScreen() {
       </ScrollView>
 
       {/* Floating Bottom Action */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.bgPrimary, borderTopColor: colors.borderLight }]}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
         <PrimaryButton
           title="Start Guided 5-4-3-2-1 Guide"
           variant="primary"
@@ -120,34 +96,6 @@ export function SensoryGroundingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navTitleCol: { alignItems: 'center' },
-  navTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  navSubtitle: { fontSize: 12, fontWeight: '500', marginTop: 1 },
-  badgeOrb: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,

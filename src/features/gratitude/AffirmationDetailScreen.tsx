@@ -7,8 +7,9 @@ import { database } from '../../database';
 import Affirmation from '../../database/models/Affirmation';
 import { Card } from '../../components/Card';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { ScreenHeader } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
@@ -19,8 +20,8 @@ type RouteProp = NativeStackScreenProps<RootStackParamList, 'AffirmationDetail'>
 export function AffirmationDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const colors = useThemeColors();
-  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
+  const { colors, isDark } = useAppTheme();
+  const lilacTint = resolveTint(!!isDark, 'lilac');
   const { id } = route.params ?? {};
 
   const [affirmation, setAffirmation] = useState<{
@@ -131,8 +132,8 @@ export function AffirmationDetailScreen() {
 
   if (!id) {
     return (
-      <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: colors.textSecondary }}>Not found</Text>
+      <ScreenContainer scroll={false} backgroundColor={colors.background.default} style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: colors.text.secondary }}>Not found</Text>
       </ScreenContainer>
     );
   }
@@ -147,8 +148,8 @@ export function AffirmationDetailScreen() {
 
   if (!affirmation) {
     return (
-      <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: colors.textSecondary }}>Affirmation not found</Text>
+      <ScreenContainer scroll={false} backgroundColor={colors.background.default} style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: colors.text.secondary }}>Affirmation not found</Text>
       </ScreenContainer>
     );
   }
@@ -156,17 +157,7 @@ export function AffirmationDetailScreen() {
   return (
     <ScreenContainer contentContainerStyle={styles.content}>
       <PopIn index={0}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{affirmation?.category ?? ''}</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title={affirmation?.category ?? ''} />
       </PopIn>
 
       <PopIn index={1}>
@@ -182,33 +173,33 @@ export function AffirmationDetailScreen() {
           onPress={handleToggleFavorite}
           style={[
             styles.actionButton,
-            { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-            affirmation?.favorite && { borderColor: (colors.accentPeach || '#EB876D') + '60' },
+            { backgroundColor: colors.surface.default, borderColor: colors.border.default },
+            affirmation?.favorite && { borderColor: (colors.accents.peach) + '60' },
           ]}
         >
           <Ionicons
             name={affirmation?.favorite ? 'heart' : 'heart-outline'}
             size={20}
-            color={affirmation?.favorite ? (colors.accentPeach || '#EB876D') : colors.accentPrimary}
+            color={affirmation?.favorite ? (colors.accents.peach) : colors.primary.default}
           />
-          <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>
+          <Text style={[styles.actionLabel, { color: colors.text.primary }]}>
             {affirmation?.favorite ? 'Favorited' : 'Favorite'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={handleShare}
-          style={[styles.actionButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+          style={[styles.actionButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
         >
-          <Ionicons name="share-outline" size={20} color={colors.accentPrimary} />
-          <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Share</Text>
+          <Ionicons name="share-outline" size={20} color={colors.primary.default} />
+          <Text style={[styles.actionLabel, { color: colors.text.primary }]}>Share</Text>
         </TouchableOpacity>
       </View>
       </PopIn>
 
       <PopIn index={3}>
       <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-        <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete Affirmation</Text>
+        <Text style={[styles.deleteButtonText, { color: colors.accents.rose }]}>Delete Affirmation</Text>
       </TouchableOpacity>
       </PopIn>
     </ScreenContainer>
@@ -217,21 +208,6 @@ export function AffirmationDetailScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 60, gap: 20 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', textTransform: 'capitalize', letterSpacing: -0.3 },
   affirmationCard: {
     padding: 28,
     borderRadius: 24,

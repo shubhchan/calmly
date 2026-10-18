@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -8,9 +8,9 @@ import Habit from '../../database/models/Habit';
 import { getHabitEncouragement } from '../../utils/encouragement';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Card } from '../../components/Card';
-import { HabitPlantingIllustration, StaggeredEntry, CelebratoryCheckbox, TactilePressable } from '../../components';
+import { HabitPlantingIllustration, StaggeredEntry, CelebratoryCheckbox, TactilePressable, ScreenHeader } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
@@ -61,7 +61,7 @@ function getIconName(icon?: string | null): any {
 
 export function HabitListScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -159,29 +159,29 @@ export function HabitListScreen() {
   const safeCompletions = todayCompletions ?? {};
   const completedCount = (dueHabits ?? []).filter((h) => h?.id && safeCompletions[h.id]).length;
   const totalDue = (dueHabits ?? []).length;
-  const mintTint = resolveTint(!!colors.isDark, 'mint');
+  const mintTint = resolveTint(!!isDark, 'mint');
 
   return (
-    <ScreenContainer contentContainerStyle={styles.content}>
-      <PopIn index={0}>
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Habits</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Nurture your daily rhythm</Text>
-        </View>
-        <TactilePressable
-          onPress={handleAddHabit}
-          scaleDownTo={0.9}
-          hapticStyle="medium"
-          style={[styles.addButton, { backgroundColor: colors.accentPrimary }]}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Add habit"
-        >
-          <Ionicons name="add" size={24} color="#FFFFFF" />
-        </TactilePressable>
-      </View>
-      </PopIn>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader
+        title="Habits"
+        subtitle="Nurture your daily rhythm"
+        right={
+          <TactilePressable
+            onPress={handleAddHabit}
+            scaleDownTo={0.9}
+            hapticStyle="medium"
+            style={[styles.addButton, { backgroundColor: colors.primary.default }]}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Add habit"
+          >
+            <Ionicons name="add" size={24} color="#FFFFFF" />
+          </TactilePressable>
+        }
+      />
+
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
       {totalDue > 0 && (
         <PopIn index={1}>
@@ -223,8 +223,8 @@ export function HabitListScreen() {
         <PopIn index={2}>
         <View style={styles.emptyState}>
           <HabitPlantingIllustration width={160} height={135} style={{ marginBottom: 6 }} />
-          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No habits yet</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{getHabitEncouragement('empty')}</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>No habits yet</Text>
+          <Text style={[styles.emptyText, { color: colors.text.secondary }]}>{getHabitEncouragement('empty')}</Text>
           <PrimaryButton onPress={handleAddHabit} title="Create Your First Habit" style={styles.emptyButton} />
         </View>
         </PopIn>
@@ -244,7 +244,7 @@ export function HabitListScreen() {
             const habitColor = habit?.color || COLORS[0];
 
             return (
-              <StaggeredEntry key={habit?.id ?? Math.random().toString()} index={Math.min(index, 7)} delayStep={26}>
+              <StaggeredEntry key={habit?.id ?? 'ph-' + index} index={Math.min(index, 7)}>
                 <TactilePressable
                   onPress={() => handleHabitPress(habit)}
                   scaleDownTo={0.98}
@@ -254,8 +254,8 @@ export function HabitListScreen() {
                   style={[
                     styles.habitCard,
                     {
-                      backgroundColor: colors.bgCard,
-                      borderColor: colors.isDark ? '#2E3D52' : colors.borderLight,
+                      backgroundColor: colors.surface.default,
+                      borderColor: isDark ? '#2E3D52' : colors.border.default,
                     },
                     isCompleted && { borderColor: habitColor + '55' },
                   ]}
@@ -268,13 +268,13 @@ export function HabitListScreen() {
                       <Text
                         style={[
                           styles.habitName,
-                          { color: colors.textPrimary },
+                          { color: colors.text.primary },
                           isCompleted && { opacity: 0.75, textDecorationLine: 'line-through' },
                         ]}
                       >
                         {habit?.name ?? ''}
                       </Text>
-                      <Text style={[styles.habitFrequency, { color: colors.textTertiary }]}>
+                      <Text style={[styles.habitFrequency, { color: colors.text.tertiary }]}>
                         {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
                         {habit?.frequency === 'custom' && dayLabels.length > 0 && ` • ${dayLabels.join(', ')}`}
                       </Text>
@@ -297,16 +297,17 @@ export function HabitListScreen() {
           })}
 
           {(habits ?? []).length > (dueHabits ?? []).length && (
-            <Text style={[styles.notDueText, { color: colors.textTertiary }]}>
+            <Text style={[styles.notDueText, { color: colors.text.tertiary }]}>
               {(habits ?? []).length - (dueHabits ?? []).length} habit{(habits ?? []).length - (dueHabits ?? []).length > 1 ? 's' : ''} scheduled for other days
             </Text>
           )}
         </View>
         </PopIn>
       )}
+      </ScrollView>
 
       <PopIn index={3}>
-      <View style={[styles.bottomActions, { borderTopColor: colors.borderLight }]}>
+      <View style={[styles.bottomActions, { borderTopColor: colors.border.default }]}>
         <TactilePressable
           onPress={() => navigation.navigate('Routines')}
           scaleDownTo={0.98}
@@ -316,13 +317,13 @@ export function HabitListScreen() {
           style={[
             styles.routineButton,
             {
-              borderColor: colors.accentPrimary,
-              backgroundColor: colors.bgCard,
+              borderColor: colors.primary.default,
+              backgroundColor: colors.surface.default,
             },
           ]}
         >
-          <Ionicons name="list-outline" size={20} color={colors.accentPrimary} />
-          <Text style={[styles.routineButtonText, { color: colors.accentPrimary }]}>Mindful Routines</Text>
+          <Ionicons name="list-outline" size={20} color={colors.primary.default} />
+          <Text style={[styles.routineButtonText, { color: colors.primary.default }]}>Mindful Routines</Text>
         </TactilePressable>
       </View>
       </PopIn>
@@ -333,14 +334,6 @@ export function HabitListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, marginTop: 4 },
   addButton: {
     width: 44,
     height: 44,

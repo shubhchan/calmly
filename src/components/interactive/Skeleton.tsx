@@ -9,7 +9,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
+import { withAlpha } from '../../theme/tokens';
 
 interface SkeletonProps {
   width?: number | `${number}%`;
@@ -28,7 +29,7 @@ const BAND_TRAVEL_PADDING = 160;
  * Purely decorative: hidden from assistive technology.
  */
 export function Skeleton({ width, height = 16, radius = 10, style, shimmer = true }: SkeletonProps) {
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const containerWidth = useSharedValue(0);
   const sweep = useSharedValue(0);
   const pulse = useSharedValue(0);
@@ -57,8 +58,8 @@ export function Skeleton({ width, height = 16, radius = 10, style, shimmer = tru
     };
   });
 
-  const baseColor = colors.isDark ? colors.bgCardHover : colors.bgTertiary;
-  const highlight = colors.isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(255, 255, 255, 0.75)';
+  const baseColor = isDark ? colors.surface.hover : colors.background.tertiary;
+  const highlight = isDark ? withAlpha('#94A3B8', 0.16) : withAlpha('#FFFFFF', 0.75);
 
   return (
     <Animated.View
@@ -155,7 +156,7 @@ export function SkeletonCard({
   shimmer = true,
   style,
 }: SkeletonCardProps) {
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
   return (
     <View
       accessible={false}
@@ -170,8 +171,8 @@ export function SkeletonCard({
           paddingVertical: 15,
           borderRadius: 20,
           borderWidth: 1,
-          backgroundColor: colors.bgCard,
-          borderColor: colors.isDark ? '#2E3D52' : colors.borderLight,
+          backgroundColor: colors.surface.default,
+          borderColor: colors.border.default,
         },
         style,
       ]}

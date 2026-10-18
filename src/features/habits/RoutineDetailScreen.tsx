@@ -8,9 +8,9 @@ import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { TactilePressable, StaggeredEntry } from '../../components';
+import { TactilePressable, StaggeredEntry, ScreenHeader } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
@@ -45,7 +45,7 @@ function getIconName(icon?: string | null): any {
 export function RoutineDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
   const { timeOfDay = 'morning', routine } = route.params ?? {};
   const isEditing = !!routine;
 
@@ -149,23 +149,8 @@ export function RoutineDetailScreen() {
   }
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      <View style={styles.topNav}>
-        <TactilePressable
-          onPress={() => navigation.goBack()}
-          scaleDownTo={0.9}
-          hapticStyle="light"
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          hitSlop={10}
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TactilePressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-          {isEditing ? 'Edit Routine' : `New ${config.label} Routine`}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title={isEditing ? 'Edit Routine' : `New ${config.label} Routine`} />
 
       <ScrollView
         style={styles.scrollView}
@@ -176,13 +161,13 @@ export function RoutineDetailScreen() {
       >
         <PopIn index={0}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Routine Title</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Routine Title</Text>
           <TextInput
-            style={[styles.input, { color: colors.textPrimary, borderBottomColor: colors.borderLight }]}
+            style={[styles.input, { color: colors.text.primary, borderBottomColor: colors.border.default }]}
             placeholder={`e.g. ${config.label} Awakening`}
             value={name}
             onChangeText={setName}
-            placeholderTextColor={colors.textTertiary}
+            placeholderTextColor={colors.text.tertiary}
             autoCapitalize="words"
             maxLength={50}
           />
@@ -192,11 +177,11 @@ export function RoutineDetailScreen() {
         <PopIn index={1}>
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>
               Linked Habits ({selectedHabitIds.length})
             </Text>
             {selectedHabitIds.length > 0 && (
-              <Text style={{ fontSize: 12, color: colors.accentPrimary, fontWeight: '600' }}>
+              <Text style={{ fontSize: 12, color: colors.primary.default, fontWeight: '600' }}>
                 Tap checkbox to toggle
               </Text>
             )}
@@ -204,9 +189,9 @@ export function RoutineDetailScreen() {
 
           {habits.length === 0 ? (
             <View style={styles.noHabits}>
-              <Ionicons name="leaf-outline" size={36} color={colors.textTertiary} />
-              <Text style={[styles.noHabitsText, { color: colors.textSecondary }]}>No habits available</Text>
-              <Text style={[styles.noHabitsSubtext, { color: colors.textTertiary }]}>
+              <Ionicons name="leaf-outline" size={36} color={colors.text.tertiary} />
+              <Text style={[styles.noHabitsText, { color: colors.text.secondary }]}>No habits available</Text>
+              <Text style={[styles.noHabitsSubtext, { color: colors.text.tertiary }]}>
                 Create habits in the Habits tab first, then link them to this routine.
               </Text>
             </View>
@@ -216,12 +201,12 @@ export function RoutineDetailScreen() {
                 const isSelected = selectedHabitIds.includes(item.id);
                 const order = selectedHabitIds.indexOf(item.id) + 1;
                 return (
-                  <StaggeredEntry key={item.id} index={index} delayStep={30}>
+                  <StaggeredEntry key={item.id} index={index}>
                     <TactilePressable
                       style={[
                         styles.habitSelectItem,
-                        { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: isSelected ? colors.accentPrimary : colors.borderLight },
-                        isSelected && { backgroundColor: colors.accentPrimary + '15', borderWidth: 2 },
+                        { backgroundColor: colors.background.secondary, borderColor: isSelected ? colors.primary.default : colors.border.default },
+                        isSelected && { backgroundColor: colors.primary.default + '15', borderWidth: 2 },
                       ]}
                       onPress={() => toggleHabit(item.id)}
                       scaleDownTo={0.98}
@@ -232,22 +217,22 @@ export function RoutineDetailScreen() {
                           <Ionicons name={getIconName(item.icon)} size={20} color="#FFFFFF" />
                         </View>
                         <View style={styles.habitSelectInfo}>
-                          <Text style={[styles.habitSelectName, { color: colors.textPrimary }]}>{item.name}</Text>
-                          <Text style={[styles.habitSelectFrequency, { color: colors.textTertiary }]}>
+                          <Text style={[styles.habitSelectName, { color: colors.text.primary }]}>{item.name}</Text>
+                          <Text style={[styles.habitSelectFrequency, { color: colors.text.tertiary }]}>
                             {FREQUENCY_LABELS[item.frequency] || item.frequency}
                           </Text>
                         </View>
                       </View>
                       <View style={styles.habitSelectRight}>
                         {isSelected && (
-                          <View style={[styles.orderBadge, { backgroundColor: colors.accentPrimary }]}>
+                          <View style={[styles.orderBadge, { backgroundColor: colors.primary.default }]}>
                             <Text style={styles.orderBadgeText}>{order}</Text>
                           </View>
                         )}
                         <Ionicons
                           name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
                           size={22}
-                          color={isSelected ? colors.accentPrimary : colors.textTertiary}
+                          color={isSelected ? colors.primary.default : colors.text.tertiary}
                         />
                       </View>
                     </TactilePressable>
@@ -274,9 +259,9 @@ export function RoutineDetailScreen() {
               onPress={handleDelete}
               scaleDownTo={0.96}
               hapticStyle="medium"
-              style={[styles.deleteButton, { borderColor: colors.accentRose || '#EB697F' }]}
+              style={[styles.deleteButton, { borderColor: colors.accents.rose }]}
             >
-              <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete</Text>
+              <Text style={[styles.deleteButtonText, { color: colors.accents.rose }]}>Delete</Text>
             </TactilePressable>
           )}
         </View>
@@ -288,23 +273,6 @@ export function RoutineDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  topNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110, gap: 16 },
   section: { gap: 10, padding: 16, borderRadius: 20 },

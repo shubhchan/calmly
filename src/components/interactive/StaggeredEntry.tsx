@@ -1,52 +1,31 @@
 import React from 'react';
-import { StyleProp, ViewStyle, View } from 'react-native';
-import Animated, {
-  FadeInDown,
-  FadeIn,
-  useReducedMotion,
-} from 'react-native-reanimated';
+import { StyleProp, ViewStyle } from 'react-native';
+import { motion } from '../../theme/motion';
+import { PopIn } from './PopIn';
 
 interface StaggeredEntryProps {
   index?: number;
   delayStep?: number;
   baseDelay?: number;
-  damping?: number;
-  stiffness?: number;
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }
 
 /**
- * Hardware-accelerated staggered entrance animation wrapper.
- * Staggers child cards and list items into view smoothly using Reanimated 4 physics,
- * automatically falling back to an instant fade if reduced motion is requested.
+ * @deprecated Use PopIn directly. This is now an alias so the whole app shares
+ * one entrance physics — it previously used a separate layout-animation path
+ * whose stagger rhythm drifted from PopIn's.
  */
 export function StaggeredEntry({
   index = 0,
-  delayStep = 32,
+  delayStep = motion.stagger,
   baseDelay = 0,
-  damping = 14,
-  stiffness = 180,
   style,
   children,
 }: StaggeredEntryProps) {
-  const reducedMotion = useReducedMotion();
-  const delay = baseDelay + index * delayStep;
-
-  if (reducedMotion) {
-    return (
-      <Animated.View entering={FadeIn.duration(150)} style={style}>
-        {children}
-      </Animated.View>
-    );
-  }
-
   return (
-    <Animated.View
-      entering={FadeInDown.delay(delay).springify().damping(damping).stiffness(stiffness)}
-      style={style}
-    >
+    <PopIn index={index} delayStep={delayStep} baseDelay={baseDelay} style={style}>
       {children}
-    </Animated.View>
+    </PopIn>
   );
 }

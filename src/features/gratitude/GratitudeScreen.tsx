@@ -10,9 +10,9 @@ import PositiveMoment from '../../database/models/PositiveMoment';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { AppIcon } from '../../components/AppIcon';
 import type { AppIconName } from '../../components/AppIcon';
-import { GratitudeBloomIllustration, SelfCompassionIllustration } from '../../components';
+import { GratitudeBloomIllustration, SelfCompassionIllustration, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
@@ -24,7 +24,7 @@ type RouteProp = NativeStackScreenProps<RootStackParamList, 'Gratitude'>['route'
 export function GratitudeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const { type = 'gratitude' } = route.params ?? {}; // 'gratitude' | 'positive'
 
   const [entries, setEntries] = useState<(GratitudeEntry | PositiveMoment)[]>([]);
@@ -98,30 +98,34 @@ export function GratitudeScreen() {
   }
 
   return (
-    <ScreenContainer contentContainerStyle={styles.content}>
-      <PopIn index={0}>
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => setShowFavoritesOnly(!showFavoritesOnly)}
-          style={[
-            styles.filterButton,
-            { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-            showFavoritesOnly && { backgroundColor: (colors.accentPeach || '#EB876D') + '20', borderColor: colors.accentPeach || '#EB876D' },
-          ]}
-          hitSlop={10}
-        >
-          <Ionicons
-            name={showFavoritesOnly ? 'heart' : 'heart-outline'}
-            size={22}
-            color={showFavoritesOnly ? (colors.accentPeach || '#EB876D') : colors.textTertiary}
-          />
-        </TouchableOpacity>
-      </View>
-      </PopIn>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader
+        title={title}
+        subtitle={subtitle}
+        right={
+          <TactilePressable
+            onPress={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            scaleDownTo={0.92}
+            hapticStyle="selection"
+            style={[
+              styles.filterButton,
+              { backgroundColor: colors.surface.default, borderColor: colors.border.default },
+              showFavoritesOnly && { backgroundColor: (colors.accents.peach) + '20', borderColor: colors.accents.peach },
+            ]}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Show favorites only"
+          >
+            <Ionicons
+              name={showFavoritesOnly ? 'heart' : 'heart-outline'}
+              size={22}
+              color={showFavoritesOnly ? (colors.accents.peach) : colors.text.tertiary}
+            />
+          </TactilePressable>
+        }
+      />
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
       {(entries ?? []).length === 0 ? (
         <PopIn index={1}>
@@ -131,15 +135,15 @@ export function GratitudeScreen() {
           ) : (
             <SelfCompassionIllustration width={160} height={135} style={{ marginBottom: 6 }} />
           )}
-          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{emptyTitle}</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{emptySubtitle}</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>{emptyTitle}</Text>
+          <Text style={[styles.emptyText, { color: colors.text.secondary }]}>{emptySubtitle}</Text>
           <PrimaryButton onPress={handleAdd} title={type === 'gratitude' ? 'Record Gratitude' : 'Save Good Thing'} style={styles.emptyButton} />
         </View>
         </PopIn>
       ) : (
         <View style={styles.list}>
           {(entries ?? []).map((entry, idx) => {
-            const tint = resolveTint(!!colors.isDark, tintForIndex(idx));
+            const tint = resolveTint(!!isDark, tintForIndex(idx));
             return (
             <PopIn key={entry?.id ?? String(idx)} index={Math.min(idx + 1, 8)}>
             <TouchableOpacity
@@ -186,7 +190,7 @@ export function GratitudeScreen() {
                   <Ionicons
                     name={entry?.favorite ? 'heart' : 'heart-outline'}
                     size={22}
-                    color={entry?.favorite ? (colors.accentPeach || '#EB876D') : tint.muted}
+                    color={entry?.favorite ? (colors.accents.peach) : tint.muted}
                   />
                 </TouchableOpacity>
               </View>
@@ -207,6 +211,7 @@ export function GratitudeScreen() {
         />
         </PopIn>
       )}
+      </ScrollView>
     </ScreenContainer>
   );
 }
@@ -214,9 +219,6 @@ export function GratitudeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, marginTop: 4 },
   filterButton: {
     width: 42,
     height: 42,

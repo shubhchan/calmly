@@ -10,9 +10,9 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { ScreenHeader, TactilePressable } from '../../components';
 import { Card } from '../../components/Card';
 import { PopIn } from '../../components/interactive/PopIn';
 import { BrandedLoader } from '../../components/interactive/LoadingState';
@@ -37,8 +37,7 @@ const CATEGORY_FILTERS: CategoryFilter[] = ['all', 'sans', 'serif', 'handwritten
 const PREVIEW_SENTENCE = 'The quiet mind writes clearly.';
 
 export function FontBrowserScreen() {
-  const navigation = useNavigation<any>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const activeFont = useFontStore((s) => s.active);
 
   const [catalog, setCatalog] = useState<GoogleFontSummary[]>([]);
@@ -106,7 +105,6 @@ export function FontBrowserScreen() {
     [applyingFamily],
   );
 
-  const isDark = !!colors.isDark;
   const previewTint = resolveTint(isDark, 'lilac');
 
   const listHeader = (
@@ -128,7 +126,7 @@ export function FontBrowserScreen() {
       </PopIn>
 
       <PopIn index={1}>
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Included with Calmly</Text>
+        <Text style={[styles.sectionLabel, { color: colors.text.secondary }]}>Included with Calmly</Text>
       </PopIn>
 
       {BUNDLED_FONTS.map((font, index) => (
@@ -148,20 +146,20 @@ export function FontBrowserScreen() {
       ))}
 
       <PopIn index={6}>
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 10 }]}>
+        <Text style={[styles.sectionLabel, { color: colors.text.secondary, marginTop: 10 }]}>
           Google Fonts
         </Text>
       </PopIn>
 
       <PopIn index={7}>
-        <View style={[styles.searchBar, { backgroundColor: colors.bgSecondary, borderColor: colors.borderLight }]}>
-          <Ionicons name="search" size={17} color={colors.textTertiary} />
+        <View style={[styles.searchBar, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}>
+          <Ionicons name="search" size={17} color={colors.text.tertiary} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder={catalogLoading ? 'Loading the library…' : 'Search 1,500+ Google fonts'}
-            placeholderTextColor={colors.textTertiary}
-            style={[styles.searchInput, { color: colors.textPrimary }]}
+            placeholderTextColor={colors.text.tertiary}
+            style={[styles.searchInput, { color: colors.text.primary }]}
             autoCorrect={false}
             autoCapitalize="none"
             returnKeyType="search"
@@ -169,7 +167,7 @@ export function FontBrowserScreen() {
           />
           {search.length > 0 && (
             <Pressable onPress={() => setSearch('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={17} color={colors.textTertiary} />
+              <Ionicons name="close-circle" size={17} color={colors.text.tertiary} />
             </Pressable>
           )}
         </View>
@@ -190,15 +188,15 @@ export function FontBrowserScreen() {
                 style={[
                   styles.chip,
                   {
-                    backgroundColor: selected ? colors.accentPrimary + '18' : colors.bgSecondary,
-                    borderColor: selected ? colors.accentPrimary : colors.borderLight,
+                    backgroundColor: selected ? colors.primary.default + '18' : colors.background.secondary,
+                    borderColor: selected ? colors.primary.default : colors.border.default,
                   },
                 ]}
               >
                 <Text
                   style={[
                     styles.chipLabel,
-                    { color: selected ? colors.accentPrimary : colors.textSecondary },
+                    { color: selected ? colors.primary.default : colors.text.secondary },
                   ]}
                 >
                   {label}
@@ -210,9 +208,9 @@ export function FontBrowserScreen() {
       </PopIn>
 
       {catalogError && !catalogLoading && (
-        <View style={[styles.errorBanner, { backgroundColor: colors.bgSecondary, borderColor: colors.borderLight }]}>
-          <Ionicons name="cloud-offline-outline" size={16} color={colors.textTertiary} />
-          <Text style={[styles.errorText, { color: colors.textTertiary }]}>
+        <View style={[styles.errorBanner, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}>
+          <Ionicons name="cloud-offline-outline" size={16} color={colors.text.tertiary} />
+          <Text style={[styles.errorText, { color: colors.text.tertiary }]}>
             Couldn’t reach Google Fonts. Bundled fonts above still work offline.
           </Text>
         </View>
@@ -222,23 +220,7 @@ export function FontBrowserScreen() {
 
   return (
     <ScreenContainer scroll={false} style={styles.container}>
-      <View style={styles.navBar}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          hitSlop={10}
-          style={[styles.backButton, { backgroundColor: colors.bgSecondary, borderColor: colors.borderLight }]}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={19} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.navTitles}>
-          <Text style={[styles.navTitle, { color: colors.textPrimary }]}>Typography</Text>
-          <Text style={[styles.navSubtitle, { color: colors.textTertiary }]}>
-            One font, everywhere — instantly
-          </Text>
-        </View>
-      </View>
+      <ScreenHeader title="Typography" subtitle="One font, everywhere — instantly" />
 
       <FlatList
         style={styles.list}
@@ -258,7 +240,7 @@ export function FontBrowserScreen() {
           catalogLoading ? (
             <BrandedLoader label="Fetching the font library…" />
           ) : filteredGoogleFonts.length === 0 && !catalogError ? (
-            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
+            <Text style={[styles.emptyText, { color: colors.text.tertiary }]}>
               No fonts match “{search.trim()}”.
             </Text>
           ) : (
@@ -305,15 +287,15 @@ function FontCard({
     : null;
 
   return (
-    <Pressable
+    <TactilePressable
       onPress={onPress}
-      style={({ pressed }) => [
+      scaleDownTo={0.99}
+      style={[
         styles.fontCard,
         {
-          backgroundColor: active ? (colors.accentPrimary || '#3E7B52') + '10' : colors.bgCard,
-          borderColor: active ? (colors.accentPrimary || '#3E7B52') : colors.borderLight,
+          backgroundColor: active ? colors.primary.default + '10' : colors.surface.default,
+          borderColor: active ? colors.primary.default : colors.border.default,
         },
-        pressed && { opacity: 0.88, transform: [{ scale: 0.99 }] },
       ]}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
@@ -323,31 +305,31 @@ function FontCard({
       <View style={styles.cardHeaderRow}>
         <View style={styles.titleSubtitleCol}>
           <Text
-            style={[styles.fontCardTitle, { color: colors.textPrimary }, familyStyle]}
+            style={[styles.fontCardTitle, { color: colors.text.primary }, familyStyle]}
             numberOfLines={1}
           >
             {title}
           </Text>
-          <Text style={[styles.fontCardMeta, { color: colors.textTertiary }]} numberOfLines={1}>
+          <Text style={[styles.fontCardMeta, { color: colors.text.tertiary }]} numberOfLines={1}>
             {meta}
           </Text>
         </View>
 
         <View style={styles.fontCardAction}>
           {busy ? (
-            <ActivityIndicator size="small" color={colors.accentPrimary || '#3E7B52'} />
+            <ActivityIndicator size="small" color={colors.primary.default} />
           ) : active ? (
             <View
               style={[
                 styles.statePill,
                 {
-                  backgroundColor: (colors.accentPrimary || '#3E7B52') + '18',
-                  borderColor: colors.accentPrimary || '#3E7B52',
+                  backgroundColor: colors.primary.default + '18',
+                  borderColor: colors.primary.default,
                 },
               ]}
             >
-              <Ionicons name="checkmark-circle" size={15} color={colors.accentPrimary || '#3E7B52'} />
-              <Text style={[styles.statePillText, { color: colors.accentPrimary || '#3E7B52' }]}>
+              <Ionicons name="checkmark-circle" size={15} color={colors.primary.default} />
+              <Text style={[styles.statePillText, { color: colors.primary.default }]}>
                 Applied
               </Text>
             </View>
@@ -355,15 +337,15 @@ function FontCard({
             <View
               style={[
                 styles.statePill,
-                { backgroundColor: colors.bgSecondary, borderColor: colors.borderLight },
+                { backgroundColor: colors.background.secondary, borderColor: colors.border.default },
               ]}
             >
               <Ionicons
                 name={downloaded ? 'checkmark-done-outline' : 'cloud-download-outline'}
                 size={15}
-                color={colors.textSecondary}
+                color={colors.text.secondary}
               />
-              <Text style={[styles.statePillText, { color: colors.textSecondary }]}>
+              <Text style={[styles.statePillText, { color: colors.text.secondary }]}>
                 {downloaded ? 'Apply' : 'Get'}
               </Text>
             </View>
@@ -373,12 +355,12 @@ function FontCard({
 
       {/* Font Sample Preview Text */}
       <Text
-        style={[styles.fontCardSample, { color: colors.textSecondary }, familyStyle]}
+        style={[styles.fontCardSample, { color: colors.text.secondary }, familyStyle]}
         numberOfLines={2}
       >
         {PREVIEW_SENTENCE}
       </Text>
-    </Pressable>
+    </TactilePressable>
   );
 }
 
@@ -435,25 +417,6 @@ const GoogleFontRow = React.memo(function GoogleFontRow({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 14,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navTitles: { flex: 1 },
-  navTitle: { fontSize: 24, letterSpacing: -0.3 },
-  navSubtitle: { fontSize: 12.5, marginTop: 1 },
   list: {
     flex: 1,
     width: '100%',

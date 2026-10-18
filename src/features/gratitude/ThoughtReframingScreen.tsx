@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ScreenHeader } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
@@ -55,9 +55,8 @@ const STEPS = [
 ];
 
 export function ThoughtReframingScreen() {
-  const navigation = useNavigation();
-  const colors = useThemeColors();
-  const sageTint = resolveTint(!!colors.isDark, 'sage');
+  const { colors, isDark } = useAppTheme();
+  const sageTint = resolveTint(!!isDark, 'sage');
   const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState<string[]>(['', '', '', '', '', '', '']);
   const [completed, setCompleted] = useState(false);
@@ -158,48 +157,38 @@ export function ThoughtReframingScreen() {
   }
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-            hitSlop={10}
-          >
-            <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Cognitive Reframing</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <ScreenHeader title="Cognitive Reframing" />
 
-        <View style={[styles.progressBar, { backgroundColor: colors.borderLight }]}>
-          <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.accentPrimary }]} />
+        <View style={[styles.progressBar, { backgroundColor: colors.border.default }]}>
+          <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary.default }]} />
         </View>
-        <Text style={[styles.stepCounter, { color: colors.textTertiary }]}>
+        <Text style={[styles.stepCounter, { color: colors.text.tertiary }]}>
           Step {currentStep + 1} of {(STEPS ?? []).length}
         </Text>
 
         <PopIn index={0}>
         <Card style={styles.stepCard}>
-          <Text style={[styles.stepTitle, { color: colors.accentPrimary }]}>{step?.title ?? ''}</Text>
-          <Text style={[styles.stepPrompt, { color: colors.textPrimary }]}>{step?.prompt ?? ''}</Text>
+          <Text style={[styles.stepTitle, { color: colors.primary.default }]}>{step?.title ?? ''}</Text>
+          <Text style={[styles.stepPrompt, { color: colors.text.primary }]}>{step?.prompt ?? ''}</Text>
           <TextInput
             style={[
               styles.textArea,
               {
-                color: colors.textPrimary,
-                backgroundColor: colors.bgPrimary,
-                borderColor: colors.borderLight,
+                color: colors.text.primary,
+                backgroundColor: colors.background.default,
+                borderColor: colors.border.default,
               },
             ]}
             placeholder={step?.placeholder ?? ''}
             value={(responses ?? [])[currentStep] ?? ''}
             onChangeText={handleUpdateResponse}
-            placeholderTextColor={colors.textTertiary}
+            placeholderTextColor={colors.text.tertiary}
             multiline
             numberOfLines={4}
             autoCapitalize="sentences"
@@ -208,14 +197,14 @@ export function ThoughtReframingScreen() {
         </PopIn>
       </ScrollView>
 
-      <View style={[styles.bottomBar, { borderTopColor: colors.borderLight, backgroundColor: colors.bgPrimary }]}>
+      <View style={[styles.bottomBar, { borderTopColor: colors.border.default, backgroundColor: colors.background.default }]}>
         <View style={styles.buttonRow}>
           {currentStep > 0 && (
             <TouchableOpacity
               onPress={handleBack}
-              style={[styles.bottomBackButton, { borderColor: colors.borderLight, backgroundColor: colors.bgCard }]}
+              style={[styles.bottomBackButton, { borderColor: colors.border.default, backgroundColor: colors.surface.default }]}
             >
-              <Text style={[styles.backButtonText, { color: colors.textPrimary }]}>Back</Text>
+              <Text style={[styles.backButtonText, { color: colors.text.primary }]}>Back</Text>
             </TouchableOpacity>
           )}
           <View style={{ flex: 1 }}>
@@ -233,20 +222,6 @@ export function ThoughtReframingScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   progressBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
   progressFill: { height: '100%', borderRadius: 3 },
   stepCounter: { textAlign: 'center', fontSize: 13, fontWeight: '500' },

@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { StackActions } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import Animated, {
   useSharedValue,
@@ -52,6 +53,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticFeedback } from '../utils/haptics';
 import { fontFamilies } from '../theme/typography';
 import { FontBrowserScreen } from '../features/settings/FontBrowserScreen';
+import { DesignSystemScreen } from '../design-system/DesignSystemScreen';
 import { BrandedLoader } from '../components/interactive/LoadingState';
 import { useAppReducedMotion } from '../theme/motion';
 import { pushTransition, modalTransition, immersiveTransition, tabTransition } from './transitions';
@@ -263,9 +265,20 @@ const AnimatedTabItem = React.memo(function AnimatedTabItem({
       canPreventDefault: true,
     });
 
-    if (!isFocused && !event.defaultPrevented) {
-      navigation.navigate(route.name);
+    if (event.defaultPrevented) return;
+
+    if (isFocused) {
+      // Re-tapping the active tab snaps its nested stack back to the root screen.
+      const state = navigation.getState();
+      const tabRoute = state.routes.find((r: any) => r.key === route.key);
+      const nestedState = (tabRoute as any)?.state;
+      if (nestedState && (nestedState.index ?? 0) > 0) {
+        navigation.dispatch({ ...StackActions.popToTop(), target: nestedState.key });
+      }
+      return;
     }
+
+    navigation.navigate(route.name);
   }, [navigation, route.key, route.name, isFocused]);
 
   const iconName = tabIcon(route.name as keyof TabParamList, isFocused);
@@ -437,7 +450,7 @@ export function AppNavigator() {
     <Tab.Navigator
       initialRouteName="Home"
       tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={tabTransition()}
+      screenOptions={{ ...tabTransition(), popToTopOnBlur: true }}
     >
       <Tab.Screen name="Home" component={GuardedHomeStack} />
       <Tab.Screen name="Journal" component={GuardedJournalStack} />
@@ -499,6 +512,7 @@ export function RootNavigator() {
       <RootStack.Screen name="BodyScan" component={BodyScanScreen} options={push} />
       <RootStack.Screen name="MoodCalendar" component={MoodCalendarScreen} options={push} />
       <RootStack.Screen name="FontBrowser" component={FontBrowserScreen} options={push} />
+      <RootStack.Screen name="DesignSystem" component={DesignSystemScreen} options={push} />
     </RootStack.Navigator>
   );
 }

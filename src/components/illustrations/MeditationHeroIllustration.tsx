@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Path, Circle, Rect, G, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { StyleProp, ViewStyle, View } from 'react-native';
 
 interface IllustrationProps {
@@ -10,11 +10,10 @@ interface IllustrationProps {
 }
 
 export function MeditationHeroIllustration({ width = 160, height = 140, style }: IllustrationProps) {
-  const colors = useThemeColors();
-  const isDark = colors.isDark;
+  const { colors, isDark } = useAppTheme();
 
-  const primaryAccent = colors.accentPrimary;
-  const secondaryAccent = colors.accentBg || (isDark ? '#1C3325' : '#EDF5EF');
+  const primaryAccent = colors.primary.default;
+  const secondaryAccent = colors.primary.subtle || (isDark ? '#1C3325' : '#EDF5EF');
   const auraFill = isDark ? 'rgba(94, 190, 123, 0.12)' : 'rgba(62, 123, 82, 0.08)';
   const bodyTone = isDark ? '#D1D5DB' : '#384455';
   const clothTone = primaryAccent;

@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { AppIcon } from '../AppIcon';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { useAppReducedMotion, motion } from '../../theme/motion';
 import { Skeleton, SkeletonCard, SkeletonText } from './Skeleton';
 
@@ -23,12 +23,7 @@ import { Skeleton, SkeletonCard, SkeletonText } from './Skeleton';
  */
 
 export function BrandedLoader({ label, compact = false }: { label?: string; compact?: boolean }) {
-  let colors: any;
-  try {
-    colors = useThemeColors();
-  } catch {
-    colors = { accentPrimary: '#447C54', textTertiary: '#667085' };
-  }
+  const { colors } = useAppTheme();
   const reducedMotion = useAppReducedMotion();
   const pulse = useSharedValue(0);
 
@@ -59,7 +54,7 @@ export function BrandedLoader({ label, compact = false }: { label?: string; comp
       accessibilityLabel={label ?? 'Loading'}
     >
       <Animated.View style={pulseStyle}>
-        <AppIcon name="i-leaf" size={compact ? 20 : 40} color={colors.accentPrimary ?? '#447C54'} />
+        <AppIcon name="i-leaf" size={compact ? 20 : 40} color={colors.primary.default} />
       </Animated.View>
       {label ? (
         <Animated.Text
@@ -67,7 +62,7 @@ export function BrandedLoader({ label, compact = false }: { label?: string; comp
           style={[
             styles.brandedLabel,
             compact && { marginTop: 0, fontSize: 13 },
-            { color: colors.textTertiary ?? '#667085' },
+            { color: colors.text.tertiary },
           ]}
         >
           {label}

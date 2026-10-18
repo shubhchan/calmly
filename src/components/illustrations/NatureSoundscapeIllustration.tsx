@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Path, Circle, Rect, G, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { StyleProp, ViewStyle, View } from 'react-native';
 
 interface IllustrationProps {
@@ -10,12 +10,11 @@ interface IllustrationProps {
 }
 
 export function NatureSoundscapeIllustration({ width = 160, height = 135, style }: IllustrationProps) {
-  const colors = useThemeColors();
-  const isDark = colors.isDark;
+  const { colors, isDark } = useAppTheme();
 
-  const primaryAccent = colors.accentPrimary;
-  const skyAccent = colors.accentSky || '#6B9BCD';
-  const peachAccent = colors.accentPeach || '#EB876D';
+  const primaryAccent = colors.primary.default;
+  const skyAccent = colors.accents.sky || '#6B9BCD';
+  const peachAccent = colors.accents.peach || '#EB876D';
   const leafTone = isDark ? '#7BD495' : '#3E7B52';
   const stoneTone = isDark ? '#263447' : '#E6E0D4';
   const waterTone = isDark ? '#1F3A52' : '#DCEAF5';

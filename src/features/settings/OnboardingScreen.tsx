@@ -9,7 +9,7 @@ import { AppIcon } from '../../components/AppIcon';
 import type { AppIconName } from '../../components/AppIcon';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { habitRepository } from '../../database/repositories/habitRepository';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Onboarding'>['navigation'];
@@ -40,7 +40,7 @@ const STARTER_HABITS = [
 
 export function OnboardingScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
   const [step, setStep] = useState(0);
   const [goals, setGoals] = useState<string[]>([]);
   const [timeOfDay, setTimeOfDay] = useState<string>('');
@@ -121,11 +121,11 @@ export function OnboardingScreen() {
       case 0:
         return (
           <View style={styles.welcomeStep}>
-            <View style={[styles.welcomeIconWrap, { backgroundColor: colors.accentPrimary + '18' }]}>
-              <AppIcon name="i-leaf" size={48} color={colors.accentPrimary} />
+            <View style={[styles.welcomeIconWrap, { backgroundColor: colors.primary.default + '18' }]}>
+              <AppIcon name="i-leaf" size={48} color={colors.primary.default} />
             </View>
-            <Text style={[styles.welcomeTitle, { color: colors.textPrimary }]}>Welcome to Calmly</Text>
-            <Text style={[styles.welcomeText, { color: colors.textSecondary }]}>
+            <Text style={[styles.welcomeTitle, { color: colors.text.primary }]}>Welcome to Calmly</Text>
+            <Text style={[styles.welcomeText, { color: colors.text.secondary }]}>
               An offline-first, private sanctuary crafted for genuine presence, emotional balance, and mindful living.
             </Text>
             <View style={styles.features}>
@@ -135,8 +135,8 @@ export function OnboardingScreen() {
                 { icon: 'flower-outline', text: 'Guided somatic breathing & sensory grounding' },
               ].map((feat, i) => (
                 <View key={i} style={styles.featureItem}>
-                  <Ionicons name={feat.icon as any} size={22} color={colors.accentPrimary} style={{ marginTop: 2 }} />
-                  <Text style={[styles.featureText, { color: colors.textPrimary }]}>{feat.text}</Text>
+                  <Ionicons name={feat.icon as any} size={22} color={colors.primary.default} style={{ marginTop: 2 }} />
+                  <Text style={[styles.featureText, { color: colors.text.primary }]}>{feat.text}</Text>
                 </View>
               ))}
             </View>
@@ -145,8 +145,8 @@ export function OnboardingScreen() {
       case 1:
         return (
           <View style={styles.selectionStep}>
-            <Text style={[styles.stepQuestion, { color: colors.textPrimary }]}>What brings you here?</Text>
-            <Text style={[styles.stepHint, { color: colors.textSecondary }]}>Select all that resonate with you</Text>
+            <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>What brings you here?</Text>
+            <Text style={[styles.stepHint, { color: colors.text.secondary }]}>Select all that resonate with you</Text>
             <View style={styles.goalGrid}>
               {GOALS.map((g) => {
                 const isSelected = (goals ?? []).includes(g.id);
@@ -156,7 +156,7 @@ export function OnboardingScreen() {
                     onPress={() => toggleGoal(g.id)}
                     style={[
                       styles.goalCard,
-                      { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                      { backgroundColor: colors.surface.default, borderColor: colors.border.default },
                       isSelected && { borderColor: g.color, backgroundColor: g.color + '14', borderWidth: 2 },
                     ]}
                     activeOpacity={0.75}
@@ -167,7 +167,7 @@ export function OnboardingScreen() {
                     <Text
                       style={[
                         styles.goalLabel,
-                        { color: colors.textPrimary },
+                        { color: colors.text.primary },
                         isSelected && { color: g.color, fontWeight: '700' },
                       ]}
                     >
@@ -182,8 +182,8 @@ export function OnboardingScreen() {
       case 2:
         return (
           <View style={styles.selectionStep}>
-            <Text style={[styles.stepQuestion, { color: colors.textPrimary }]}>When do you prefer to check in?</Text>
-            <Text style={[styles.stepHint, { color: colors.textSecondary }]}>We tailor mindful invitations to your preferred rhythm</Text>
+            <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>When do you prefer to check in?</Text>
+            <Text style={[styles.stepHint, { color: colors.text.secondary }]}>We tailor mindful invitations to your preferred rhythm</Text>
             <View style={styles.timeOptions}>
               {TIME_OPTIONS.map((t) => {
                 const isSelected = timeOfDay === t.id;
@@ -193,28 +193,28 @@ export function OnboardingScreen() {
                     onPress={() => setTimeOfDay(t.id)}
                     style={[
                       styles.timeOption,
-                      { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-                      isSelected && { borderColor: colors.accentPrimary, backgroundColor: colors.accentPrimary + '14', borderWidth: 2 },
+                      { backgroundColor: colors.surface.default, borderColor: colors.border.default },
+                      isSelected && { borderColor: colors.primary.default, backgroundColor: colors.primary.default + '14', borderWidth: 2 },
                     ]}
                     activeOpacity={0.75}
                   >
-                    <AppIcon name={t.icon} size={32} color={isSelected ? colors.accentPrimary : undefined} />
+                    <AppIcon name={t.icon} size={32} color={isSelected ? colors.primary.default : undefined} />
                     <View style={styles.timeInfo}>
                       <Text
                         style={[
                           styles.timeLabel,
-                          { color: colors.textPrimary },
-                          isSelected && { color: colors.accentPrimary, fontWeight: '700' },
+                          { color: colors.text.primary },
+                          isSelected && { color: colors.primary.default, fontWeight: '700' },
                         ]}
                       >
                         {t.label}
                       </Text>
-                      <Text style={[styles.timeDesc, { color: colors.textTertiary }]}>{t.description}</Text>
+                      <Text style={[styles.timeDesc, { color: colors.text.tertiary }]}>{t.description}</Text>
                     </View>
                     <Ionicons
                       name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
                       size={22}
-                      color={isSelected ? colors.accentPrimary : colors.textTertiary}
+                      color={isSelected ? colors.primary.default : colors.text.tertiary}
                     />
                   </TouchableOpacity>
                 );
@@ -225,8 +225,8 @@ export function OnboardingScreen() {
       case 3:
         return (
           <View style={styles.selectionStep}>
-            <Text style={[styles.stepQuestion, { color: colors.textPrimary }]}>Start with tiny habits</Text>
-            <Text style={[styles.stepHint, { color: colors.textSecondary }]}>Pick 1-3 tiny rituals to start gentle momentum</Text>
+            <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>Start with tiny habits</Text>
+            <Text style={[styles.stepHint, { color: colors.text.secondary }]}>Pick 1-3 tiny rituals to start gentle momentum</Text>
             <View style={styles.habitGrid}>
               {STARTER_HABITS.map((h) => {
                 const isSelected = (selectedHabits ?? []).includes(h.id);
@@ -236,7 +236,7 @@ export function OnboardingScreen() {
                     onPress={() => toggleHabit(h.id)}
                     style={[
                       styles.habitCard,
-                      { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
+                      { backgroundColor: colors.surface.default, borderColor: colors.border.default },
                       isSelected && { borderColor: h.color, backgroundColor: h.color + '14', borderWidth: 2 },
                     ]}
                     activeOpacity={0.75}
@@ -248,18 +248,18 @@ export function OnboardingScreen() {
                       <Text
                         style={[
                           styles.habitName,
-                          { color: colors.textPrimary },
+                          { color: colors.text.primary },
                           isSelected && { color: h.color, fontWeight: '700' },
                         ]}
                       >
                         {h.name}
                       </Text>
-                      <Text style={[styles.habitReminder, { color: colors.textTertiary }]}>{h.reminder}</Text>
+                      <Text style={[styles.habitReminder, { color: colors.text.tertiary }]}>{h.reminder}</Text>
                     </View>
                     <Ionicons
                       name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
                       size={22}
-                      color={isSelected ? h.color : colors.textTertiary}
+                      color={isSelected ? h.color : colors.text.tertiary}
                     />
                   </TouchableOpacity>
                 );
@@ -270,17 +270,17 @@ export function OnboardingScreen() {
       case 4:
         return (
           <View style={styles.inputStep}>
-            <Text style={[styles.stepQuestion, { color: colors.textPrimary }]}>What should we call you?</Text>
-            <Text style={[styles.stepHint, { color: colors.textSecondary }]}>Used for a warm, personalized greeting</Text>
+            <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>What should we call you?</Text>
+            <Text style={[styles.stepHint, { color: colors.text.secondary }]}>Used for a warm, personalized greeting</Text>
             <TextInput
               style={[
                 styles.nameInput,
-                { color: colors.textPrimary, borderBottomColor: colors.accentPrimary },
+                { color: colors.text.primary, borderBottomColor: colors.primary.default },
               ]}
               placeholder="Your name"
               value={name}
               onChangeText={setName}
-              placeholderTextColor={colors.textTertiary}
+              placeholderTextColor={colors.text.tertiary}
               autoCapitalize="words"
               autoFocus
               maxLength={30}
@@ -290,10 +290,10 @@ export function OnboardingScreen() {
       case 5:
         return (
           <View style={styles.privacyStep}>
-            <View style={[styles.welcomeIconWrap, { backgroundColor: colors.accentPrimary + '18' }]}>
-              <Ionicons name="shield-checkmark" size={48} color={colors.accentPrimary} />
+            <View style={[styles.welcomeIconWrap, { backgroundColor: colors.primary.default + '18' }]}>
+              <Ionicons name="shield-checkmark" size={48} color={colors.primary.default} />
             </View>
-            <Text style={[styles.welcomeTitle, { color: colors.textPrimary }]}>Privacy First & Always</Text>
+            <Text style={[styles.welcomeTitle, { color: colors.text.primary }]}>Privacy First & Always</Text>
             <View style={styles.privacyPoints}>
               {[
                 'Zero cloud servers: All journals and mood records live exclusively on your device',
@@ -303,8 +303,8 @@ export function OnboardingScreen() {
                 'No third-party analytics, tracking pixels, or ads',
               ].map((point, i) => (
                 <View key={i} style={styles.privacyItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.accentPrimary} />
-                  <Text style={[styles.privacyText, { color: colors.textPrimary }]}>{point}</Text>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.primary.default} />
+                  <Text style={[styles.privacyText, { color: colors.text.primary }]}>{point}</Text>
                 </View>
               ))}
             </View>
@@ -316,11 +316,11 @@ export function OnboardingScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary} style={styles.container}>
-      <View style={[styles.progressBar, { backgroundColor: colors.borderLight }]}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.accentPrimary }]} />
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default} style={styles.container}>
+      <View style={[styles.progressBar, { backgroundColor: colors.border.default }]}>
+        <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary.default }]} />
       </View>
-      <Text style={[styles.progressText, { color: colors.textTertiary }]}>
+      <Text style={[styles.progressText, { color: colors.text.tertiary }]}>
         Step {step + 1} of {STEPS.length}
       </Text>
 
@@ -332,17 +332,17 @@ export function OnboardingScreen() {
         {renderStep()}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { borderTopColor: colors.borderLight, backgroundColor: colors.bgPrimary }]}>
+      <View style={[styles.bottomBar, { borderTopColor: colors.border.default, backgroundColor: colors.background.default }]}>
         <TouchableOpacity
           onPress={handleBack}
           disabled={step === 0}
           style={[
             styles.backButton,
-            { borderColor: colors.borderLight, backgroundColor: colors.bgCard },
+            { borderColor: colors.border.default, backgroundColor: colors.surface.default },
             step === 0 && { opacity: 0.3 },
           ]}
         >
-          <Text style={[styles.backButtonText, { color: colors.textPrimary }]}>Back</Text>
+          <Text style={[styles.backButtonText, { color: colors.text.primary }]}>Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 2 }}>
           <PrimaryButton

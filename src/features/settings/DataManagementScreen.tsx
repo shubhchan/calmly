@@ -1,17 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Share } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { ScreenHeader } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
-
-type NavigationProp = NativeStackScreenProps<RootStackParamList, 'DataManagement'>['navigation'];
 
 const DATA_TYPES = [
   { key: 'moods', label: 'Mood Check-ins', icon: 'happy-outline' },
@@ -25,12 +21,11 @@ const DATA_TYPES = [
 ];
 
 export function DataManagementScreen() {
-  const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const creamTint = resolveTint(!!colors.isDark, 'cream');
-  const blushTint = resolveTint(!!colors.isDark, 'blush');
+  const creamTint = resolveTint(!!isDark, 'cream');
+  const blushTint = resolveTint(!!isDark, 'blush');
 
   const handleExportAll = useCallback(async () => {
     setExporting(true);
@@ -190,17 +185,7 @@ export function DataManagementScreen() {
 
   return (
     <ScreenContainer contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Data & Backup</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title="Data & Backup" />
 
       <PopIn index={0}>
         <Card tone="cream" style={styles.card}>
@@ -220,8 +205,8 @@ export function DataManagementScreen() {
 
       <PopIn index={1}>
         <Card style={styles.card}>
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Category Management</Text>
-        <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Category Management</Text>
+        <Text style={[styles.sectionDesc, { color: colors.text.secondary }]}>
           Selectively erase individual categories without affecting the rest of your history.
         </Text>
         <View style={styles.typeList}>
@@ -232,19 +217,19 @@ export function DataManagementScreen() {
               disabled={!!deleting}
               style={[
                 styles.typeItem,
-                { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: colors.borderLight },
+                { backgroundColor: colors.background.secondary, borderColor: colors.border.default },
               ]}
               activeOpacity={0.75}
             >
-              <View style={[styles.typeIcon, { backgroundColor: colors.accentPrimary + '14' }]}>
-                <Ionicons name={type.icon as any} size={20} color={colors.accentPrimary} />
+              <View style={[styles.typeIcon, { backgroundColor: colors.primary.default + '14' }]}>
+                <Ionicons name={type.icon as any} size={20} color={colors.primary.default} />
               </View>
-              <Text style={[styles.typeLabel, { color: colors.textPrimary }]}>{type.label}</Text>
+              <Text style={[styles.typeLabel, { color: colors.text.primary }]}>{type.label}</Text>
               <View style={{ marginTop: 2 }}>
                 {deleting === type.key ? (
-                  <ActivityIndicator size="small" color={colors.accentPrimary} />
+                  <ActivityIndicator size="small" color={colors.primary.default} />
                 ) : (
-                  <Ionicons name="trash-outline" size={18} color={colors.textTertiary} />
+                  <Ionicons name="trash-outline" size={18} color={colors.text.tertiary} />
                 )}
               </View>
             </TouchableOpacity>
@@ -269,8 +254,8 @@ export function DataManagementScreen() {
             loading={deleting === 'all'}
             title={deleting === 'all' ? 'Erasing...' : 'Wipe All Data Permanently'}
             variant="outline"
-            style={{ borderColor: colors.accentRose || '#EB697F' }}
-            textStyle={{ color: colors.accentRose || '#EB697F' }}
+            style={{ borderColor: colors.accents.rose }}
+            textStyle={{ color: colors.accents.rose }}
             fullWidth
           />
         </Card>
@@ -282,21 +267,6 @@ export function DataManagementScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   card: { padding: 18, borderRadius: 20, gap: 12 },
   sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
   sectionDesc: { fontSize: 14, lineHeight: 20 },

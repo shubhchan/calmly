@@ -7,7 +7,7 @@ import { getActiveFont } from './fontStore';
  */
 
 export const fontFamilies = {
-  // Oddly Calming or Active Font (Powers screen titles, greetings, mindfulness cards, quotes)
+  // Active Font (Powers screen titles, greetings, mindfulness cards, quotes)
   get calming() {
     const f = getActiveFont().faces;
     return {

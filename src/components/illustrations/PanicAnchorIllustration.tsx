@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { StyleProp, ViewStyle, View } from 'react-native';
 
 interface IllustrationProps {
@@ -10,11 +10,10 @@ interface IllustrationProps {
 }
 
 export function PanicAnchorIllustration({ width = 140, height = 120, style }: IllustrationProps) {
-  const colors = useThemeColors();
-  const isDark = colors.isDark;
+  const { colors, isDark } = useAppTheme();
 
-  const roseAccent = colors.accentRose || (isDark ? '#F47293' : '#DB3A60');
-  const primaryAccent = colors.accentPrimary;
+  const roseAccent = colors.accents.rose || (isDark ? '#F47293' : '#DB3A60');
+  const primaryAccent = colors.primary.default;
   const stoneTone = isDark ? '#263447' : '#E6E0D4';
 
   return (

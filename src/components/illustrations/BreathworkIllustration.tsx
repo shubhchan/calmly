@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { StyleProp, ViewStyle, View } from 'react-native';
 
 interface IllustrationProps {
@@ -10,10 +10,9 @@ interface IllustrationProps {
 }
 
 export function BreathworkIllustration({ width = 140, height = 120, style }: IllustrationProps) {
-  const colors = useThemeColors();
-  const isDark = colors.isDark;
+  const { colors, isDark } = useAppTheme();
 
-  const primaryAccent = colors.accentPrimary;
+  const primaryAccent = colors.primary.default;
   const leafTone = isDark ? '#7BD495' : '#3E7B52';
   const stoneTone = isDark ? '#263447' : '#E6E0D4';
   const airTone = isDark ? '#93C5FD' : '#60A5FA';

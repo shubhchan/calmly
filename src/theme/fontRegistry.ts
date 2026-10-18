@@ -13,6 +13,8 @@ import {
   Newsreader_700Bold,
 } from '@expo-google-fonts/newsreader';
 import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand';
+import { Doto_400Regular, Doto_500Medium, Doto_700Bold } from '@expo-google-fonts/doto';
+import { Handjet_400Regular, Handjet_500Medium, Handjet_700Bold } from '@expo-google-fonts/handjet';
 import { ActiveFont, FontCategory, registerExemptFaceKeys } from './fontStore';
 
 /**
@@ -28,25 +30,9 @@ export interface BundledFont extends ActiveFont {
 
 export const BUNDLED_FONTS: BundledFont[] = [
   {
-    key: 'oddly-calming',
-    label: 'Oddly Calming',
-    description: 'Playful handwritten — the original Calmly voice',
-    category: 'handwritten',
-    source: 'bundled',
-    faces: {
-      regular: 'OddlyCalming',
-      medium: 'OddlyCalming',
-      bold: 'OddlyCalming',
-      italic: 'OddlyCalming',
-    },
-    assets: {
-      OddlyCalming: require('../../assets/fonts/OddlyCalming.ttf'),
-    },
-  },
-  {
     key: 'plus-jakarta-sans',
     label: 'Plus Jakarta Sans',
-    description: 'Clean and friendly modern humanist sans',
+    description: 'Clean and friendly modern humanist sans — Calmly default',
     category: 'sans',
     source: 'bundled',
     faces: {
@@ -96,6 +82,40 @@ export const BUNDLED_FONTS: BundledFont[] = [
       PatrickHand_400Regular,
     },
   },
+  {
+    key: 'doto',
+    label: 'Doto',
+    description: 'Dot-matrix display — Nothing-phone style',
+    category: 'display',
+    source: 'bundled',
+    faces: {
+      regular: 'Doto_400Regular',
+      medium: 'Doto_500Medium',
+      bold: 'Doto_700Bold',
+    },
+    assets: {
+      Doto_400Regular,
+      Doto_500Medium,
+      Doto_700Bold,
+    },
+  },
+  {
+    key: 'handjet',
+    label: 'Handjet',
+    description: 'Pixel-grid display — Nothing 5x7 style',
+    category: 'display',
+    source: 'bundled',
+    faces: {
+      regular: 'Handjet_400Regular',
+      medium: 'Handjet_500Medium',
+      bold: 'Handjet_700Bold',
+    },
+    assets: {
+      Handjet_400Regular,
+      Handjet_500Medium,
+      Handjet_700Bold,
+    },
+  },
 ];
 
 /** Combined useFonts() map for App boot: face key -> asset module. */
@@ -111,9 +131,9 @@ export function getBundledFont(key: string): BundledFont | undefined {
   return BUNDLED_FONTS.find((font) => font.key === key);
 }
 
-/** Every bundled face except the legacy default, which must always follow the active font. */
+/** Every bundled face, so font previews can render each family in its own typeface. */
 const bundledExemptKeys = BUNDLED_FONTS.flatMap((font) =>
-  Object.values(font.faces).filter((face): face is string => Boolean(face) && face !== 'OddlyCalming'),
+  Object.values(font.faces).filter((face): face is string => Boolean(face)),
 );
 registerExemptFaceKeys(bundledExemptKeys);
 

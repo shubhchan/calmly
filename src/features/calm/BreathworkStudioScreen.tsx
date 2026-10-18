@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, BreathingPreset } from '../../types/navigation';
-import { useThemeColors } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, MeditationHeroIllustration } from '../../components';
+import { useAppTheme } from '../../theme/ThemeContext';
+import { Card, CardContent, PrimaryButton, MeditationHeroIllustration, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -59,7 +59,7 @@ const TECHNIQUES: TechniqueOption[] = [
 
 export function BreathworkStudioScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
 
   const [selectedTechnique, setSelectedTechnique] = useState<BreathingPreset>('4-7-8');
   const [selectedDuration, setSelectedDuration] = useState<number>(5); // minutes
@@ -83,36 +83,12 @@ export function BreathworkStudioScreen() {
     }
   };
 
-  const coralTint = resolveTint(!!colors.isDark, 'coral');
-  const sageTint = resolveTint(!!colors.isDark, 'sage');
+  const coralTint = resolveTint(!!isDark, 'coral');
+  const sageTint = resolveTint(!!isDark, 'sage');
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      {/* Top Navigation Bar */}
-      <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            styles.backButton,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              transform: [{ scale: pressed ? 0.92 : 1 }],
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.navTitleCol}>
-          <Text style={[styles.navTitle, { color: colors.textPrimary }]}>Breathwork Studio</Text>
-          <Text style={[styles.navSubtitle, { color: colors.textTertiary }]}>Parasympathetic Cadence</Text>
-        </View>
-        <View style={[styles.ambientIndicator, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}>
-          <Ionicons name="leaf-outline" size={16} color={colors.accentPrimary} />
-        </View>
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title="Breathwork Studio" subtitle="Parasympathetic Cadence" bordered />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -122,15 +98,15 @@ export function BreathworkStudioScreen() {
         <PopIn index={0}>
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
-            <View style={[styles.heroAuraGlow, { backgroundColor: colors.accentBg }]}>
+            <View style={[styles.heroAuraGlow, { backgroundColor: colors.primary.subtle }]}>
               <MeditationHeroIllustration width={190} height={155} />
             </View>
             <View style={styles.heroBadgeRow}>
-              <View style={[styles.heroBadge, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}>
-                <Ionicons name="sparkles" size={12} color={colors.accentPrimary} />
-                <Text style={[styles.heroBadgeText, { color: colors.accentPrimary }]}>Clinical Somatics</Text>
+              <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
+                <Ionicons name="sparkles" size={12} color={colors.primary.default} />
+                <Text style={[styles.heroBadgeText, { color: colors.primary.default }]}>Clinical Somatics</Text>
               </View>
-              <Text style={[styles.heroEstText, { color: colors.textTertiary }]}>{selectedDuration} min session</Text>
+              <Text style={[styles.heroEstText, { color: colors.text.tertiary }]}>{selectedDuration} min session</Text>
             </View>
           </CardContent>
         </Card>
@@ -139,10 +115,10 @@ export function BreathworkStudioScreen() {
         {/* Cadence Selection Header */}
         <PopIn index={1}>
         <View style={{ marginBottom: 4 }}>
-          <Text style={[styles.headline, { color: colors.textPrimary }]}>
+          <Text style={[styles.headline, { color: colors.text.primary }]}>
             Restore Calm in 90 Seconds
           </Text>
-          <Text style={[styles.subheadline, { color: colors.textSecondary }]}>
+          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
             Select your rhythm below to lower resting pulse and ease tension.
           </Text>
         </View>
@@ -159,16 +135,15 @@ export function BreathworkStudioScreen() {
               {TECHNIQUES.map((tech) => {
                 const isSelected = selectedTechnique === tech.id;
                 return (
-                  <Pressable
+                  <TactilePressable
                     key={tech.id}
                     onPress={() => setSelectedTechnique(tech.id)}
-                    style={({ pressed }) => [
+                    scaleDownTo={0.98}
+                    style={[
                       styles.techniqueCard,
                       {
                         backgroundColor: coralTint.plate,
                         borderColor: isSelected ? coralTint.accent : coralTint.border,
-                        opacity: pressed ? 0.9 : 1,
-                        transform: [{ scale: pressed ? 0.98 : 1 }],
                       },
                     ]}
                   >
@@ -194,7 +169,7 @@ export function BreathworkStudioScreen() {
                     <Text style={[styles.techniqueDesc, { color: coralTint.text }]}>
                       {tech.description}
                     </Text>
-                  </Pressable>
+                  </TactilePressable>
                 );
               })}
             </View>
@@ -205,23 +180,23 @@ export function BreathworkStudioScreen() {
         {/* Live Cadence Blueprint Visualizer */}
         <Card variant="outlined" style={styles.blueprintCard}>
           <CardContent style={styles.blueprintContent}>
-            <Text style={[styles.blueprintHeading, { color: colors.textPrimary }]}>
+            <Text style={[styles.blueprintHeading, { color: colors.text.primary }]}>
               Rhythm Cadence Blueprint
             </Text>
             <View style={styles.cadenceStepsRow}>
-              <View style={[styles.cadenceStep, { backgroundColor: colors.accentBg }]}>
-                <Text style={[styles.cadenceTime, { color: colors.accentPrimary }]}>{currentTechnique.inhale}s</Text>
-                <Text style={[styles.cadenceLabel, { color: colors.textTertiary }]}>Inhale</Text>
+              <View style={[styles.cadenceStep, { backgroundColor: colors.primary.subtle }]}>
+                <Text style={[styles.cadenceTime, { color: colors.primary.default }]}>{currentTechnique.inhale}s</Text>
+                <Text style={[styles.cadenceLabel, { color: colors.text.tertiary }]}>Inhale</Text>
               </View>
               {currentTechnique.hold > 0 && (
-                <View style={[styles.cadenceStep, { backgroundColor: (colors.accentPeach || '#EB876D') + '15' }]}>
-                  <Text style={[styles.cadenceTime, { color: colors.accentPeach || '#EB876D' }]}>{currentTechnique.hold}s</Text>
-                  <Text style={[styles.cadenceLabel, { color: colors.textTertiary }]}>Hold</Text>
+                <View style={[styles.cadenceStep, { backgroundColor: (colors.accents.peach) + '15' }]}>
+                  <Text style={[styles.cadenceTime, { color: colors.accents.peach }]}>{currentTechnique.hold}s</Text>
+                  <Text style={[styles.cadenceLabel, { color: colors.text.tertiary }]}>Hold</Text>
                 </View>
               )}
-              <View style={[styles.cadenceStep, { backgroundColor: (colors.accentSky || '#6B9BCD') + '15' }]}>
-                <Text style={[styles.cadenceTime, { color: colors.accentSky || '#6B9BCD' }]}>{currentTechnique.exhale}s</Text>
-                <Text style={[styles.cadenceLabel, { color: colors.textTertiary }]}>Exhale</Text>
+              <View style={[styles.cadenceStep, { backgroundColor: (colors.accents.sky) + '15' }]}>
+                <Text style={[styles.cadenceTime, { color: colors.accents.sky }]}>{currentTechnique.exhale}s</Text>
+                <Text style={[styles.cadenceLabel, { color: colors.text.tertiary }]}>Exhale</Text>
               </View>
             </View>
           </CardContent>
@@ -242,16 +217,15 @@ export function BreathworkStudioScreen() {
               ].map((dur) => {
                 const isSelected = selectedDuration === dur.val;
                 return (
-                  <Pressable
+                  <TactilePressable
                     key={dur.val}
                     onPress={() => setSelectedDuration(dur.val)}
-                    style={({ pressed }) => [
+                    scaleDownTo={0.94}
+                    style={[
                       styles.durationPill,
                       {
                         backgroundColor: isSelected ? sageTint.accent : sageTint.plate,
                         borderColor: isSelected ? sageTint.accent : sageTint.border,
-                        transform: [{ scale: pressed ? 0.94 : 1 }],
-                        opacity: pressed ? 0.88 : 1,
                       },
                     ]}
                   >
@@ -271,7 +245,7 @@ export function BreathworkStudioScreen() {
                     >
                       {dur.sub}
                     </Text>
-                  </Pressable>
+                  </TactilePressable>
                 );
               })}
             </View>
@@ -282,7 +256,7 @@ export function BreathworkStudioScreen() {
         {/* Ambient Acoustics Selector */}
         <PopIn index={4}>
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Background Nature Acoustic
           </Text>
           <View style={styles.ambientPillRow}>
@@ -294,33 +268,32 @@ export function BreathworkStudioScreen() {
             ].map((snd) => {
               const isSelected = ambientSound === snd.id;
               return (
-                <Pressable
+                <TactilePressable
                   key={snd.id}
                   onPress={() => handleToggleAmbient(snd.id as any)}
-                  style={({ pressed }) => [
+                  scaleDownTo={0.94}
+                  style={[
                     styles.ambientPill,
                     {
-                      backgroundColor: isSelected ? colors.accentBg : colors.bgCard,
-                      borderColor: isSelected ? colors.accentPrimary : colors.borderLight,
-                      transform: [{ scale: pressed ? 0.94 : 1 }],
-                      opacity: pressed ? 0.88 : 1,
+                      backgroundColor: isSelected ? colors.primary.subtle : colors.surface.default,
+                      borderColor: isSelected ? colors.primary.default : colors.border.default,
                     },
                   ]}
                 >
                   <Ionicons
                     name={snd.icon as any}
                     size={14}
-                    color={isSelected ? colors.accentPrimary : colors.textTertiary}
+                    color={isSelected ? colors.primary.default : colors.text.tertiary}
                   />
                   <Text
                     style={[
                       styles.ambientPillText,
-                      { color: isSelected ? colors.accentPrimary : colors.textSecondary },
+                      { color: isSelected ? colors.primary.default : colors.text.secondary },
                     ]}
                   >
                     {snd.label}
                   </Text>
-                </Pressable>
+                </TactilePressable>
               );
             })}
           </View>
@@ -329,7 +302,7 @@ export function BreathworkStudioScreen() {
       </ScrollView>
 
       {/* Floating Bottom Primary Action Bar */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.bgPrimary, borderTopColor: colors.borderLight }]}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
         <PrimaryButton
           title={`Start ${selectedDuration}-Minute Session`}
           variant="primary"
@@ -344,34 +317,6 @@ export function BreathworkStudioScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navTitleCol: { alignItems: 'center' },
-  navTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  navSubtitle: { fontSize: 12, fontWeight: '500', marginTop: 1 },
-  ambientIndicator: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,

@@ -5,6 +5,7 @@ import { useFontStore } from './fontStore';
 import { Storage } from '../services/storage';
 import { bootLog } from '../components/ErrorBoundary';
 import { resolveColors, toCssVars, ThemeMode as ResolvedMode, AccentColor } from './palette';
+import { createAppTheme, lightTheme, type AppTheme } from './themes';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type { AccentColor };
@@ -15,6 +16,8 @@ interface ThemeContextType {
   resolvedTheme: ResolvedMode;
   isDark: boolean;
   colors: ReturnType<typeof resolveColors>;
+  /** Semantic design-system tokens (colors etc.) derived from the raw palette. */
+  tokens: AppTheme;
   setTheme: (theme: ThemeMode) => Promise<void>;
   setAccent: (accent: AccentColor) => Promise<void>;
   toggleTheme: () => Promise<void>;
@@ -65,6 +68,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Guarded: if the CSS-interop runtime ever throws in a release bundle, the
   // app still paints (unstyled vars) instead of grey-screening.
   const colors = useMemo(() => resolveColors(resolvedTheme, accent), [resolvedTheme, accent]);
+  const tokens = useMemo(() => createAppTheme(colors), [colors]);
   const themeVars = useMemo(() => {
     try {
       return vars(toCssVars(colors));
@@ -103,7 +107,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider
-      value={{ theme, accent, resolvedTheme, isDark, colors, setTheme, setAccent, toggleTheme, fontRevision }}
+      value={{ theme, accent, resolvedTheme, isDark, colors, tokens, setTheme, setAccent, toggleTheme, fontRevision }}
     >
       {/* This View carries the CSS variables for the whole native tree. */}
       {/* NOTE: flex:1 is set as a plain style (not only className) so a
@@ -129,6 +133,16 @@ export function useTheme() {
 // Never pass 'var(--color-x)' strings to those props; they are not CSS-aware.
 export function useThemeColors() {
   return useTheme().colors;
+}
+
+/**
+ * Design-system hook: the semantic theme. Safe to call outside the provider
+ * (boot screens, error boundaries) — falls back to the canonical light theme
+ * instead of throwing.
+ */
+export function useAppTheme(): AppTheme {
+  const context = useContext(ThemeContext);
+  return context?.tokens ?? lightTheme;
 }
 
 export function useThemedStyles<T>(styleCreator: (colors: ReturnType<typeof resolveColors>, isDark: boolean) => T): T {

@@ -7,9 +7,9 @@ import { habitRepository } from '../../database/repositories/habitRepository';
 import { getIconName } from '../../utils/iconMap';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { HabitPlantingIllustration } from '../../components';
+import { HabitPlantingIllustration, ScreenHeader } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { FormSkeleton } from '../../components/interactive/LoadingState';
@@ -47,7 +47,7 @@ const COLORS = [
 export function HabitFormScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
   const { id } = route.params ?? {};
   const isEditing = !!id;
 
@@ -175,8 +175,8 @@ export function HabitFormScreen() {
   };
 
   const renderIconPicker = () => (
-    <View style={[styles.pickerContainer, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
-      <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Choose Icon</Text>
+    <View style={[styles.pickerContainer, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
+      <Text style={[styles.pickerTitle, { color: colors.text.primary }]}>Choose Icon</Text>
       <ScrollView horizontal style={styles.iconScroll} showsHorizontalScrollIndicator={false}>
         {(ICONS ?? []).map((i) => (
           <TouchableOpacity
@@ -187,11 +187,11 @@ export function HabitFormScreen() {
             }}
             style={[
               styles.iconOption,
-              { backgroundColor: colors.bgPrimary, borderColor: colors.borderLight },
+              { backgroundColor: colors.background.default, borderColor: colors.border.default },
               icon === i && { backgroundColor: color, borderColor: color },
             ]}
           >
-            <Ionicons name={getIconName(i) as any} size={26} color={icon === i ? '#FFFFFF' : colors.textPrimary} />
+            <Ionicons name={getIconName(i) as any} size={26} color={icon === i ? '#FFFFFF' : colors.text.primary} />
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -199,8 +199,8 @@ export function HabitFormScreen() {
   );
 
   const renderColorPicker = () => (
-    <View style={[styles.pickerContainer, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
-      <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Choose Color</Text>
+    <View style={[styles.pickerContainer, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
+      <Text style={[styles.pickerTitle, { color: colors.text.primary }]}>Choose Color</Text>
       <View style={styles.colorGrid}>
         {(COLORS ?? []).map((c) => (
           <TouchableOpacity
@@ -211,7 +211,7 @@ export function HabitFormScreen() {
             }}
             style={[
               styles.colorOption,
-              color === c && { borderColor: colors.accentPrimary },
+              color === c && { borderColor: colors.primary.default },
             ]}
           >
             <View style={[styles.colorCircle, { backgroundColor: c }]} />
@@ -230,20 +230,8 @@ export function HabitFormScreen() {
   }
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      <View style={styles.topNav}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-          {isEditing ? 'Edit Habit' : 'New Habit'}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title={isEditing ? 'Edit Habit' : 'New Habit'} />
 
       <ScrollView
         style={styles.scrollView}
@@ -255,7 +243,7 @@ export function HabitFormScreen() {
         <PopIn index={0}>
         <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginBottom: 4 }}>
           <HabitPlantingIllustration width={140} height={110} />
-          <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 8 }}>
+          <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: 8 }}>
             {isEditing ? 'Adjust your daily practice' : 'Plant a tiny mindful habit for daily growth'}
           </Text>
         </View>
@@ -263,13 +251,13 @@ export function HabitFormScreen() {
 
         <PopIn index={1}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Habit Name</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Habit Name</Text>
           <TextInput
-            style={[styles.input, { color: colors.textPrimary, borderBottomColor: colors.borderLight }]}
+            style={[styles.input, { color: colors.text.primary, borderBottomColor: colors.border.default }]}
             placeholder="e.g. Mindful Morning Walk"
             value={name}
             onChangeText={setName}
-            placeholderTextColor={colors.textTertiary}
+            placeholderTextColor={colors.text.tertiary}
             autoCapitalize="words"
             maxLength={50}
           />
@@ -278,17 +266,17 @@ export function HabitFormScreen() {
 
         <PopIn index={2}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Icon & Color Identity</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Icon & Color Identity</Text>
           <View style={styles.iconColorRow}>
             <TouchableOpacity onPress={() => setShowIconPicker(true)} style={styles.iconPreview}>
               <View style={[styles.iconPreviewCircle, { backgroundColor: color }]}>
                 <Ionicons name={getIconName(icon) as any} size={28} color="#FFFFFF" />
               </View>
-              <Text style={[styles.iconPreviewLabel, { color: colors.textSecondary }]}>Select Icon</Text>
+              <Text style={[styles.iconPreviewLabel, { color: colors.text.secondary }]}>Select Icon</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowColorPicker(true)} style={styles.colorPreview}>
               <View style={[styles.colorPreviewCircle, { backgroundColor: color }]} />
-              <Text style={[styles.iconPreviewLabel, { color: colors.textSecondary }]}>Select Color</Text>
+              <Text style={[styles.iconPreviewLabel, { color: colors.text.secondary }]}>Select Color</Text>
             </TouchableOpacity>
           </View>
         </Card>
@@ -296,29 +284,29 @@ export function HabitFormScreen() {
 
         <PopIn index={3}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Frequency</Text>
-          {(FREQUENCY_OPTIONS ?? []).map((opt) => {
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Frequency</Text>
+          {(FREQUENCY_OPTIONS ?? []).map((opt, index) => {
             const isSelected = frequency === opt?.value;
             return (
               <TouchableOpacity
-                key={opt?.value ?? Math.random().toString()}
+                key={opt?.value ?? 'ph-' + index}
                 onPress={() => opt?.value && setFrequency(opt.value as 'daily' | 'weekdays' | 'custom')}
                 style={[
                   styles.frequencyOption,
-                  { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: isSelected ? colors.accentPrimary : colors.borderLight },
-                  isSelected && { backgroundColor: colors.accentPrimary + '14', borderWidth: 2 },
+                  { backgroundColor: colors.background.secondary, borderColor: isSelected ? colors.primary.default : colors.border.default },
+                  isSelected && { backgroundColor: colors.primary.default + '14', borderWidth: 2 },
                 ]}
               >
                 <View style={styles.frequencyOptionContent}>
-                  <Text style={[styles.frequencyLabel, { color: colors.textPrimary }, isSelected && { fontWeight: '700' }]}>
+                  <Text style={[styles.frequencyLabel, { color: colors.text.primary }, isSelected && { fontWeight: '700' }]}>
                     {opt?.label ?? ''}
                   </Text>
-                  <Text style={[styles.frequencyDesc, { color: colors.textTertiary }]}>{opt?.description ?? ''}</Text>
+                  <Text style={[styles.frequencyDesc, { color: colors.text.tertiary }]}>{opt?.description ?? ''}</Text>
                 </View>
                 <Ionicons
                   name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
                   size={22}
-                  color={isSelected ? colors.accentPrimary : colors.textTertiary}
+                  color={isSelected ? colors.primary.default : colors.text.tertiary}
                   style={{ marginTop: 2 }}
                 />
               </TouchableOpacity>
@@ -327,24 +315,24 @@ export function HabitFormScreen() {
 
           {frequency === 'custom' && (
             <View style={styles.dayPicker}>
-              <Text style={[styles.dayPickerLabel, { color: colors.textSecondary }]}>Active Days</Text>
+              <Text style={[styles.dayPickerLabel, { color: colors.text.secondary }]}>Active Days</Text>
               <View style={styles.dayButtons}>
-                {(DAYS ?? []).map((day) => {
+                {(DAYS ?? []).map((day, index) => {
                   const isDaySelected = (customDays ?? []).includes(day?.value);
                   return (
                     <TouchableOpacity
-                      key={day?.value ?? Math.random().toString()}
+                      key={day?.value ?? 'ph-' + index}
                       onPress={() => day?.value && toggleDay(day.value)}
                       style={[
                         styles.dayButton,
-                        { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-                        isDaySelected && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
+                        { backgroundColor: colors.surface.default, borderColor: colors.border.default },
+                        isDaySelected && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
                       ]}
                     >
                       <Text
                         style={[
                           styles.dayButtonText,
-                          { color: colors.textPrimary },
+                          { color: colors.text.primary },
                           isDaySelected && { color: '#FFFFFF', fontWeight: '700' },
                         ]}
                       >
@@ -361,41 +349,41 @@ export function HabitFormScreen() {
 
         <PopIn index={4}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Daily Reminder</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Daily Reminder</Text>
           <TouchableOpacity
             onPress={() => setShowTimePicker(true)}
-            style={[styles.reminderButton, { backgroundColor: colors.bgSecondary ?? '#F4EFE6', borderColor: colors.borderLight }]}
+            style={[styles.reminderButton, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}
           >
-            <Ionicons name="alarm-outline" size={22} color={colors.accentPrimary} style={{ marginTop: 2 }} />
+            <Ionicons name="alarm-outline" size={22} color={colors.primary.default} style={{ marginTop: 2 }} />
             <View style={styles.reminderButtonContent}>
-              <Text style={[styles.reminderButtonLabel, { color: colors.textPrimary }]}>Scheduled Time</Text>
-              <Text style={[styles.reminderButtonValue, { color: reminderTime ? colors.accentPrimary : colors.textTertiary }]}>
+              <Text style={[styles.reminderButtonLabel, { color: colors.text.primary }]}>Scheduled Time</Text>
+              <Text style={[styles.reminderButtonValue, { color: reminderTime ? colors.primary.default : colors.text.tertiary }]}>
                 {reminderTime || 'None set'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} style={{ marginTop: 2 }} />
+            <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} style={{ marginTop: 2 }} />
           </TouchableOpacity>
         </Card>
         </PopIn>
 
         <PopIn index={5}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Daily Repetitions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Daily Repetitions</Text>
           <View style={styles.goalRow}>
             <TouchableOpacity
               onPress={() => setGoal(Math.max(1, (goal ?? 1) - 1))}
-              style={[styles.goalButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+              style={[styles.goalButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
             >
-              <Ionicons name="remove" size={20} color={colors.textPrimary} />
+              <Ionicons name="remove" size={20} color={colors.text.primary} />
             </TouchableOpacity>
-            <Text style={[styles.goalValue, { color: colors.textPrimary }]}>{goal ?? 1}</Text>
+            <Text style={[styles.goalValue, { color: colors.text.primary }]}>{goal ?? 1}</Text>
             <TouchableOpacity
               onPress={() => setGoal((goal ?? 1) + 1)}
-              style={[styles.goalButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+              style={[styles.goalButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
             >
-              <Ionicons name="add" size={20} color={colors.textPrimary} />
+              <Ionicons name="add" size={20} color={colors.text.primary} />
             </TouchableOpacity>
-            <Text style={[styles.goalLabel, { color: colors.textSecondary }]}>
+            <Text style={[styles.goalLabel, { color: colors.text.secondary }]}>
               time{(goal ?? 1) !== 1 ? 's' : ''} per day
             </Text>
           </View>
@@ -404,13 +392,13 @@ export function HabitFormScreen() {
 
         <PopIn index={6}>
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Intention & Notes</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Intention & Notes</Text>
           <TextInput
-            style={[styles.textArea, { color: colors.textPrimary, borderColor: colors.borderLight, backgroundColor: colors.bgCard }]}
+            style={[styles.textArea, { color: colors.text.primary, borderColor: colors.border.default, backgroundColor: colors.surface.default }]}
             placeholder="Why is this habit meaningful to you?..."
             value={notes}
             onChangeText={setNotes}
-            placeholderTextColor={colors.textTertiary}
+            placeholderTextColor={colors.text.tertiary}
             multiline
             numberOfLines={3}
             maxLength={500}
@@ -431,9 +419,9 @@ export function HabitFormScreen() {
           {isEditing && (
             <TouchableOpacity
               onPress={handleDelete}
-              style={[styles.deleteButton, { borderColor: colors.accentRose || '#EB697F' }]}
+              style={[styles.deleteButton, { borderColor: colors.accents.rose }]}
             >
-              <Text style={[styles.deleteButtonText, { color: colors.accentRose || '#EB697F' }]}>Delete</Text>
+              <Text style={[styles.deleteButtonText, { color: colors.accents.rose }]}>Delete</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -457,10 +445,10 @@ export function HabitFormScreen() {
       {showTimePicker && (
         <View style={styles.modalOverlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowTimePicker(false)} />
-          <View style={[styles.timePickerContainer, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
-            <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Set Reminder Time</Text>
+          <View style={[styles.timePickerContainer, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
+            <Text style={[styles.pickerTitle, { color: colors.text.primary }]}>Set Reminder Time</Text>
             <View style={styles.timePicker}>
-              <Text style={[styles.timeDisplay, { color: colors.accentPrimary }]}>{reminderTime || '--:--'}</Text>
+              <Text style={[styles.timeDisplay, { color: colors.primary.default }]}>{reminderTime || '--:--'}</Text>
               <View style={styles.timeButtons}>
                 {['06:00', '07:00', '08:00', '09:00', '12:00', '17:00', '18:00', '20:00', '21:00', '22:00'].map((t) => (
                   <TouchableOpacity
@@ -471,14 +459,14 @@ export function HabitFormScreen() {
                     }}
                     style={[
                       styles.timeButton,
-                      { backgroundColor: colors.bgPrimary, borderColor: colors.borderLight },
-                      reminderTime === t && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
+                      { backgroundColor: colors.background.default, borderColor: colors.border.default },
+                      reminderTime === t && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
                     ]}
                   >
                     <Text
                       style={[
                         styles.timeButtonText,
-                        { color: colors.textPrimary },
+                        { color: colors.text.primary },
                         reminderTime === t && { color: '#FFFFFF', fontWeight: '700' },
                       ]}
                     >
@@ -492,9 +480,9 @@ export function HabitFormScreen() {
                   setReminderTime('');
                   setShowTimePicker(false);
                 }}
-                style={[styles.clearTimeButton, { borderColor: colors.borderLight }]}
+                style={[styles.clearTimeButton, { borderColor: colors.border.default }]}
               >
-                <Text style={[styles.clearTimeButtonText, { color: colors.textSecondary }]}>Clear</Text>
+                <Text style={[styles.clearTimeButtonText, { color: colors.text.secondary }]}>Clear</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -506,23 +494,6 @@ export function HabitFormScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  topNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110, gap: 16 },
   section: {

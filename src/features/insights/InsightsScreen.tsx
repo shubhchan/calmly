@@ -4,10 +4,10 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository, WeeklyStats, Insight, HabitStats } from '../../database/repositories/insightsRepository';
-import { Card, CardContent, PrimaryButton, AppIcon, MoodLandscapeIllustration, HabitPlantingIllustration, MoodAuraIllustration, StaggeredEntry } from '../../components';
+import { Card, CardContent, PrimaryButton, AppIcon, PageHeader, MoodLandscapeIllustration, HabitPlantingIllustration, MoodAuraIllustration, StaggeredEntry, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -25,7 +25,7 @@ interface MoodTrendPoint {
 
 export function InsightsScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const [stats, setStats] = useState<WeeklyStats | null>(null);
   const [habitStats, setHabitStats] = useState<HabitStats[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -192,33 +192,32 @@ export function InsightsScreen() {
     );
   }
 
-  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
-  const skyTint = resolveTint(!!colors.isDark, 'sky');
-  const creamTint = resolveTint(!!colors.isDark, 'cream');
-  const coralTint = resolveTint(!!colors.isDark, 'coral');
-  const navyTint = resolveTint(!!colors.isDark, 'navy');
-  const mintTint = resolveTint(!!colors.isDark, 'mint');
+  const lilacTint = resolveTint(!!isDark, 'lilac');
+  const skyTint = resolveTint(!!isDark, 'sky');
+  const creamTint = resolveTint(!!isDark, 'cream');
+  const coralTint = resolveTint(!!isDark, 'coral');
+  const navyTint = resolveTint(!!isDark, 'navy');
+  const mintTint = resolveTint(!!isDark, 'mint');
 
   const activeHabitsCount = (habitStats ?? []).filter(h => (h.completedThisWeek || 0) > 0).length;
 
   return (
     <ScreenContainer contentContainerStyle={styles.content}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Insights</Text>
-          <View style={[styles.headerBadge, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}>
-            <AppIcon name="l-chart" size={18} loop />
-            <Text style={[styles.headerBadgeText, { color: colors.accentPrimary }]}>Mindful Data</Text>
+      <PageHeader
+        title="Insights"
+        subtitle="Understand your personal emotional rhythms and consistency"
+        right={
+          <View style={[styles.headerBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
+            <AppIcon name="l-chart" size={18} />
+            <Text style={[styles.headerBadgeText, { color: colors.primary.default }]}>Mindful Data</Text>
           </View>
-        </View>
-        <Text style={[styles.subtitle, { color: colors.textTertiary }]}>
-          Understand your personal emotional rhythms and consistency
-        </Text>
-      </View>
+        }
+        style={{ marginBottom: 2 }}
+      />
 
       {/* Segmented Time Range Picker */}
-      <View style={[styles.segmentedControl, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}>
+      <View style={[styles.segmentedControl, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
         <Pressable
           onPress={() => {
             hapticFeedback.selection();
@@ -226,14 +225,14 @@ export function InsightsScreen() {
           }}
           style={({ pressed }) => [
             styles.segmentButton,
-            timeRange === 'week' && [styles.segmentButtonActive, { backgroundColor: colors.accentPrimary }],
+            timeRange === 'week' && [styles.segmentButtonActive, { backgroundColor: colors.primary.default }],
             { transform: [{ scale: pressed ? 0.97 : 1 }], opacity: pressed ? 0.9 : 1 },
           ]}
         >
           <Text
             style={[
               styles.segmentText,
-              { color: colors.textSecondary },
+              { color: colors.text.secondary },
               timeRange === 'week' && styles.segmentTextActive,
             ]}
           >
@@ -247,14 +246,14 @@ export function InsightsScreen() {
           }}
           style={({ pressed }) => [
             styles.segmentButton,
-            timeRange === 'month' && [styles.segmentButtonActive, { backgroundColor: colors.accentPrimary }],
+            timeRange === 'month' && [styles.segmentButtonActive, { backgroundColor: colors.primary.default }],
             { transform: [{ scale: pressed ? 0.97 : 1 }], opacity: pressed ? 0.9 : 1 },
           ]}
         >
           <Text
             style={[
               styles.segmentText,
-              { color: colors.textSecondary },
+              { color: colors.text.secondary },
               timeRange === 'month' && styles.segmentTextActive,
             ]}
           >
@@ -274,8 +273,8 @@ export function InsightsScreen() {
                 <View style={[styles.metricIconOrb, { backgroundColor: lilacTint.plate }]}>
                   <AppIcon name="l-heart" size={26} loop />
                 </View>
-                <View style={[styles.trendBadge, { backgroundColor: ((stats?.avgMood ?? 0) >= 6 ? colors.success : lilacTint.accent) + '15' }]}>
-                  <Text style={[styles.trendBadgeText, { color: (stats?.avgMood ?? 0) >= 6 ? colors.success : lilacTint.accent }]}>
+                <View style={[styles.trendBadge, { backgroundColor: ((stats?.avgMood ?? 0) >= 6 ? colors.status.success.default : lilacTint.accent) + '15' }]}>
+                  <Text style={[styles.trendBadgeText, { color: (stats?.avgMood ?? 0) >= 6 ? colors.status.success.default : lilacTint.accent }]}>
                     {(stats?.avgMood ?? 0) >= 6 ? '↑ Good' : '→ Calm'}
                   </Text>
                 </View>
@@ -371,21 +370,15 @@ export function InsightsScreen() {
                 {timeRange === 'week' ? 'Daily emotional progression' : 'Monthly overview'}
               </Text>
             </View>
-            <Pressable
+            <TactilePressable
               onPress={() => navigation.navigate('MoodCalendar')}
-              style={({ pressed }) => [
-                styles.calendarLink,
-                {
-                  backgroundColor: navyTint.plate,
-                  transform: [{ scale: pressed ? 0.94 : 1 }],
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
+              scaleDownTo={0.94}
+              style={[styles.calendarLink, { backgroundColor: navyTint.plate }]}
               hitSlop={8}
             >
               <Ionicons name="calendar-outline" size={14} color={navyTint.accent} />
               <Text style={[styles.calendarLinkText, { color: navyTint.accent }]}>Calendar</Text>
-            </Pressable>
+            </TactilePressable>
           </View>
 
           {(moodTrend ?? []).length > 0 ? (
@@ -399,7 +392,7 @@ export function InsightsScreen() {
                           styles.barPrimary,
                           {
                             height: Math.max(((point?.intensity ?? 0) / 10) * 110, 8),
-                            backgroundColor: colors.accentPrimary,
+                            backgroundColor: colors.primary.default,
                           },
                         ]}
                       />
@@ -408,7 +401,7 @@ export function InsightsScreen() {
                           styles.barSecondary,
                           {
                             height: Math.max(((point?.stress ?? 0) / 10) * 110, 8),
-                            backgroundColor: colors.accentRose || '#EB697F',
+                            backgroundColor: colors.accents.rose,
                           },
                         ]}
                       />
@@ -422,11 +415,11 @@ export function InsightsScreen() {
 
               <View style={styles.chartLegend}>
                 <View style={styles.legendRow}>
-                  <View style={[styles.legendDot, { backgroundColor: colors.accentPrimary }]} />
+                  <View style={[styles.legendDot, { backgroundColor: colors.primary.default }]} />
                   <Text style={[styles.legendLabel, { color: navyTint.muted }]}>Mood Intensity</Text>
                 </View>
                 <View style={styles.legendRow}>
-                  <View style={[styles.legendDot, { backgroundColor: colors.accentRose || '#EB697F' }]} />
+                  <View style={[styles.legendDot, { backgroundColor: colors.accents.rose }]} />
                   <Text style={[styles.legendLabel, { color: navyTint.muted }]}>Stress Level</Text>
                 </View>
               </View>
@@ -470,10 +463,10 @@ export function InsightsScreen() {
                 const completed = h?.completedThisWeek ?? 0;
                 const total = h?.totalThisWeek ?? 0;
                 const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-                const habitColor = h?.color || colors.accentPrimary;
+                const habitColor = h?.color || colors.primary.default;
 
                 return (
-                  <StaggeredEntry key={h?.id ?? Math.random().toString()} index={Math.min(index, 7)} delayStep={28}>
+                  <StaggeredEntry key={h?.id ?? 'ph-' + index} index={Math.min(index, 7)}>
                   <View
                     style={[styles.habitRowCard, { backgroundColor: mintTint.plate, borderColor: mintTint.border }]}
                   >
@@ -533,7 +526,7 @@ export function InsightsScreen() {
           ) : (
             <View style={styles.insightsList}>
               {(insights ?? []).map((insight, index) => (
-                <StaggeredEntry key={insight?.id ?? Math.random().toString()} index={Math.min(index, 7)} delayStep={28}>
+                <StaggeredEntry key={insight?.id ?? 'ph-' + index} index={Math.min(index, 7)}>
                 <View
                   style={[
                     styles.insightCard,
@@ -542,12 +535,12 @@ export function InsightsScreen() {
                       borderColor: lilacTint.border,
                     },
                     insight?.type === 'positive' && {
-                      borderColor: colors.accentPrimary + '50',
-                      backgroundColor: colors.accentPrimary + '0E',
+                      borderColor: colors.primary.default + '50',
+                      backgroundColor: colors.primary.default + '0E',
                     },
                     insight?.type === 'action' && {
-                      borderColor: (colors.accentPeach || '#EB876D') + '50',
-                      backgroundColor: (colors.accentPeach || '#EB876D') + '0E',
+                      borderColor: colors.accents.peach + '50',
+                      backgroundColor: colors.accents.peach + '0E',
                     },
                   ]}
                 >
@@ -595,7 +588,7 @@ export function InsightsScreen() {
                 size="md"
                 onPress={handleExport}
                 fullWidth
-                leftIcon={<Ionicons name="download-outline" size={18} color={colors.accentPrimary} />}
+                leftIcon={<Ionicons name="download-outline" size={18} color={colors.primary.default} />}
               />
             </View>
           </View>
@@ -609,8 +602,8 @@ export function InsightsScreen() {
               },
             ]}
           >
-            <Ionicons name="trash-outline" size={15} color={colors.accentRose || '#EB697F'} />
-            <Text style={[styles.deleteLinkText, { color: colors.accentRose || '#EB697F' }]}>
+            <Ionicons name="trash-outline" size={15} color={colors.accents.rose} />
+            <Text style={[styles.deleteLinkText, { color: colors.accents.rose }]}>
               Clear all app records
             </Text>
           </Pressable>
@@ -636,21 +629,6 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
     gap: 16,
   },
-  header: {
-    marginBottom: 2,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  title: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
   headerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -664,11 +642,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.sans.bold,
     fontSize: 12,
     fontWeight: '700',
-  },
-  subtitle: {
-    fontFamily: fontFamilies.sans.medium,
-    fontSize: 14,
-    lineHeight: 20,
   },
   segmentedControl: {
     flexDirection: 'row',

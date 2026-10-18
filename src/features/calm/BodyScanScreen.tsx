@@ -3,8 +3,8 @@ import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import { useThemeColors } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, BodyScanIllustration } from '../../components';
+import { useAppTheme } from '../../theme/ThemeContext';
+import { Card, CardContent, PrimaryButton, BodyScanIllustration, ScreenHeader } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 
@@ -65,7 +65,7 @@ const BODY_ZONES: ZoneConfig[] = [
 
 export function BodyScanScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors } = useAppTheme();
 
   const [selectedZone, setSelectedZone] = useState<string>('shoulders');
   const activeZone = BODY_ZONES.find((z) => z.id === selectedZone) || BODY_ZONES[1];
@@ -75,63 +75,39 @@ export function BodyScanScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.bgPrimary}>
-      {/* Top Bar */}
-      <View style={[styles.navBar, { borderBottomColor: colors.borderLight }]}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            styles.backButton,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.borderLight,
-              transform: [{ scale: pressed ? 0.92 : 1 }],
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.navTitleCol}>
-          <Text style={[styles.navTitle, { color: colors.textPrimary }]}>Somatic Body Scan</Text>
-          <Text style={[styles.navSubtitle, { color: colors.textTertiary }]}>Muscle Tension Reliever</Text>
-        </View>
-        <View style={[styles.badgeOrb, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}>
-          <Ionicons name="body-outline" size={16} color={colors.accentPrimary} />
-        </View>
-      </View>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <ScreenHeader title="Somatic Body Scan" subtitle="Muscle Tension Reliever" bordered />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Hero Card with SVG Illustration */}
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
-            <View style={[styles.heroAuraGlow, { backgroundColor: colors.accentBg }]}>
+            <View style={[styles.heroAuraGlow, { backgroundColor: colors.primary.subtle }]}>
               <BodyScanIllustration width={190} height={155} />
             </View>
             <View style={styles.heroBadgeRow}>
-              <View style={[styles.heroBadge, { backgroundColor: colors.accentBg, borderColor: colors.accentBorder }]}>
-                <Ionicons name="fitness-outline" size={12} color={colors.accentPrimary} />
-                <Text style={[styles.heroBadgeText, { color: colors.accentPrimary }]}>Somatic Biofeedback</Text>
+              <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
+                <Ionicons name="fitness-outline" size={12} color={colors.primary.default} />
+                <Text style={[styles.heroBadgeText, { color: colors.primary.default }]}>Somatic Biofeedback</Text>
               </View>
-              <Text style={[styles.heroEstText, { color: colors.textTertiary }]}>8 min guided scan</Text>
+              <Text style={[styles.heroEstText, { color: colors.text.tertiary }]}>8 min guided scan</Text>
             </View>
           </CardContent>
         </Card>
 
         {/* Header Cue */}
         <View style={{ marginBottom: 4 }}>
-          <Text style={[styles.headline, { color: colors.textPrimary }]}>
+          <Text style={[styles.headline, { color: colors.text.primary }]}>
             Release Stored Tension
           </Text>
-          <Text style={[styles.subheadline, { color: colors.textSecondary }]}>
+          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
             Gently focus your attention to soothe each muscle group.
           </Text>
         </View>
 
         {/* Anatomy Zones Carousel */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Target Anatomy Zone
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.zonesScroll}>
@@ -144,8 +120,8 @@ export function BodyScanScreen() {
                   style={({ pressed }) => [
                     styles.zoneChip,
                     {
-                      backgroundColor: isSelected ? colors.accentPrimary : colors.bgCard,
-                      borderColor: isSelected ? colors.accentPrimary : colors.borderLight,
+                      backgroundColor: isSelected ? colors.primary.default : colors.surface.default,
+                      borderColor: isSelected ? colors.primary.default : colors.border.default,
                       transform: [{ scale: pressed ? 0.94 : 1 }],
                       opacity: pressed ? 0.88 : 1,
                     },
@@ -154,7 +130,7 @@ export function BodyScanScreen() {
                   <Text
                     style={[
                       styles.zoneChipText,
-                      { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                      { color: isSelected ? '#FFFFFF' : colors.text.primary },
                       isSelected && { fontWeight: '700' },
                     ]}
                   >
@@ -170,21 +146,21 @@ export function BodyScanScreen() {
         <Card variant="outlined" style={styles.activeZoneCard}>
           <CardContent style={styles.activeZoneContent}>
             <View style={styles.activeZoneHeader}>
-              <View style={[styles.activeZoneOrb, { backgroundColor: colors.accentBg }]}>
-                <Ionicons name="leaf" size={20} color={colors.accentPrimary} />
+              <View style={[styles.activeZoneOrb, { backgroundColor: colors.primary.subtle }]}>
+                <Ionicons name="leaf" size={20} color={colors.primary.default} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.activeZoneTitle, { color: colors.textPrimary }]}>
+                <Text style={[styles.activeZoneTitle, { color: colors.text.primary }]}>
                   {activeZone.name}
                 </Text>
-                <Text style={[styles.activeZoneBenefit, { color: colors.accentPrimary }]}>
+                <Text style={[styles.activeZoneBenefit, { color: colors.primary.default }]}>
                   {activeZone.somaticBenefit}
                 </Text>
               </View>
             </View>
-            <View style={[styles.cueBox, { backgroundColor: colors.bgSecondary ?? '#F4EFE6' }]}>
-              <Text style={[styles.cueLabel, { color: colors.textTertiary }]}>Somatic Release Cue:</Text>
-              <Text style={[styles.cueText, { color: colors.textPrimary }]}>
+            <View style={[styles.cueBox, { backgroundColor: colors.background.secondary }]}>
+              <Text style={[styles.cueLabel, { color: colors.text.tertiary }]}>Somatic Release Cue:</Text>
+              <Text style={[styles.cueText, { color: colors.text.primary }]}>
                 {activeZone.cue}
               </Text>
             </View>
@@ -193,7 +169,7 @@ export function BodyScanScreen() {
       </ScrollView>
 
       {/* Floating Bottom Primary Action Bar */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.bgPrimary, borderTopColor: colors.borderLight }]}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
         <PrimaryButton
           title="Start Full 8-Minute Body Scan"
           variant="primary"
@@ -208,34 +184,6 @@ export function BodyScanScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navTitleCol: { alignItems: 'center' },
-  navTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  navSubtitle: { fontSize: 12, fontWeight: '500', marginTop: 1 },
-  badgeOrb: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,

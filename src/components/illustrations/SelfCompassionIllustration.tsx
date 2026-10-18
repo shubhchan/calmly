@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Path, Circle, Rect, G, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { StyleProp, ViewStyle, View } from 'react-native';
 
 interface IllustrationProps {
@@ -10,12 +10,11 @@ interface IllustrationProps {
 }
 
 export function SelfCompassionIllustration({ width = 150, height = 130, style }: IllustrationProps) {
-  const colors = useThemeColors();
-  const isDark = colors.isDark;
+  const { colors, isDark } = useAppTheme();
 
-  const primaryAccent = colors.accentPrimary;
-  const roseAccent = colors.accentRose || '#EB697F';
-  const peachAccent = colors.accentPeach || '#EB876D';
+  const primaryAccent = colors.primary.default;
+  const roseAccent = colors.accents.rose || '#EB697F';
+  const peachAccent = colors.accents.peach || '#EB876D';
   const bodyTone = isDark ? '#D1D5DB' : '#384455';
   const clothTone = isDark ? '#2D3E56' : '#E6DDD0';
   const stoneTone = isDark ? '#263447' : '#E6E0D4';

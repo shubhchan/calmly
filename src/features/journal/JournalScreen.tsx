@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, JournalReflectionIllustration, StaggeredEntry, TactilePressable } from '../../components';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { Card, CardContent, PrimaryButton, JournalReflectionIllustration, PageHeader, StaggeredEntry, TactilePressable } from '../../components';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { format } from 'date-fns';
@@ -33,8 +33,8 @@ const journalTypes: JournalTemplate[] = [
 
 export function JournalScreen() {
   const navigation = useNavigation<any>();
-  const colors = useThemeColors();
-  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
+  const { colors, isDark } = useAppTheme();
+  const lilacTint = resolveTint(!!isDark, 'lilac');
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const hasLoadedRef = useRef(false);
@@ -71,7 +71,7 @@ export function JournalScreen() {
   };
 
   const renderJournalType = (item: JournalTemplate, index: number) => (
-    <StaggeredEntry index={index} delayStep={28} baseDelay={60} key={item.id}>
+    <StaggeredEntry index={index} key={item.id}>
       <TactilePressable
         onPress={() => {
           navigation?.navigate?.('JournalEntry', { type: item.id as any });
@@ -117,16 +117,15 @@ export function JournalScreen() {
     <ScreenContainer
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => loadEntries(true)} tintColor={colors.accentPrimary} />
+        <RefreshControl refreshing={loading} onRefresh={() => loadEntries(true)} tintColor={colors.primary.default} />
       }
     >
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>My Journal</Text>
-        <Text style={[styles.subtitle, { color: colors.textTertiary }]}>
-          {entries.length} reflection{entries.length === 1 ? '' : 's'} recorded · Choose a template or free write
-        </Text>
-      </View>
+      <PageHeader
+        title="My Journal"
+        subtitle={`${entries.length} reflection${entries.length === 1 ? '' : 's'} recorded · Choose a template or free write`}
+        style={{ marginBottom: 2 }}
+      />
 
       {/* Prompts & Templates Card Container — lilac pop card */}
       <PopIn index={0}>
@@ -158,7 +157,7 @@ export function JournalScreen() {
       <PopIn index={1}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Recent Reflections
           </Text>
           <TactilePressable
@@ -171,8 +170,8 @@ export function JournalScreen() {
             accessibilityLabel="New journal entry"
             style={styles.newActionLink}
           >
-            <Ionicons name="add" size={16} color={colors.accentPrimary} />
-            <Text style={[styles.newActionText, { color: colors.accentPrimary }]}>New entry</Text>
+            <Ionicons name="add" size={16} color={colors.primary.default} />
+            <Text style={[styles.newActionText, { color: colors.primary.default }]}>New entry</Text>
           </TactilePressable>
         </View>
 
@@ -186,7 +185,7 @@ export function JournalScreen() {
               const typeConfig = journalTypes.find((t) => t.id === entry.type) || journalTypes[0];
 
               return (
-                <StaggeredEntry key={entry.id} index={Math.min(idx, 8)} delayStep={26} baseDelay={70}>
+                <StaggeredEntry key={entry.id} index={Math.min(idx, 8)}>
                 <TactilePressable
                   onPress={() => {
                     navigation.navigate('JournalEntry', { id: entry.id });
@@ -198,8 +197,8 @@ export function JournalScreen() {
                   style={[
                     styles.entryCard,
                     {
-                      backgroundColor: colors.isDark ? '#1E293B' : (colors.bgSecondary || '#F4EFE6'),
-                      borderColor: colors.isDark ? '#354760' : (colors.borderMedium || '#D5CCC0'),
+                      backgroundColor: isDark ? '#1E293B' : colors.background.secondary,
+                      borderColor: isDark ? '#354760' : colors.border.strong,
                     },
                   ]}
                 >
@@ -218,7 +217,7 @@ export function JournalScreen() {
 
                     <View style={styles.entryBody}>
                       <View style={styles.entryMeta}>
-                        <Text style={[styles.entryDate, { color: colors.textTertiary }]}>
+                        <Text style={[styles.entryDate, { color: colors.text.tertiary }]}>
                           {formattedDate}
                         </Text>
                         <View style={[styles.typeBadge, { backgroundColor: typeConfig.color + '18' }]}>
@@ -229,13 +228,13 @@ export function JournalScreen() {
                       </View>
 
                       {entry.title ? (
-                        <Text style={[styles.entryTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                        <Text style={[styles.entryTitle, { color: colors.text.primary }]} numberOfLines={1}>
                           {entry.title}
                         </Text>
                       ) : null}
 
                       <Text
-                        style={[styles.entrySnippet, { color: colors.textSecondary }]}
+                        style={[styles.entrySnippet, { color: colors.text.secondary }]}
                         numberOfLines={2}
                       >
                         {entry.body || 'No written reflection text'}
@@ -256,7 +255,7 @@ export function JournalScreen() {
                       <Ionicons
                         name={entry.favorite ? 'heart' : 'heart-outline'}
                         size={20}
-                        color={entry.favorite ? '#DB3A60' : colors.textTertiary}
+                        color={entry.favorite ? '#DB3A60' : colors.text.tertiary}
                       />
                     </TactilePressable>
                   </View>
@@ -269,10 +268,10 @@ export function JournalScreen() {
           <Card variant="outlined" style={styles.emptyCard}>
             <CardContent style={styles.emptyContent}>
               <JournalReflectionIllustration width={150} height={125} style={{ marginBottom: 4 }} />
-              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+              <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
                 A fresh blank canvas
               </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+              <Text style={[styles.emptySubtitle, { color: colors.text.tertiary }]}>
                 Write down your thoughts, a moment of presence, or release whatever weighs on you.
               </Text>
               <PrimaryButton
@@ -301,20 +300,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 110,
     gap: 22,
-  },
-  header: {
-    marginBottom: 2,
-  },
-  title: {
-    fontFamily: fontFamilies.calming.bold,
-    fontSize: 32,
-    letterSpacing: 0.2,
-  },
-  subtitle: {
-    fontFamily: fontFamilies.sans.medium,
-    fontSize: 14,
-    marginTop: 4,
-    lineHeight: 20,
   },
   section: {
     gap: 12,

@@ -1,19 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/Card';
+import { ScreenHeader } from '../../components';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { notificationService, NotificationCategory } from '../../services/notifications';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { BrandedLoader } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
-
-type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Notifications'>['navigation'];
 
 const NOTIFICATION_CATEGORIES: { key: NotificationCategory; label: string; description: string; icon: any; color: string }[] = [
   { key: 'morningCheckIn', label: 'Morning Check-In', description: 'A gentle prompt to start your day mindfully', icon: 'sunny-outline', color: '#EB876D' },
@@ -25,14 +21,13 @@ const NOTIFICATION_CATEGORIES: { key: NotificationCategory; label: string; descr
 ];
 
 export function NotificationsScreen() {
-  const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const [masterEnabled, setMasterEnabled] = useState(false);
   const [categories, setCategories] = useState<Record<NotificationCategory, boolean>>({} as any);
   const [times, setTimes] = useState<Record<NotificationCategory, string>>({} as any);
   const [loading, setLoading] = useState(true);
   const [permission, setPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
-  const skyTint = resolveTint(!!colors.isDark, 'sky');
+  const skyTint = resolveTint(!!isDark, 'sky');
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -109,17 +104,7 @@ export function NotificationsScreen() {
 
   return (
     <ScreenContainer contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => (navigation as any)?.goBack?.()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Mindful Reminders</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title="Mindful Reminders" />
 
       <PopIn index={0}>
         <Card tone="sky" style={styles.card}>
@@ -141,8 +126,8 @@ export function NotificationsScreen() {
 
       <PopIn index={1}>
         <Card style={styles.card}>
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Categories</Text>
-        <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Categories</Text>
+        <Text style={[styles.sectionDesc, { color: colors.text.secondary }]}>
           Invitational, non-guilt prompts calibrated for mindful presence.
         </Text>
         {(NOTIFICATION_CATEGORIES ?? []).map((cat, idx) => (
@@ -150,7 +135,7 @@ export function NotificationsScreen() {
             key={cat.key}
             style={[
               styles.categoryItem,
-              { borderBottomColor: colors.borderLight },
+              { borderBottomColor: colors.border.default },
               idx === NOTIFICATION_CATEGORIES.length - 1 && { borderBottomWidth: 0 },
             ]}
           >
@@ -158,21 +143,21 @@ export function NotificationsScreen() {
               <Ionicons name={cat.icon} size={22} color={cat.color} />
             </View>
             <View style={styles.categoryInfo}>
-              <Text style={[styles.categoryLabel, { color: colors.textPrimary }]}>{cat.label}</Text>
-              <Text style={[styles.categoryDesc, { color: colors.textTertiary }]}>{cat.description}</Text>
+              <Text style={[styles.categoryLabel, { color: colors.text.primary }]}>{cat.label}</Text>
+              <Text style={[styles.categoryDesc, { color: colors.text.tertiary }]}>{cat.description}</Text>
             </View>
             <View style={styles.categoryControls}>
               <TouchableOpacity
                 onPress={() => handleTestNotification(cat.key)}
-                style={[styles.testButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
+                style={[styles.testButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
               >
-                <Text style={[styles.testButtonText, { color: colors.accentPrimary }]}>Test</Text>
+                <Text style={[styles.testButtonText, { color: colors.primary.default }]}>Test</Text>
               </TouchableOpacity>
               <Switch
                 value={(categories ?? {})[cat.key] && masterEnabled}
                 onValueChange={(enabled) => handleCategoryToggle(cat.key, enabled)}
                 thumbColor="#FFFFFF"
-                trackColor={{ false: colors.borderLight, true: colors.accentPrimary }}
+                trackColor={{ false: colors.border.default, true: colors.primary.default }}
                 disabled={!masterEnabled || permission !== 'granted'}
               />
             </View>
@@ -182,10 +167,10 @@ export function NotificationsScreen() {
       </PopIn>
 
       <PopIn index={2}>
-        <Card variant="outlined" style={[styles.noteCard, { backgroundColor: colors.accentPrimary + '10', borderColor: colors.accentPrimary + '30' }]}>
+        <Card variant="outlined" style={[styles.noteCard, { backgroundColor: colors.primary.default + '10', borderColor: colors.primary.default + '30' }]}>
           <View style={styles.noteContent}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.accentPrimary} />
-            <Text style={[styles.noteText, { color: colors.textSecondary }]}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.primary.default} />
+            <Text style={[styles.noteText, { color: colors.text.secondary }]}>
               All notification messages use gentle, encouraging language. No aggressive streak warnings or guilt prompts.
             </Text>
           </View>
@@ -198,21 +183,6 @@ export function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 60, gap: 16 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   card: { padding: 18, borderRadius: 20, gap: 12 },
   masterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   masterInfo: { flex: 1 },

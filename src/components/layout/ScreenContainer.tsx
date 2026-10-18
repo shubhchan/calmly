@@ -7,7 +7,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { motion, useAppReducedMotion } from '../../theme/motion';
 
 interface ScreenContainerProps {
@@ -51,12 +51,7 @@ export function ScreenContainer({
   keyboardShouldPersistTaps,
   showsVerticalScrollIndicator,
 }: ScreenContainerProps) {
-  let colors: any;
-  try {
-    colors = useThemeColors();
-  } catch {
-    colors = { bgPrimary: '#FBF9F5' };
-  }
+  const { colors } = useAppTheme();
 
   const reducedMotion = useAppReducedMotion();
   const progress = useSharedValue(animate ? 0 : 1);
@@ -82,7 +77,7 @@ export function ScreenContainer({
 
   const surfaceStyle: StyleProp<ViewStyle> = {
     flex: 1,
-    backgroundColor: backgroundColor ?? colors.bgPrimary ?? '#FBF9F5',
+    backgroundColor: backgroundColor ?? colors.background.default,
   };
 
   if (!scroll) {

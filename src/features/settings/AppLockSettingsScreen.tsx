@@ -8,8 +8,9 @@ import { Card } from '../../components/Card';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { appLockService } from '../../services/appLock';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { ScreenHeader } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 import { BrandedLoader } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
@@ -18,14 +19,14 @@ type NavigationProp = NativeStackScreenProps<RootStackParamList, 'AppLockSetting
 
 export function AppLockSettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const colors = useThemeColors();
+  const { colors, isDark } = useAppTheme();
   const [pinEnabled, setPinEnabled] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [autoLockMinutes, setAutoLockMinutes] = useState(5);
   const [hideInSwitcher, setHideInSwitcher] = useState(true);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
-  const lilacTint = resolveTint(!!colors.isDark, 'lilac');
+  const lilacTint = resolveTint(!!isDark, 'lilac');
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -139,17 +140,7 @@ export function AppLockSettingsScreen() {
 
   return (
     <ScreenContainer contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => (navigation as any)?.goBack?.()}
-          style={[styles.backButton, { backgroundColor: colors.bgCard, borderColor: colors.borderLight }]}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>App Lock & Security</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title="App Lock & Security" />
 
       <PopIn index={0}>
         <Card tone="lilac" style={styles.card}>
@@ -178,15 +169,15 @@ export function AppLockSettingsScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleRemovePin}
-                    style={[styles.removeButton, { borderColor: (colors.accentRose || '#EB697F') + '60' }]}
+                    style={[styles.removeButton, { borderColor: colors.accents.rose + '60' }]}
                   >
-                    <Text style={[styles.removeButtonText, { color: colors.accentRose || '#EB697F' }]}>Remove</Text>
+                    <Text style={[styles.removeButtonText, { color: colors.accents.rose }]}>Remove</Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <TouchableOpacity
                   onPress={() => handlePinToggle(true)}
-                  style={[styles.setupButton, { backgroundColor: colors.accentPrimary }]}
+                  style={[styles.setupButton, { backgroundColor: colors.primary.default }]}
                 >
                   <Text style={styles.setupButtonText}>Set Up PIN</Text>
                 </TouchableOpacity>
@@ -226,8 +217,8 @@ export function AppLockSettingsScreen() {
 
       <PopIn index={1}>
         <Card style={styles.card}>
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Auto-Lock Timeout</Text>
-        <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Auto-Lock Timeout</Text>
+        <Text style={[styles.sectionDesc, { color: colors.text.secondary }]}>
           Require passcode after app remains inactive
         </Text>
         <View style={styles.autoLockOptions}>
@@ -239,14 +230,14 @@ export function AppLockSettingsScreen() {
                 onPress={() => handleAutoLockChange(minutes)}
                 style={[
                   styles.autoLockButton,
-                  { backgroundColor: colors.bgCard, borderColor: colors.borderLight },
-                  isSelected && { backgroundColor: colors.accentPrimary, borderColor: colors.accentPrimary },
+                  { backgroundColor: colors.surface.default, borderColor: colors.border.default },
+                  isSelected && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
                 ]}
               >
                 <Text
                   style={[
                     styles.autoLockButtonText,
-                    { color: colors.textPrimary },
+                    { color: colors.text.primary },
                     isSelected && { color: '#FFFFFF', fontWeight: '700' },
                   ]}
                 >
@@ -264,12 +255,12 @@ export function AppLockSettingsScreen() {
         <Card style={styles.card}>
         <View style={styles.switcherRow}>
           <View style={styles.switcherInfo}>
-            <View style={[styles.lockIcon, { backgroundColor: (colors.accentPeach || '#EB876D') + '18' }]}>
-              <Ionicons name="eye-off-outline" size={20} color={colors.accentPeach || '#EB876D'} />
+            <View style={[styles.lockIcon, { backgroundColor: colors.accents.peach + '18' }]}>
+              <Ionicons name="eye-off-outline" size={20} color={colors.accents.peach} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.lockOptionLabel, { color: colors.textPrimary }]}>Hide in App Switcher</Text>
-              <Text style={[styles.lockOptionDesc, { color: colors.textTertiary }]}>
+              <Text style={[styles.lockOptionLabel, { color: colors.text.primary }]}>Hide in App Switcher</Text>
+              <Text style={[styles.lockOptionDesc, { color: colors.text.tertiary }]}>
                 Obscure app preview screen when switching tasks
               </Text>
             </View>
@@ -278,7 +269,7 @@ export function AppLockSettingsScreen() {
             value={hideInSwitcher}
             onValueChange={handleSwitcherToggle}
             thumbColor="#FFFFFF"
-            trackColor={{ false: colors.borderLight, true: colors.accentPrimary }}
+            trackColor={{ false: colors.border.default, true: colors.primary.default }}
             style={{ marginTop: 2 }}
           />
         </View>
@@ -291,21 +282,6 @@ export function AppLockSettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   card: { padding: 18, borderRadius: 20, gap: 14 },
   sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
   sectionDesc: { fontSize: 14, lineHeight: 20 },

@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { useThemeColors } from '../../theme/ThemeContext';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { StyleProp, ViewStyle, View } from 'react-native';
 
 interface IllustrationProps {
@@ -10,11 +10,10 @@ interface IllustrationProps {
 }
 
 export function MoodLandscapeIllustration({ width = 140, height = 120, style }: IllustrationProps) {
-  const colors = useThemeColors();
-  const isDark = colors.isDark;
+  const { colors, isDark } = useAppTheme();
 
-  const primaryAccent = colors.accentPrimary;
-  const secondaryAccent = colors.accentLavender || (isDark ? '#A78BFA' : '#6C5CE7');
+  const primaryAccent = colors.primary.default;
+  const secondaryAccent = colors.accents.lavender || (isDark ? '#A78BFA' : '#6C5CE7');
   const leafTone = isDark ? '#7BD495' : '#3E7B52';
   const stoneTone = isDark ? '#263447' : '#E6E0D4';
   const sunTone = isDark ? '#FB923C' : '#D96547';
