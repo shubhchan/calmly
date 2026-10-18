@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { RefreshControlProps, StyleProp, ViewStyle } from 'react-native';
+import { RefreshControlProps, StyleProp, View, ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -30,10 +30,14 @@ interface ScreenContainerProps {
 /**
  * The one screen scaffold every route uses.
  *
- * Guarantees a uniform entry for all screens: themed surface, a gentle
- * spring rise + settle, honoring OS and in-app reduced-motion settings.
- * Route exits are handled natively by the stack (slide/fade/sheet), so the
- * motion language stays: native route transition + this content entrance.
+ * The themed surface is painted opaque from the very first frame so native
+ * route transitions (stack slide, modal sheet, tab swap) never reveal the
+ * screen underneath through a half-transparent page. Only the content plays
+ * the gentle rise + settle entrance; loading bodies show their shimmering
+ * skeletons immediately and crossfade to real content when data resolves.
+ *
+ * Route exits are handled natively by the stack, and reduced motion is honored
+ * from both the OS setting and the in-app toggle.
  */
 export function ScreenContainer({
   children,
@@ -82,18 +86,24 @@ export function ScreenContainer({
   };
 
   if (!scroll) {
-    return <Animated.View style={[surfaceStyle, animatedStyle, style]}>{children}</Animated.View>;
+    return (
+      <View style={surfaceStyle}>
+        <Animated.View style={[{ flex: 1 }, style, animatedStyle]}>{children}</Animated.View>
+      </View>
+    );
   }
 
   return (
-    <Animated.ScrollView
-      style={[surfaceStyle, animatedStyle, style]}
-      contentContainerStyle={[{ paddingBottom: bottomPadding }, contentContainerStyle]}
-      showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? false}
-      keyboardShouldPersistTaps={keyboardShouldPersistTaps ?? 'handled'}
-      refreshControl={refreshControl}
-    >
-      {children}
-    </Animated.ScrollView>
+    <View style={surfaceStyle}>
+      <Animated.ScrollView
+        style={[{ flex: 1 }, style, animatedStyle]}
+        contentContainerStyle={[{ paddingBottom: bottomPadding }, contentContainerStyle]}
+        showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? false}
+        keyboardShouldPersistTaps={keyboardShouldPersistTaps ?? 'handled'}
+        refreshControl={refreshControl}
+      >
+        {children}
+      </Animated.ScrollView>
+    </View>
   );
 }

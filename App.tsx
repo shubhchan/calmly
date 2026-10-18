@@ -1,12 +1,12 @@
 import 'react-native-gesture-handler';
 import './src/theme/fontPatcher';
 import './global.css';
-import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View, StatusBar as RNStatusBar, Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeProvider, useThemeColors } from './src/theme/ThemeContext';
 import { AppIcon } from './src/components/AppIcon';
@@ -272,6 +272,25 @@ function AppShell({
   const statusBarColor = colors?.bgPrimary ?? (isDark ? '#0F141C' : '#FBF9F5');
   const barStyle = isDark ? 'light-content' : 'dark-content';
 
+  // The navigation container's own background must match the app surface.
+  // Otherwise React Navigation's default light-grey theme shows through during
+  // any scene transition — the literal white/grey "flash" on page change.
+  const navTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: colors?.accentPrimary ?? '#3E7B52',
+        background: colors?.bgPrimary ?? (isDark ? '#111722' : '#FAF8F5'),
+        card: colors?.bgCard ?? colors?.bgPrimary ?? (isDark ? '#17202E' : '#FFFFFF'),
+        text: colors?.textPrimary ?? (isDark ? '#E8ECF1' : '#1A212D'),
+        border: colors?.borderLight ?? (isDark ? '#243245' : '#EBE3D5'),
+        notification: colors?.accentPrimary ?? '#3E7B52',
+      },
+    };
+  }, [isDark, colors]);
+
   useEffect(() => {
     if (Platform.OS === 'android') {
       try {
@@ -296,6 +315,7 @@ function AppShell({
       <Suspense fallback={<SuspenseFallbackProbe />}>
         <NavigationContainer
           key={`nav-${navKey}`}
+          theme={navTheme}
           onReady={handleNavReady}
           onStateChange={handleStateChange}
         >

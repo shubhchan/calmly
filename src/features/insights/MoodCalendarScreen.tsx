@@ -205,7 +205,11 @@ export function MoodCalendarScreen() {
 
   if (initialLoading) {
     return (
-      <ScreenContainer contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}>
+      <ScreenContainer
+        scroll={false}
+        backgroundColor={colors.bgPrimary}
+        style={{ paddingHorizontal: 20, paddingTop: 16 }}
+      >
         <GridSkeleton cells={12} columns={3} />
       </ScreenContainer>
     );

@@ -101,7 +101,7 @@ export function NotificationsScreen() {
 
   if (loading) {
     return (
-      <ScreenContainer scroll={false} style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <ScreenContainer contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
         <BrandedLoader label="Loading reminders" />
       </ScreenContainer>
     );

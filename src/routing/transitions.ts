@@ -43,10 +43,17 @@ export function immersiveTransition(reducedMotion: boolean): NativeStackNavigati
   };
 }
 
-/** Tab switches: gentle fade between sanctuaries. */
-export function tabTransition(reducedMotion: boolean) {
+/**
+ * Tab switches: instant swap.
+ *
+ * A scene cross-fade here dims BOTH pages over the container background and
+ * double-fades with each screen's own content entrance, which reads as a
+ * flash. Instead the new page paints immediately — opaque, themed, with its
+ * shimmering skeletons already in place — and content fades in on its own.
+ */
+export function tabTransition() {
   return {
     headerShown: false,
-    animation: reducedMotion ? ('none' as const) : ('fade' as const),
+    animation: 'none' as const,
   };
 }

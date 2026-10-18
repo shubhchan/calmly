@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
   FadeIn,
+  FadeOut,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -48,6 +49,7 @@ export function BrandedLoader({ label, compact = false }: { label?: string; comp
   return (
     <Animated.View
       entering={FadeIn.duration(motion.duration.fast)}
+      exiting={reducedMotion ? undefined : FadeOut.duration(motion.duration.normal)}
       style={[
         styles.brandedLoader,
         compact && { paddingVertical: 12, paddingHorizontal: 20, flexDirection: 'row', gap: 10 },
@@ -75,10 +77,17 @@ export function BrandedLoader({ label, compact = false }: { label?: string; comp
   );
 }
 
+/**
+ * Shared frame for every skeleton preset. Fades in on mount and dissolves
+ * when data resolves, so placeholder -> content is always a soft crossfade
+ * rather than a hard blink.
+ */
 function LoadingShell({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const reducedMotion = useAppReducedMotion();
   return (
     <Animated.View
       entering={FadeIn.duration(motion.duration.normal)}
+      exiting={reducedMotion ? undefined : FadeOut.duration(motion.duration.normal)}
       accessible={false}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"

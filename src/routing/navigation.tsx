@@ -429,7 +429,6 @@ const tabBarStyles = StyleSheet.create({
 
 export function AppNavigator() {
   useRenderLog('app-navigator-render');
-  const reducedMotion = useAppReducedMotion();
   useEffect(() => {
     bootLog('app-navigator-mounted');
   }, []);
@@ -438,7 +437,7 @@ export function AppNavigator() {
     <Tab.Navigator
       initialRouteName="Home"
       tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={tabTransition(reducedMotion)}
+      screenOptions={tabTransition()}
     >
       <Tab.Screen name="Home" component={GuardedHomeStack} />
       <Tab.Screen name="Journal" component={GuardedJournalStack} />
