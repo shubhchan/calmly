@@ -66,7 +66,10 @@ class AppLockService {
         requiresAuth: settings.pinEnabled || settings.biometricEnabled,
       };
       this.startAutoLockTimer(settings.autoLockMinutes);
-      await this.setSwitcherProtection(settings.hideContentInSwitcher !== false);
+      await this.setScreenProtection({
+        allowScreenshots: settings.allowScreenshots !== false,
+        hideInSwitcher: settings.hideContentInSwitcher !== false,
+      });
     } catch (error) {
       console.warn('AppLock init failed, continuing unlocked:', error);
     } finally {
@@ -193,26 +196,31 @@ class AppLockService {
     }
   }
 
-  async setSwitcherProtection(enabled: boolean): Promise<void> {
+  async setScreenProtection(options: { allowScreenshots: boolean; hideInSwitcher: boolean }): Promise<void> {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const ScreenCapture = require('expo-screen-capture');
       if (!ScreenCapture) return;
-      if (Platform.OS === 'ios' && ScreenCapture.enableAppSwitcherProtectionAsync) {
-        if (enabled) {
-          await ScreenCapture.enableAppSwitcherProtectionAsync(0.6);
-        } else if (ScreenCapture.disableAppSwitcherProtectionAsync) {
-          await ScreenCapture.disableAppSwitcherProtectionAsync();
+      if (Platform.OS === 'ios') {
+        if (ScreenCapture.enableAppSwitcherProtectionAsync) {
+          if (options.hideInSwitcher) {
+            await ScreenCapture.enableAppSwitcherProtectionAsync(0.6);
+          } else {
+            await ScreenCapture.disableAppSwitcherProtectionAsync?.();
+          }
         }
         return;
       }
-      if (enabled) {
-        await ScreenCapture.preventScreenCaptureAsync?.('calmly-privacy');
-      } else {
+      // Android: FLAG_SECURE blocks screenshots entirely (and blanks the
+      // recents preview), so the user-facing "Allow Screenshots" setting
+      // decides whether the block is active.
+      if (options.allowScreenshots) {
         await ScreenCapture.allowScreenCaptureAsync?.('calmly-privacy');
+      } else {
+        await ScreenCapture.preventScreenCaptureAsync?.('calmly-privacy');
       }
     } catch (error) {
-      console.warn('AppLock switcher protection unavailable:', error);
+      console.warn('AppLock screen protection unavailable:', error);
     }
   }
 

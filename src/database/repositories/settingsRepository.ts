@@ -127,6 +127,7 @@ export interface AppSettings {
   pinHash?: string;
   autoLockMinutes: number;
   hideContentInSwitcher: boolean;
+  allowScreenshots: boolean;
   theme: 'light' | 'dark' | 'system';
   accent: 'sage' | 'lavender' | 'sky' | 'peach' | 'rose' | 'ocean';
   reducedMotion: boolean;
@@ -158,6 +159,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   pinEnabled: false,
   autoLockMinutes: 5,
   hideContentInSwitcher: true,
+  allowScreenshots: true,
   theme: 'system',
   accent: 'sage',
   reducedMotion: false,

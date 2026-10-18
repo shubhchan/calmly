@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, Alert, Switch, Platform } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -24,6 +24,7 @@ export function AppLockSettingsScreen() {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [autoLockMinutes, setAutoLockMinutes] = useState(5);
   const [hideInSwitcher, setHideInSwitcher] = useState(true);
+  const [allowScreenshots, setAllowScreenshots] = useState(true);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const lilacTint = resolveTint(!!isDark, 'lilac');
@@ -40,6 +41,7 @@ export function AppLockSettingsScreen() {
       setBiometricEnabled(settings?.biometricEnabled ?? false);
       setAutoLockMinutes(settings?.autoLockMinutes ?? 5);
       setHideInSwitcher(settings?.hideContentInSwitcher ?? true);
+      setAllowScreenshots(settings?.allowScreenshots ?? true);
     } catch (error) {
       console.error('Failed to load app lock settings:', error);
     } finally {
@@ -102,13 +104,43 @@ export function AppLockSettingsScreen() {
     }
   };
 
+  const authenticateChange = async (): Promise<boolean> => {
+    // Privacy switches are protected by the device lock when app lock is on.
+    if (!pinEnabled && !biometricEnabled) return true;
+    try {
+      const available = (await LocalAuthentication?.hasHardwareAsync?.()) ?? false;
+      const enrolled = (await LocalAuthentication?.isEnrolledAsync?.()) ?? false;
+      if (!available || !enrolled) return true;
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Confirm security setting change',
+        fallbackLabel: 'Use passcode',
+        cancelLabel: 'Cancel',
+      });
+      return result.success;
+    } catch {
+      return true;
+    }
+  };
+
   const handleSwitcherToggle = async (enabled: boolean) => {
     try {
+      if (!(await authenticateChange())) return;
       setHideInSwitcher(enabled ?? true);
       await settingsRepository?.updateSettings?.({ hideContentInSwitcher: enabled ?? true });
-      await appLockService?.setSwitcherProtection?.(enabled ?? true);
+      await appLockService?.setScreenProtection?.({ allowScreenshots, hideInSwitcher: enabled ?? true });
     } catch (error) {
       console.error('Failed to toggle switcher:', error);
+    }
+  };
+
+  const handleScreenshotToggle = async (enabled: boolean) => {
+    try {
+      if (!(await authenticateChange())) return;
+      setAllowScreenshots(enabled ?? true);
+      await settingsRepository?.updateSettings?.({ allowScreenshots: enabled ?? true });
+      await appLockService?.setScreenProtection?.({ allowScreenshots: enabled ?? true, hideInSwitcher });
+    } catch (error) {
+      console.error('Failed to toggle screenshots:', error);
     }
   };
 
@@ -263,26 +295,49 @@ export function AppLockSettingsScreen() {
 
       <PopIn index={2}>
         <Card style={styles.card}>
-        <View style={styles.switcherRow}>
-          <View style={styles.switcherInfo}>
-            <View style={[styles.lockIcon, { backgroundColor: colors.accents.peach + '18' }]}>
-              <Ionicons name="eye-off-outline" size={20} color={colors.accents.peach} />
+        {Platform.OS === 'ios' ? (
+          <View style={styles.switcherRow}>
+            <View style={styles.switcherInfo}>
+              <View style={[styles.lockIcon, { backgroundColor: colors.accents.peach + '18' }]}>
+                <Ionicons name="eye-off-outline" size={20} color={colors.accents.peach} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.lockOptionLabel, { color: colors.text.primary }]}>Hide in App Switcher</Text>
+                <Text style={[styles.lockOptionDesc, { color: colors.text.tertiary }]}>
+                  Blur the app preview when switching tasks. Confirmation is required to change this.
+                </Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.lockOptionLabel, { color: colors.text.primary }]}>Hide in App Switcher</Text>
-              <Text style={[styles.lockOptionDesc, { color: colors.text.tertiary }]}>
-                Obscure app preview when switching tasks (blocks screenshots on Android)
-              </Text>
-            </View>
+            <Switch
+              value={hideInSwitcher}
+              onValueChange={handleSwitcherToggle}
+              thumbColor="#FFFFFF"
+              trackColor={{ false: colors.border.default, true: colors.primary.default }}
+              style={{ marginTop: 2 }}
+            />
           </View>
-          <Switch
-            value={hideInSwitcher}
-            onValueChange={handleSwitcherToggle}
-            thumbColor="#FFFFFF"
-            trackColor={{ false: colors.border.default, true: colors.primary.default }}
-            style={{ marginTop: 2 }}
-          />
-        </View>
+        ) : (
+          <View style={styles.switcherRow}>
+            <View style={styles.switcherInfo}>
+              <View style={[styles.lockIcon, { backgroundColor: colors.accents.sky + '18' }]}>
+                <Ionicons name="camera-outline" size={20} color={colors.accents.sky} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.lockOptionLabel, { color: colors.text.primary }]}>Allow Screenshots</Text>
+                <Text style={[styles.lockOptionDesc, { color: colors.text.tertiary }]}>
+                  Let you capture what's on screen. When off, screenshots and the app-switcher preview are blocked.
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={allowScreenshots}
+              onValueChange={handleScreenshotToggle}
+              thumbColor="#FFFFFF"
+              trackColor={{ false: colors.border.default, true: colors.primary.default }}
+              style={{ marginTop: 2 }}
+            />
+          </View>
+        )}
         </Card>
       </PopIn>
     </ScreenContainer>
