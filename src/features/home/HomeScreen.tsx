@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, InteractionManager } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, AppText, PageHeader, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration, TactilePressable, StaggeredEntry, CelebratoryCheckbox } from '../../components';
 import type { AppIconName } from '../../components';
@@ -72,7 +72,10 @@ export function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadHomeData();
+      const task = InteractionManager.runAfterInteractions(() => {
+        loadHomeData();
+      });
+      return () => task.cancel();
     }, [loadHomeData])
   );
 

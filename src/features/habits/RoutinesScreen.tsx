@@ -14,6 +14,8 @@ import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint, tintForIndex } from '../../theme/tints';
+import Animated from 'react-native-reanimated';
+import { sharedSpringStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Routines'>['navigation'];
 
@@ -89,7 +91,7 @@ export function RoutinesScreen() {
 
   if (loading) {
     return (
-      <ScreenContainer contentContainerStyle={styles.content}>
+      <ScreenContainer animate={false} contentContainerStyle={styles.content}>
         <ListSkeleton rows={3} />
       </ScreenContainer>
     );
@@ -114,9 +116,13 @@ export function RoutinesScreen() {
           <StaggeredEntry key={timeOfDay} index={sectionIndex}>
             <Card style={styles.sectionCard}>
               <View style={styles.timeOfDayHeader}>
-                <View style={[styles.timeOfDayIcon, { backgroundColor: config.color + '20' }]}>
+                <Animated.View
+                  sharedTransitionTag={sharedTransitionTags.routineIcon(timeOfDay)}
+                  sharedTransitionStyle={sharedSpringStyle}
+                  style={[styles.timeOfDayIcon, { backgroundColor: config.color + '20' }]}
+                >
                   <Ionicons name={config.icon} size={22} color={config.color} />
-                </View>
+                </Animated.View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.timeOfDayLabel, { color: colors.text.primary }]}>{config.label}</Text>
                   <Text style={{ fontSize: 12, color: colors.text.tertiary }}>

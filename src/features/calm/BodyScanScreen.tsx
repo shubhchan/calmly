@@ -8,6 +8,8 @@ import { Card, CardContent, PrimaryButton, BodyScanIllustration, ScreenHeader, T
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { useTabBarOffset } from '../../utils/useTabBarOffset';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -77,7 +79,7 @@ export function BodyScanScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Somatic Body Scan" subtitle="Muscle Tension Reliever" bordered />
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>
@@ -85,7 +87,12 @@ export function BodyScanScreen() {
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
             <View style={[styles.heroAuraGlow, { backgroundColor: colors.primary.subtle }]}>
-              <BodyScanIllustration width={190} height={155} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.calmHero('bodyScan')}
+                sharedTransitionStyle={sharedElementStyle}
+              >
+                <BodyScanIllustration width={190} height={155} />
+              </Animated.View>
             </View>
             <View style={styles.heroBadgeRow}>
               <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>

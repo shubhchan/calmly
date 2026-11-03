@@ -10,6 +10,8 @@ import { ScreenHeader, TactilePressable } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
 import { deleteSettingsFileStore } from '../../database/repositories/settingsRepository';
+import { moodRepository } from '../../database/repositories/moodRepository';
+import { journalRepository } from '../../database/repositories/journalRepository';
 
 const DATA_TYPES = [
   { key: 'moods', label: 'Mood Check-ins', icon: 'happy-outline' },
@@ -43,8 +45,8 @@ export function DataManagementScreen() {
       };
 
       const collections = {
-        moods: await safeFetch('mood_entries'),
-        journals: await safeFetch('journal_entries'),
+        moods: await moodRepository.getAll(),
+        journals: await journalRepository.getAll(),
         habits: await safeFetch('habits'),
         completions: await safeFetch('habit_completions'),
         gratitude: await safeFetch('gratitude_entries'),
@@ -67,8 +69,8 @@ export function DataManagementScreen() {
         version: '1.0',
         app: 'Calmly',
         data: {
-          moods: (collections?.moods ?? []).map((e: any) => e?._raw),
-          journals: (collections?.journals ?? []).map((e: any) => e?._raw),
+          moods: (collections?.moods ?? []).map((e: any) => e?._raw ?? e),
+          journals: (collections?.journals ?? []).map((e: any) => e?._raw ?? e),
           habits: (collections?.habits ?? []).map((e: any) => e?._raw),
           completions: (collections?.completions ?? []).map((e: any) => e?._raw),
           gratitude: (collections?.gratitude ?? []).map((e: any) => e?._raw),
@@ -168,6 +170,8 @@ export function DataManagementScreen() {
                   await Promise.all((items ?? []).map((item: any) => item?.destroyPermanently?.()));
                 });
               }
+              if (typeKey === 'moods') await moodRepository.clearFallback();
+              if (typeKey === 'journals') await journalRepository.clearFallback();
               Alert.alert('Deleted', `${typeObj?.label ?? 'Items'} cleared.`);
             } catch (err) {
               console.error('Delete failed:', err);
@@ -209,8 +213,9 @@ export function DataManagementScreen() {
                   )
                 );
               });
+              await Promise.all([moodRepository.clearFallback(), journalRepository.clearFallback()]);
               deleteSettingsFileStore();
-              Alert.alert('Reset Complete', 'All local data was erased.');
+              Alert.alert('Reset Complete', 'All local data was erased. Cloud snapshots must be deleted separately in Google Drive.');
             } catch (err) {
               console.error('Wipe failed:', err);
               Alert.alert('Error', 'Failed to erase data.');

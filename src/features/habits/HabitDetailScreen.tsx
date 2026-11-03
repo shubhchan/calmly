@@ -18,6 +18,8 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>['route'];
@@ -32,7 +34,8 @@ export function HabitDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
   const { colors, isDark } = useAppTheme();
-  const { id } = route.params ?? {};
+  const { id, preview } = route.params ?? {};
+  const previewHabit = preview ? { ...preview, id: id ?? '' } : null;
 
   const [habit, setHabit] = useState<Habit | null>(null);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
@@ -119,7 +122,22 @@ export function HabitDetailScreen() {
 
   const handleEdit = () => {
     if (!id) return;
-    navigation.navigate('HabitForm', { id });
+    const source = habit ?? previewHabit;
+    navigation.navigate('HabitForm', {
+      id,
+      preview: source
+        ? {
+            name: source.name ?? '',
+            icon: source.icon ?? 'water',
+            color: source.color ?? colors.primary.default,
+            frequency: source.frequency ?? 'daily',
+            customDays: source.customDays,
+            reminderTime: (source as Habit).reminderTime ?? undefined,
+            goal: (source as Habit).goal ?? undefined,
+            notes: (source as Habit).notes ?? undefined,
+          }
+        : undefined,
+    });
   };
 
   const handleDelete = () => {
@@ -150,15 +168,17 @@ export function HabitDetailScreen() {
     );
   }
 
-  if (loading) {
+  if (loading && !previewHabit) {
     return (
-      <ScreenContainer contentContainerStyle={styles.content}>
+      <ScreenContainer animate={false} contentContainerStyle={styles.content}>
         <DetailSkeleton />
       </ScreenContainer>
     );
   }
 
-  if (!habit) {
+  const displayHabit = habit ?? previewHabit;
+
+  if (!displayHabit) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background.default, justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Habit not found</Text>
@@ -174,7 +194,7 @@ export function HabitDetailScreen() {
 
   let customDayLabels = '';
   try {
-    const parsed = JSON.parse(habit?.customDays || '[]');
+    const parsed = JSON.parse(displayHabit?.customDays || '[]');
     const arr = Array.isArray(parsed) ? parsed : [];
     customDayLabels = arr
       .map((d: string) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d ?? '', 10)] ?? '')
@@ -191,11 +211,11 @@ export function HabitDetailScreen() {
     calendarTitle = '';
   }
 
-  const habitAccentColor = habit?.color || colors.primary.default;
+  const habitAccentColor = displayHabit?.color || colors.primary.default;
   const sageTint = resolveTint(!!isDark, 'sage');
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer scroll={false} animate={false} backgroundColor={colors.background.default}>
       <ScreenHeader
         right={
           <View style={styles.headerActions}>
@@ -216,16 +236,19 @@ export function HabitDetailScreen() {
       />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <PopIn index={1}>
       <Card tone="sage" style={styles.habitHero}>
-        <View style={[styles.habitIconLarge, { backgroundColor: habitAccentColor }]}>
-          <Ionicons name={getIconName(habit?.icon ?? '') as any} size={36} color="#FFFFFF" />
-        </View>
-        <Text style={[styles.habitName, { color: sageTint.text }]}>{habit?.name ?? ''}</Text>
+        <Animated.View
+          sharedTransitionTag={displayHabit?.id ? sharedTransitionTags.habitIcon(displayHabit.id) : undefined}
+          sharedTransitionStyle={sharedElementStyle}
+          style={[styles.habitIconLarge, { backgroundColor: habitAccentColor }]}
+        >
+          <Ionicons name={getIconName(displayHabit?.icon ?? '') as any} size={36} color="#FFFFFF" />
+        </Animated.View>
+        <Text style={[styles.habitName, { color: sageTint.text }]}>{displayHabit?.name ?? ''}</Text>
         <View style={styles.habitMeta}>
           <Text style={[styles.habitFrequency, { color: sageTint.muted }]}>
-            {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
-            {habit?.frequency === 'custom' && customDayLabels ? ` • ${customDayLabels}` : ''}
+            {FREQUENCY_LABELS[displayHabit?.frequency ?? ''] || displayHabit?.frequency || ''}
+            {displayHabit?.frequency === 'custom' && customDayLabels ? ` • ${customDayLabels}` : ''}
           </Text>
           {habit?.reminderTime ? (
             <View style={styles.reminderBadge}>
@@ -235,7 +258,6 @@ export function HabitDetailScreen() {
           ) : null}
         </View>
       </Card>
-      </PopIn>
 
       <PopIn index={2}>
       <View style={styles.statsRow}>

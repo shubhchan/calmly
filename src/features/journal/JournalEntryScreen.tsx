@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { FormSkeleton } from '../../components/interactive/LoadingState';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedHeroStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 const journalTypeLabels: Record<JournalType, string> = {
   free: 'Free writing',
@@ -40,13 +42,14 @@ export function JournalEntryScreen() {
   const rawType = (params as any)?.type;
   const type: JournalType = (rawType && (journalTypeLabels as any)[rawType] ? rawType : 'free') as JournalType;
   const id = (params as any)?.id ?? undefined;
+  const preview = (params as any)?.preview;
   const isEditing = !!id;
   const typeIcon: AppIconName = (journalTypeIcons as any)?.[type] ?? 'l-write';
   const typeLabel = (journalTypeLabels as any)?.[type] ?? (typeof type === 'string' ? type : 'Entry');
 
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [title, setTitle] = useState(preview?.title ?? '');
+  const [content, setContent] = useState(preview?.body ?? '');
+  const [isFavorite, setIsFavorite] = useState(!!preview?.favorite);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -57,7 +60,7 @@ export function JournalEntryScreen() {
     if (!id) return;
     let isMounted = true;
     const loadEntry = async () => {
-      setLoading(true);
+      if (!preview) setLoading(true);
       try {
         const entry = await journalRepository.getById(id);
         if (entry && isMounted) {
@@ -139,7 +142,7 @@ export function JournalEntryScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
       <PopIn index={0}>
       <ScreenHeader
         title={isEditing ? 'Edit Reflection' : 'New Reflection'}
@@ -164,7 +167,6 @@ export function JournalEntryScreen() {
         showsVerticalScrollIndicator={false}
       >
       {/* Visual Zen Header Card */}
-      <PopIn index={1}>
       <View
         style={{
           alignItems: 'center',
@@ -173,11 +175,14 @@ export function JournalEntryScreen() {
           marginBottom: 16,
         }}
       >
-        <JournalReflectionIllustration width={150} height={120} />
+        <Animated.View
+          sharedTransitionTag={sharedTransitionTags.journalReflectionHero}
+          sharedTransitionStyle={sharedHeroStyle}
+        >
+          <JournalReflectionIllustration width={150} height={120} />
+        </Animated.View>
       </View>
-      </PopIn>
 
-      <PopIn index={2}>
       {loading ? (
         <FormSkeleton fields={2} />
       ) : (
@@ -185,7 +190,9 @@ export function JournalEntryScreen() {
           <CardContent style={{ padding: 20 }}>
             {/* Type Header Pill */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View
+              <Animated.View
+                sharedTransitionTag={id ? sharedTransitionTags.journalEntryIcon(id) : sharedTransitionTags.journalTemplateIcon(type)}
+                sharedTransitionStyle={sharedElementStyle}
                 style={{
                   width: 40,
                   height: 40,
@@ -198,7 +205,7 @@ export function JournalEntryScreen() {
                 }}
               >
                 <AppIcon name={typeIcon} size={20} color={colors.primary.default} />
-              </View>
+              </Animated.View>
               <View style={{ marginLeft: 12 }}>
                 <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>
                   {typeLabel}
@@ -288,7 +295,6 @@ export function JournalEntryScreen() {
           </CardContent>
         </Card>
       )}
-      </PopIn>
 
       {/* Buttons */}
       <PopIn index={3}>

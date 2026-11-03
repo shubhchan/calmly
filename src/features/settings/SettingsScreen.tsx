@@ -215,6 +215,19 @@ export function SettingsScreen() {
             </TactilePressable>
 
             <TactilePressable
+              onPress={() => navigation.navigate('CloudStorage')}
+              accessibilityRole="button"
+              style={[styles.menuRow, { borderBottomColor: colors.border.default }]}
+            >
+              <View style={styles.menuTextWrap}>
+                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Google Account & Drive</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Optional Google sign-in and encrypted Drive backups</Text>
+              </View>
+              <Ionicons name="cloud-outline" size={18} color={colors.primary.default} />
+              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+            </TactilePressable>
+
+            <TactilePressable
               onPress={() => navigation.navigate('DataManagement')}
               style={[
                 styles.menuRow,

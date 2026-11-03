@@ -31,10 +31,18 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.*
+!.env.example
+google-services.json
+GoogleService-Info.plist
 
 # typescript
 *.tsbuildinfo
+
+# archives & scratch
+*.zip
+*.base64.txt
 
 # generated native folders
 /ios

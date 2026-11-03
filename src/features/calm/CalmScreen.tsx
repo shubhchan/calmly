@@ -22,6 +22,8 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
 import { borderWidths, iconSizes, layout, radius, sizes, spacing } from '../../theme/tokens';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -92,7 +94,7 @@ export function CalmScreen() {
   const solidInk = isDark ? colors.background.default : '#FFFFFF';
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       {/* Sanctuary Top Bar */}
       <View style={[styles.header, { borderBottomColor: colors.border.default }]}>
         <View style={styles.headerTitleRow}>
@@ -186,7 +188,19 @@ export function CalmScreen() {
                   Tap any atmosphere for immediate calm
                 </AppText>
               </View>
-              <NatureSoundscapeIllustration width={96} height={76} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.calmHero('soundscapes')}
+                sharedTransitionStyle={sharedElementStyle}
+              >
+                <TactilePressable
+                  onPress={() => navigation.navigate('Soundscapes')}
+                  scaleDownTo={0.96}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open nature soundscapes player"
+                >
+                  <NatureSoundscapeIllustration width={96} height={76} />
+                </TactilePressable>
+              </Animated.View>
             </View>
 
             {/* Ambient Sound Grid (2x2 tactile cards) */}
@@ -281,7 +295,19 @@ export function CalmScreen() {
                   Restore nervous system rhythm
                 </AppText>
               </View>
-              <BreathworkIllustration width={96} height={76} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.calmHero('breathwork')}
+                sharedTransitionStyle={sharedElementStyle}
+              >
+                <TactilePressable
+                  onPress={() => navigation.navigate('BreathworkStudio')}
+                  scaleDownTo={0.96}
+                  accessibilityRole="button"
+                  accessibilityLabel="Explore breathwork studio"
+                >
+                  <BreathworkIllustration width={96} height={76} />
+                </TactilePressable>
+              </Animated.View>
             </View>
 
             {/* Direct Breathwork Presets */}
@@ -365,7 +391,12 @@ export function CalmScreen() {
                   <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={creamTint.accent} />
                 </View>
               </View>
-              <SensoryGroundingIllustration width={96} height={76} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.calmHero('sensory')}
+                sharedTransitionStyle={sharedElementStyle}
+              >
+                <SensoryGroundingIllustration width={96} height={76} />
+              </Animated.View>
             </View>
           </CardContent>
         </Card>
@@ -395,7 +426,12 @@ export function CalmScreen() {
                   <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={sageTint.accent} />
                 </View>
               </View>
-              <BodyScanIllustration width={96} height={76} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.calmHero('bodyScan')}
+                sharedTransitionStyle={sharedElementStyle}
+              >
+                <BodyScanIllustration width={96} height={76} />
+              </Animated.View>
             </View>
           </CardContent>
         </Card>
@@ -425,7 +461,12 @@ export function CalmScreen() {
                   <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={blushTint.accent} />
                 </View>
               </View>
-              <PanicAnchorIllustration width={96} height={76} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.calmHero('panic')}
+                sharedTransitionStyle={sharedElementStyle}
+              >
+                <PanicAnchorIllustration width={96} height={76} />
+              </Animated.View>
             </View>
           </CardContent>
         </Card>

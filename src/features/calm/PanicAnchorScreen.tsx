@@ -8,6 +8,8 @@ import { soundService } from '../../services/soundService';
 import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { useTabBarOffset } from '../../utils/useTabBarOffset';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 export function PanicAnchorScreen() {
   const navigation = useNavigation();
@@ -32,7 +34,7 @@ export function PanicAnchorScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Acute Panic Anchor" subtitle="Biological SOS Aid" bordered />
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>
@@ -40,7 +42,12 @@ export function PanicAnchorScreen() {
         <Card variant="elevated" style={[styles.heroCard, { borderColor: (colors.accents.rose) + '50' }]}>
           <CardContent style={styles.heroCardContent}>
             <View style={[styles.heroAuraGlow, { backgroundColor: (colors.accents.rose) + '12' }]}>
-              <PanicAnchorIllustration width={190} height={155} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.calmHero('panic')}
+                sharedTransitionStyle={sharedElementStyle}
+              >
+                <PanicAnchorIllustration width={190} height={155} />
+              </Animated.View>
             </View>
             <View style={styles.heroBadgeRow}>
               <View

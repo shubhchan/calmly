@@ -1,222 +1,110 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, BackHandler } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { BackHandler, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { appLockService } from '../../services/appLock';
 import { useAppTheme } from '../../theme/ThemeContext';
+import { AppText, TactilePressable } from '../../components';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { TactilePressable } from '../../components';
+import { motion, useAppReducedMotion } from '../../theme/motion';
 
 export function AppLockScreen({ onUnlocked }: { onUnlocked?: () => void }) {
   const { colors } = useAppTheme();
+  const { height } = useWindowDimensions();
+  const reducedMotion = useAppReducedMotion();
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [settings, setSettings] = useState<any>(null);
-  const autoPromptedRef = useRef(false);
+  const autoPrompted = useRef(false);
+  const inFlight = useRef(false);
+  const shake = useSharedValue(0);
+  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
 
-  const handleBiometric = useCallback(async () => {
-    try {
-      const unlocked = await appLockService?.unlockWithBiometric?.();
-      if (unlocked) {
-        onUnlocked?.();
-      }
-    } catch {}
+  const unlockWithBiometric = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    try { if (await appLockService.unlockWithBiometric()) onUnlocked?.(); }
+    finally { inFlight.current = false; setBusy(false); }
   }, [onUnlocked]);
 
-  const checkBiometric = useCallback(async () => {
-    let hardwareOk = false;
-    try {
-      const LocalAuthentication = require('expo-local-authentication');
-      const available = (await LocalAuthentication?.hasHardwareAsync?.()) ?? false;
-      const enrolled = (await LocalAuthentication?.isEnrolledAsync?.()) ?? false;
-      hardwareOk = available && enrolled;
-      setBiometricAvailable(hardwareOk);
-    } catch {
-      setBiometricAvailable(false);
-    }
-    try {
-      const { settingsRepository } = require('../../database/repositories/settingsRepository');
-      const s = await settingsRepository?.getSettings?.();
-      setSettings(s ?? null);
-      if (hardwareOk && s?.biometricEnabled && !autoPromptedRef.current) {
-        autoPromptedRef.current = true;
-        handleBiometric();
-      }
-    } catch {
-      setSettings(null);
-    }
-  }, [handleBiometric]);
-
   useEffect(() => {
-    checkBiometric();
-
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      return true; // Prevent back button from exiting
-    });
-
-    return () => {
-      subscription.remove();
+    let active = true;
+    const setup = async () => {
+      try {
+        const auth = require('expo-local-authentication');
+        const settings = await require('../../database/repositories/settingsRepository').settingsRepository.getSettings();
+        const available = !!settings?.biometricEnabled && await auth.hasHardwareAsync() && await auth.isEnrolledAsync();
+        if (!active) return;
+        setBiometricAvailable(available);
+        if (available && !autoPrompted.current) {
+          autoPrompted.current = true;
+          await unlockWithBiometric();
+        }
+      } catch { if (active) setBiometricAvailable(false); }
     };
-  }, [checkBiometric]);
+    void setup();
+    // Disable hardware back while the vault is locked.
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => { active = false; sub.remove(); };
+  }, [unlockWithBiometric]);
 
-  const handlePinPress = (digit: string) => {
-    if ((pin ?? '').length < 6) {
-      const nextPin = (pin ?? '') + (digit ?? '');
-      setPin(nextPin);
-      setError(false);
-      if (nextPin.length === 6) {
-        verify(nextPin);
-      }
-    }
-  };
-
-  const handleDelete = () => {
-    setPin((prev) => (prev ?? '').slice(0, -1));
-    setError(false);
-  };
-
-  const verify = async (candidatePin: string) => {
+  const verify = async (candidate: string) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
     try {
-      const valid = await appLockService?.unlockWithPin?.(candidatePin);
-      if (valid) {
-        onUnlocked?.();
-      } else {
-        setError(true);
-        setPin('');
-        try {
-          const { Haptics } = require('expo-haptics');
-          Haptics?.notificationAsync?.(Haptics?.NotificationFeedbackType?.Error);
-        } catch {}
-      }
-    } catch {
+      if (await appLockService.unlockWithPin(candidate)) { onUnlocked?.(); return; }
       setError(true);
       setPin('');
-    }
+      if (!reducedMotion) shake.value = withSequence(withTiming(-9, { duration: motion.duration.instant }), withTiming(9, { duration: motion.duration.instant }), withTiming(0, { duration: motion.duration.instant }));
+      try { const h = require('expo-haptics'); void h.notificationAsync(h.NotificationFeedbackType.Error); } catch {}
+    } catch { setError(true); setPin(''); }
+    finally { inFlight.current = false; setBusy(false); }
+  };
+  const pressKey = (key: string) => {
+    if (busy) return;
+    if (key === 'delete') { setPin(v => v.slice(0, -1)); setError(false); return; }
+    const next = (pin + key).slice(0, 6);
+    setPin(next); setError(false);
+    if (next.length === 6) void verify(next);
   };
 
-  return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default} style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.primary.default + '18' }]}>
-            <Ionicons name="lock-closed" size={36} color={colors.primary.default} />
-          </View>
-          <Text style={[styles.title, { color: colors.text.primary }]}>Calmly is Locked</Text>
-          <Text style={[styles.subtitle, { color: colors.text.secondary }]}>Enter your 6-digit security PIN</Text>
+  return <ScreenContainer scroll={false} animate={false} backgroundColor={colors.background.default}>
+    <View style={[styles.layout, { paddingTop: height < 700 ? 18 : 46 }]}>
+      <View style={styles.header}>
+        <View style={[styles.iconOuter, { backgroundColor: colors.primary.default + '14', borderColor: colors.primary.default + '24' }]}>
+          <View style={[styles.iconInner, { backgroundColor: colors.primary.default + '20' }]}><Ionicons name="lock-closed-outline" size={30} color={colors.primary.default} /></View>
         </View>
-
-        <View style={styles.pinDots}>
-          {[...Array(6)].map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.pinDot,
-                { borderColor: colors.border.default, backgroundColor: 'transparent' },
-                i < (pin ?? '').length && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
-                error && { borderColor: colors.accents.rose, backgroundColor: colors.accents.rose },
-              ]}
-            />
-          ))}
-        </View>
-
-        {error ? (
-          <Text style={[styles.errorText, { color: colors.accents.rose }]}>Incorrect PIN. Please try again.</Text>
-        ) : null}
-
-        {biometricAvailable && settings?.biometricEnabled ? (
-          <TactilePressable onPress={handleBiometric} style={styles.biometricButton}>
-            <Ionicons name="finger-print" size={24} color={colors.primary.default} />
-            <Text style={[styles.biometricText, { color: colors.primary.default }]}>Unlock with Biometrics</Text>
-          </TactilePressable>
-        ) : null}
-
-        <View style={styles.keypad}>
-          {[
-            ['1', '2', '3'],
-            ['4', '5', '6'],
-            ['7', '8', '9'],
-            ['', '0', '⌫'],
-          ].map((row, rowIndex) => (
-            <View key={rowIndex} style={styles.keypadRow}>
-              {(row ?? []).map((key, keyIndex) => (
-                <TactilePressable
-                  key={keyIndex}
-                  onPress={() => (key === '⌫' ? handleDelete() : key && handlePinPress(key))}
-                  scaleDownTo={0.9}
-                  disabled={key === ''}
-                  style={[
-                    styles.keypadButton,
-                    { backgroundColor: colors.surface.default, borderColor: colors.border.default },
-                    key === '' && styles.keypadButtonEmpty,
-                    key === '⌫' && styles.keypadButtonDelete,
-                  ]}
-                  accessibilityLabel={key === '⌫' ? 'Delete' : key}
-                >
-                  {key === '⌫' ? (
-                    <Ionicons name="backspace-outline" size={26} color={colors.text.primary} />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.keypadButtonText,
-                        { color: colors.text.primary },
-                        key === '' && styles.keypadButtonTextEmpty,
-                      ]}
-                    >
-                      {key}
-                    </Text>
-                  )}
-                </TactilePressable>
-              ))}
-            </View>
-          ))}
-        </View>
+        <AppText variant="overline" tone="secondary">PRIVATE SANCTUARY</AppText>
+        <AppText variant="h1" center>Welcome back</AppText>
+        <AppText tone="secondary" center>Enter your six-digit PIN to return to your space.</AppText>
       </View>
-    </ScreenContainer>
-  );
+      <Animated.View style={[styles.dots, shakeStyle]} accessibilityLabel={`${pin.length} of 6 PIN digits entered`}>
+        {Array.from({ length: 6 }, (_, i) => <View key={i} style={[styles.dot, { borderColor: error ? colors.accents.rose : colors.primary.default, backgroundColor: i < pin.length ? (error ? colors.accents.rose : colors.primary.default) : 'transparent' }]} />)}
+      </Animated.View>
+      <AppText variant="bodySmall" center color={error ? colors.accents.rose : colors.text.tertiary}>{error ? 'That PIN did not match. Try again.' : busy ? 'Checking your PIN…' : 'Your entries stay private on this device'}</AppText>
+      <View style={[styles.keypad, { maxWidth: 312 }]}>
+        {['1','2','3','4','5','6','7','8','9','bio','0','delete'].map(key => {
+          if (key === 'bio' && !biometricAvailable) return <View key={key} style={styles.key} />;
+          return <TactilePressable key={key} accessibilityRole="button" accessibilityLabel={key === 'delete' ? 'Delete last digit' : key === 'bio' ? 'Unlock using biometrics' : `Digit ${key}`} disabled={busy} onPress={() => key === 'bio' ? void unlockWithBiometric() : pressKey(key)} style={[styles.key, { backgroundColor: key === 'delete' || key === 'bio' ? 'transparent' : colors.surface.default, borderColor: key === 'delete' || key === 'bio' ? 'transparent' : colors.border.default }]}>
+            {key === 'delete' || key === 'bio' ? <Ionicons name={key === 'delete' ? 'backspace-outline' : 'finger-print'} size={25} color={key === 'bio' ? colors.primary.default : colors.text.secondary} /> : <AppText variant="h2">{key}</AppText>}
+          </TactilePressable>;
+        })}
+      </View>
+      <View style={styles.footer}><Ionicons name="shield-checkmark-outline" color={colors.text.tertiary} size={17}/><AppText variant="caption" tone="tertiary">A peaceful space, protected by you.</AppText></View>
+    </View>
+  </ScreenContainer>;
 }
-
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center' },
-  content: { paddingHorizontal: 32, gap: 24 },
-  header: { alignItems: 'center', gap: 10 },
-  iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  title: { fontSize: 26, fontWeight: '700', letterSpacing: -0.4 },
-  subtitle: { fontSize: 15 },
-  pinDots: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginVertical: 8 },
-  pinDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2 },
-  errorText: { textAlign: 'center', fontSize: 14, fontWeight: '500', marginTop: -8 },
-  biometricButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-  },
-  biometricText: { fontSize: 15, fontWeight: '600' },
-  keypad: { marginTop: 12, gap: 14 },
-  keypadRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  keypadButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  keypadButtonEmpty: { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 },
-  keypadButtonDelete: { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 },
-  keypadButtonText: { fontSize: 26, fontWeight: '600' },
-  keypadButtonTextEmpty: { color: 'transparent' },
+  layout: { flex: 1, alignItems: 'center', justifyContent: 'space-between', paddingBottom: 30, paddingHorizontal: 22 },
+  header: { alignItems: 'center', gap: 10, maxWidth: 330 },
+  iconOuter: { width: 88, height: 88, borderRadius: 28, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  iconInner: { width: 66, height: 66, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 15, paddingVertical: 7 },
+  dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 2 },
+  keypad: { width: '100%', flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 10 },
+  key: { width: '30%', height: 62, borderWidth: 1, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  footer: { flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
 });

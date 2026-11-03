@@ -12,6 +12,8 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedHeroStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 interface JournalTemplate {
   id: string;
@@ -89,7 +91,9 @@ export function JournalScreen() {
         ]}
       >
       <View style={styles.iconOrbContainer}>
-        <View
+        <Animated.View
+          sharedTransitionTag={sharedTransitionTags.journalTemplateIcon(item.id)}
+          sharedTransitionStyle={sharedElementStyle}
           style={[
             styles.templateIconOrb,
             {
@@ -99,7 +103,7 @@ export function JournalScreen() {
           ]}
         >
           <Ionicons name={item.icon} size={22} color={item.color} style={{ textAlign: 'center' }} />
-        </View>
+        </Animated.View>
       </View>
       <View style={styles.templateTextContainer}>
         <Text style={[styles.templateTitle, { color: lilacTint.text }]} numberOfLines={1}>
@@ -115,6 +119,7 @@ export function JournalScreen() {
 
   return (
     <ScreenContainer
+      animate={false}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => loadEntries(true)} tintColor={colors.primary.default} />
@@ -188,7 +193,15 @@ export function JournalScreen() {
                 <StaggeredEntry key={entry.id} index={Math.min(idx, 8)}>
                 <TactilePressable
                   onPress={() => {
-                    navigation.navigate('JournalEntry', { id: entry.id });
+                    navigation.navigate('JournalEntry', {
+                      id: entry.id,
+                      type: (entry.type ?? 'free') as any,
+                      preview: {
+                        title: entry.title,
+                        body: entry.body,
+                        favorite: !!entry.favorite,
+                      },
+                    });
                   }}
                   scaleDownTo={0.985}
                   hapticStyle="light"
@@ -203,7 +216,9 @@ export function JournalScreen() {
                   ]}
                 >
                   <View style={styles.entryRow}>
-                    <View
+                    <Animated.View
+                      sharedTransitionTag={entry.id ? sharedTransitionTags.journalEntryIcon(entry.id) : undefined}
+                      sharedTransitionStyle={sharedElementStyle}
                       style={[
                         styles.entryIconOrb,
                         {
@@ -213,7 +228,7 @@ export function JournalScreen() {
                       ]}
                     >
                       <Ionicons name={typeConfig.icon} size={20} color={typeConfig.color} />
-                    </View>
+                    </Animated.View>
 
                     <View style={styles.entryBody}>
                       <View style={styles.entryMeta}>
@@ -267,7 +282,12 @@ export function JournalScreen() {
         ) : (
           <Card variant="outlined" style={styles.emptyCard}>
             <CardContent style={styles.emptyContent}>
-              <JournalReflectionIllustration width={150} height={125} style={{ marginBottom: 4 }} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.journalReflectionHero}
+                sharedTransitionStyle={sharedHeroStyle}
+              >
+                <JournalReflectionIllustration width={150} height={125} style={{ marginBottom: 4 }} />
+              </Animated.View>
               <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
                 A fresh blank canvas
               </Text>

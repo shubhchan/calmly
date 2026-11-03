@@ -4,7 +4,15 @@ export type RootStackParamList = {
   HomeMain: undefined;
   Journal: undefined;
   JournalMain: undefined;
-  JournalEntry?: { id?: string; type?: JournalType };
+  JournalEntry?: {
+    id?: string;
+    type?: JournalType;
+    preview?: {
+      title?: string;
+      body?: string;
+      favorite?: boolean;
+    };
+  };
   Calm: undefined;
   CalmMain: undefined;
   BreathworkStudio: undefined;
@@ -17,20 +25,49 @@ export type RootStackParamList = {
   Insights: undefined;
   InsightsMain: undefined;
   MoodCalendar: undefined;
+  ReflectionReport: undefined;
   Settings: undefined;
   SettingsMain: undefined;
   MoodCheckIn?: { fromHome?: boolean };
   Onboarding: undefined;
   AppLock: undefined;
   Habits: undefined;
-  HabitDetail: { id: string };
-  HabitForm?: { id?: string };
+  HabitDetail: {
+    id: string;
+    preview?: {
+      name: string;
+      icon: string;
+      color: string;
+      frequency: string;
+      customDays?: string;
+    };
+  };
+  HabitForm?: {
+    id?: string;
+    preview?: {
+      name: string;
+      icon: string;
+      color: string;
+      frequency: string;
+      customDays?: string;
+      reminderTime?: string;
+      goal?: number;
+      notes?: string;
+    };
+  };
   Routines: undefined;
   RoutineDetail: { timeOfDay: 'morning' | 'afternoon' | 'evening'; routine?: any };
   Gratitude: { type: 'gratitude' | 'positive' };
   GratitudeForm: { type: 'gratitude' | 'positive'; id?: string };
   Affirmations: undefined;
-  AffirmationDetail: { id: string };
+  AffirmationDetail: {
+    id: string;
+    preview?: {
+      text: string;
+      category: string;
+      favorite: boolean;
+    };
+  };
   SelfCompassion: undefined;
   WhatCanIControl: undefined;
   ThoughtReframing: undefined;
@@ -38,6 +75,7 @@ export type RootStackParamList = {
   AppLockSettings: undefined;
   SetPin: undefined;
   DataManagement: undefined;
+  CloudStorage: undefined;
   FontBrowser: undefined;
   DesignSystem: undefined;
 };
@@ -87,7 +125,15 @@ export type MoodType =
   | 'exhausted' 
   | 'excited' 
   | 'content' 
-  | 'hopeful';
+  | 'hopeful'
+  | 'proud'
+  | 'motivated'
+  | 'relieved'
+  | 'lonely'
+  | 'frustrated'
+  | 'uncertain'
+  | 'connected'
+  | 'bored';
 
 export type HabitFrequency = 'daily' | 'weekdays' | 'custom';
 

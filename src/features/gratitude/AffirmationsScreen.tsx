@@ -15,6 +15,8 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint, tintForIndex } from '../../theme/tints';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Affirmations'>['navigation'];
 
@@ -204,41 +206,56 @@ export function AffirmationsScreen() {
     if (!item) return null;
     const tint = resolveTint(!!isDark, tintForIndex(idx));
     return (
-      <TactilePressable
-        onPress={() => item?.id && navigation.navigate('AffirmationDetail', { id: item.id })}
-        scaleDownTo={0.985}
-        hapticStyle="light"
-        accessibilityRole="button"
-        accessibilityLabel={`Affirmation: ${item?.text ?? ''}`}
-        style={[styles.affirmationCard, { backgroundColor: tint.bg, borderColor: tint.border }]}
+      <Animated.View
+        sharedTransitionTag={item?.id ? sharedTransitionTags.affirmationCard(item.id) : undefined}
+        sharedTransitionStyle={sharedElementStyle}
       >
-        <Text style={[styles.affirmationText, { color: tint.text }]} numberOfLines={3}>
-          {item?.text ?? ''}
-        </Text>
-        <View style={styles.affirmationFooter}>
-          <Text style={[styles.affirmationCategory, { color: tint.accent }]}>{item?.category ?? ''}</Text>
-          <TactilePressable
-            onPress={() => item?.id && handleToggleFavorite(item.id, item?.favorite ?? false)}
-            scaleDownTo={0.85}
-            hapticStyle="selection"
-            style={styles.favoriteButton}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={item?.favorite ? 'Remove from favorites' : 'Add to favorites'}
-          >
-            <Ionicons
-              name={item?.favorite ? 'heart' : 'heart-outline'}
-              size={20}
-              color={item?.favorite ? (colors.accents.peach) : tint.muted}
-            />
-          </TactilePressable>
-        </View>
-      </TactilePressable>
+        <TactilePressable
+          onPress={() =>
+            item?.id &&
+            navigation.navigate('AffirmationDetail', {
+              id: item.id,
+              preview: {
+                text: item.text,
+                category: item.category,
+                favorite: item.favorite,
+              },
+            })
+          }
+          scaleDownTo={0.985}
+          hapticStyle="light"
+          accessibilityRole="button"
+          accessibilityLabel={`Affirmation: ${item?.text ?? ''}`}
+          style={[styles.affirmationCard, { backgroundColor: tint.bg, borderColor: tint.border }]}
+        >
+          <Text style={[styles.affirmationText, { color: tint.text }]} numberOfLines={3}>
+            {item?.text ?? ''}
+          </Text>
+          <View style={styles.affirmationFooter}>
+            <Text style={[styles.affirmationCategory, { color: tint.accent }]}>{item?.category ?? ''}</Text>
+            <TactilePressable
+              onPress={() => item?.id && handleToggleFavorite(item.id, item?.favorite ?? false)}
+              scaleDownTo={0.85}
+              hapticStyle="selection"
+              style={styles.favoriteButton}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={item?.favorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Ionicons
+                name={item?.favorite ? 'heart' : 'heart-outline'}
+                size={20}
+                color={item?.favorite ? (colors.accents.peach) : tint.muted}
+              />
+            </TactilePressable>
+          </View>
+        </TactilePressable>
+      </Animated.View>
     );
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader
         title="Affirmations"
         subtitle="Anchor positive truths in your everyday consciousness"

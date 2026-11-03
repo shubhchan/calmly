@@ -18,6 +18,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.calmly",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "SCHEDULE_EXACT_ALARM"
       ]

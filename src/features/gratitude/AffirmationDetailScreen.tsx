@@ -13,6 +13,8 @@ import { ScreenHeader, TactilePressable } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'AffirmationDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'AffirmationDetail'>['route'];
@@ -22,14 +24,15 @@ export function AffirmationDetailScreen() {
   const route = useRoute<RouteProp>();
   const { colors, isDark } = useAppTheme();
   const lilacTint = resolveTint(!!isDark, 'lilac');
-  const { id } = route.params ?? {};
+  const { id, preview } = route.params ?? {};
+  const previewAffirmation = preview ? { ...preview, id: id ?? '' } : null;
 
   const [affirmation, setAffirmation] = useState<{
     id: string;
     text: string;
     category: string;
     favorite: boolean;
-  } | null>(null);
+  } | null>(previewAffirmation);
   const [loading, setLoading] = useState(true);
 
   const loadAffirmation = async () => {
@@ -132,13 +135,13 @@ export function AffirmationDetailScreen() {
 
   if (!id) {
     return (
-      <ScreenContainer scroll={false} backgroundColor={colors.background.default} style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default} style={{ justifyContent: 'center', alignItems: 'center' }}>
         <Text style={{ color: colors.text.secondary }}>Not found</Text>
       </ScreenContainer>
     );
   }
 
-  if (loading) {
+  if (loading && !previewAffirmation) {
     return (
       <ScreenContainer contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}>
         <DetailSkeleton />
@@ -155,17 +158,20 @@ export function AffirmationDetailScreen() {
   }
 
   return (
-    <ScreenContainer contentContainerStyle={styles.content}>
+    <ScreenContainer animate={false} contentContainerStyle={styles.content}>
       <PopIn index={0}>
       <ScreenHeader title={affirmation?.category ?? ''} />
       </PopIn>
 
-      <PopIn index={1}>
-      <Card tone="lilac" style={styles.affirmationCard}>
-        <Ionicons name="chatbubble-ellipses-outline" size={32} color={lilacTint.accent + '60'} style={{ marginBottom: 4 }} />
-        <Text style={[styles.affirmationText, { color: lilacTint.text }]}>{affirmation?.text ?? ''}</Text>
-      </Card>
-      </PopIn>
+      <Animated.View
+        sharedTransitionTag={affirmation?.id ? sharedTransitionTags.affirmationCard(affirmation.id) : undefined}
+        sharedTransitionStyle={sharedElementStyle}
+      >
+        <Card tone="lilac" style={styles.affirmationCard}>
+          <Ionicons name="chatbubble-ellipses-outline" size={32} color={lilacTint.accent + '60'} style={{ marginBottom: 4 }} />
+          <Text style={[styles.affirmationText, { color: lilacTint.text }]}>{affirmation?.text ?? ''}</Text>
+        </Card>
+      </Animated.View>
 
       <PopIn index={2}>
       <View style={styles.actions}>

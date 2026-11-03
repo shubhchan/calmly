@@ -14,6 +14,8 @@ import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
+import Animated from 'react-native-reanimated';
+import { sharedSpringStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'RoutineDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'RoutineDetail'>['route'];
@@ -142,14 +144,14 @@ export function RoutineDetailScreen() {
 
   if (loadingHabits) {
     return (
-      <ScreenContainer contentContainerStyle={styles.scrollContent}>
+      <ScreenContainer animate={false} contentContainerStyle={styles.scrollContent}>
         <DetailSkeleton />
       </ScreenContainer>
     );
   }
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer scroll={false} animate={false} backgroundColor={colors.background.default}>
       <ScreenHeader title={isEditing ? 'Edit Routine' : `New ${config.label} Routine`} />
 
       <ScrollView
@@ -159,7 +161,28 @@ export function RoutineDetailScreen() {
         onTouchStart={() => Keyboard.dismiss()}
         showsVerticalScrollIndicator={false}
       >
-        <PopIn index={0}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14, paddingHorizontal: 4 }}>
+          <Animated.View
+            sharedTransitionTag={sharedTransitionTags.routineIcon(timeOfDay)}
+            sharedTransitionStyle={sharedSpringStyle}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              backgroundColor: config.color + '20',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name={config.icon} size={24} color={config.color} />
+          </Animated.View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>{config.label} Routine</Text>
+            <Text style={{ fontSize: 12, color: colors.text.tertiary }}>
+              {isEditing ? 'Adjust routine sequence & habits' : `Define your ${config.label.toLowerCase()} habits`}
+            </Text>
+          </View>
+        </View>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Routine Title</Text>
           <TextInput
@@ -172,7 +195,6 @@ export function RoutineDetailScreen() {
             maxLength={50}
           />
         </Card>
-        </PopIn>
 
         <PopIn index={1}>
         <Card style={styles.section}>

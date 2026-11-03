@@ -49,6 +49,8 @@ import { SensoryGroundingScreen } from '../features/calm/SensoryGroundingScreen'
 import { BodyScanScreen } from '../features/calm/BodyScanScreen';
 import { PanicAnchorScreen } from '../features/calm/PanicAnchorScreen';
 import { MoodCalendarScreen } from '../features/insights/MoodCalendarScreen';
+import { ReflectionReportScreen } from '../features/insights/ReflectionReportScreen';
+import { CloudStorageScreen } from '../features/settings/CloudStorageScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticFeedback } from '../utils/haptics';
 import { fontFamilies } from '../theme/typography';
@@ -510,11 +512,13 @@ export function RootNavigator() {
       <RootStack.Screen name="Notifications" component={NotificationsScreen} options={push} />
       <RootStack.Screen name="AppLockSettings" component={AppLockSettingsScreen} options={push} />
       <RootStack.Screen name="DataManagement" component={DataManagementScreen} options={push} />
+      <RootStack.Screen name="CloudStorage" component={CloudStorageScreen} options={push} />
       <RootStack.Screen name="BreathworkStudio" component={BreathworkStudioScreen} options={push} />
       <RootStack.Screen name="Soundscapes" component={SoundscapesScreen} options={push} />
       <RootStack.Screen name="SensoryGrounding" component={SensoryGroundingScreen} options={push} />
       <RootStack.Screen name="BodyScan" component={BodyScanScreen} options={push} />
       <RootStack.Screen name="MoodCalendar" component={MoodCalendarScreen} options={push} />
+      <RootStack.Screen name="ReflectionReport" component={ReflectionReportScreen} options={push} />
       <RootStack.Screen name="FontBrowser" component={FontBrowserScreen} options={push} />
       <RootStack.Screen name="DesignSystem" component={DesignSystemScreen} options={push} />
     </RootStack.Navigator>

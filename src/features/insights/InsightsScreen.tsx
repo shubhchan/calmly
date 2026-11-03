@@ -14,6 +14,8 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
+import { moodRepository } from '../../database/repositories/moodRepository';
+import { journalRepository } from '../../database/repositories/journalRepository';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Insights'>['navigation'];
 
@@ -37,10 +39,11 @@ export function InsightsScreen() {
   const loadData = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
     try {
+      const days = timeRange === 'week' ? 7 : 30;
       const [s, h, i, m] = await Promise.all([
-        insightsRepository.getWeeklyStats(),
-        insightsRepository.getHabitStats(),
-        insightsRepository.generateInsights(),
+        insightsRepository.getStatsForRange(Date.now() - days * 86400000, Date.now()),
+        insightsRepository.getHabitStats(days),
+        insightsRepository.generateInsights(days),
         loadMoodTrend(),
       ]);
       setStats(s ?? null);
@@ -60,44 +63,21 @@ export function InsightsScreen() {
   }, [timeRange]);
 
   const loadMoodTrend = async (): Promise<MoodTrendPoint[]> => {
-    try {
-      const { database } = require('../../database');
-      const { Q } = require('@nozbe/watermelondb');
-
-      const moodCollection = database?.get('mood_entries');
-      if (!moodCollection) return [];
-      const now = Date.now();
-      const daysBack = timeRange === 'week' ? 7 : 30;
-      const safeDaysBack = Number.isFinite(daysBack) && daysBack > 0 ? daysBack : 7;
-      const start = now - safeDaysBack * 86400000;
-      const safeStart = Number.isFinite(start) ? start : 0;
-      const safeNow = Number.isFinite(now) ? now : Date.now();
-      if (safeStart > safeNow) return [];
-
-      const entries = (await moodCollection
-        .query(Q.where('created_at', Q.between(safeStart, safeNow)), Q.sortBy('created_at', Q.asc))
-        .fetch()) ?? [];
-
-      const byDate: Record<string, MoodTrendPoint> = {};
-      (entries ?? []).forEach((e: any) => {
-        const rawDate = e?.createdAt ? new Date(e.createdAt) : null;
-        if (!rawDate || Number.isNaN(rawDate.getTime())) return;
-        const date = format(rawDate, 'MM/dd');
-        if (!date) return;
-        if (!byDate[date]) {
-          byDate[date] = { date, intensity: 0, stress: 0 };
-        }
-        const intensity = typeof e?.intensity === 'number' && Number.isFinite(e.intensity) ? e.intensity : 0;
-        const stress = typeof e?.stress === 'number' && Number.isFinite(e.stress) ? e.stress : 0;
-        byDate[date].intensity = Math.max(byDate[date]?.intensity ?? 0, intensity);
-        byDate[date].stress = Math.max(byDate[date]?.stress ?? 0, stress);
-      });
-
-      return Object.values(byDate ?? {}).sort((a, b) => (a?.date ?? '').localeCompare(b?.date ?? ''));
-    } catch (error) {
-      console.error('Failed to load mood trend:', error);
-      return [];
+    // Read the repository rather than WatermelonDB directly so fallback data
+    // (including restored entries) is reflected consistently in the chart.
+    const now = Date.now();
+    const days = timeRange === 'week' ? 7 : 30;
+    const entries = await moodRepository.getByDateRange(now - days * 86400000, now);
+    const byDate = new Map<string, { sumIntensity: number; sumStress: number; count: number }>();
+    for (const e of entries || []) {
+      const date = format(new Date(e.createdAt), 'yyyy-MM-dd');
+      const value = byDate.get(date) || { sumIntensity: 0, sumStress: 0, count: 0 };
+      value.sumIntensity += Number(e.intensity) || 0;
+      value.sumStress += Number(e.stress) || 0;
+      value.count += 1;
+      byDate.set(date, value);
     }
+    return [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date: format(new Date(`${date}T12:00:00`), 'MM/dd'), intensity: v.sumIntensity / v.count, stress: v.sumStress / v.count }));
   };
 
   useFocusEffect(
@@ -172,7 +152,8 @@ export function InsightsScreen() {
                   ))
                 );
               });
-              Alert.alert('Done', 'All data has been deleted.');
+              await Promise.all([moodRepository.clearFallback(), journalRepository.clearFallback()]);
+              Alert.alert('Done', 'All local data has been deleted. Drive backups must be deleted separately.');
               loadData();
             } catch (error) {
               console.error('Delete failed:', error);
@@ -215,6 +196,19 @@ export function InsightsScreen() {
         }
         style={{ marginBottom: 2 }}
       />
+
+      <TactilePressable
+        onPress={() => navigation.navigate('ReflectionReport')}
+        accessibilityRole="button"
+        style={{ backgroundColor: colors.primary.default + '12', borderColor: colors.primary.default + '50', borderWidth: 1, borderRadius: 18, padding: 16, flexDirection: 'row', gap: 14, alignItems: 'center' }}
+      >
+        <Ionicons name="git-network-outline" size={27} color={colors.primary.default} />
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text.primary }}>Your reflection map</Text>
+          <Text style={{ fontSize: 12, lineHeight: 18, color: colors.text.secondary }}>Real saved moods, daily notes and weekly/monthly patterns</Text>
+        </View>
+        <Ionicons name="chevron-forward" color={colors.primary.default} size={18} />
+      </TactilePressable>
 
       {/* Segmented Time Range Picker */}
       <View style={[styles.segmentedControl, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
@@ -273,9 +267,9 @@ export function InsightsScreen() {
                 <View style={[styles.metricIconOrb, { backgroundColor: lilacTint.plate }]}>
                   <AppIcon name="l-heart" size={26} loop />
                 </View>
-                <View style={[styles.trendBadge, { backgroundColor: ((stats?.avgMood ?? 0) >= 6 ? colors.status.success.default : lilacTint.accent) + '15' }]}>
-                  <Text style={[styles.trendBadgeText, { color: (stats?.avgMood ?? 0) >= 6 ? colors.status.success.default : lilacTint.accent }]}>
-                    {(stats?.avgMood ?? 0) >= 6 ? '↑ Good' : '→ Calm'}
+                <View style={[styles.trendBadge, { backgroundColor: lilacTint.accent + '15' }]}>
+                  <Text style={[styles.trendBadgeText, { color: lilacTint.accent }]}>
+                    {'Recorded'}
                   </Text>
                 </View>
               </View>
@@ -283,7 +277,7 @@ export function InsightsScreen() {
                 {stats?.avgMood ? `${stats.avgMood}/10` : '—'}
               </Text>
               <Text style={[styles.metricLabel, { color: lilacTint.muted }]}>
-                Average Mood
+                Emotion Intensity
               </Text>
             </CardContent>
           </Card>

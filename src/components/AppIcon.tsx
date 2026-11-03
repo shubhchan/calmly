@@ -118,6 +118,14 @@ const REGISTRY: Record<string, RegistryEntry> = {
   'm-sad': { kind: 'mci', name: 'emoticon-sad-outline' },
   'm-angry': { kind: 'mci', name: 'emoticon-angry-outline' },
   'm-exhausted': { kind: 'ion', name: 'bed' },
+  'm-proud': { kind: 'ion', name: 'ribbon-outline' },
+  'm-motivated': { kind: 'ion', name: 'flash-outline' },
+  'm-relieved': { kind: 'mci', name: 'emoticon-happy-outline' },
+  'm-lonely': { kind: 'mci', name: 'emoticon-sad-outline' },
+  'm-frustrated': { kind: 'mci', name: 'emoticon-angry-outline' },
+  'm-uncertain': { kind: 'mci', name: 'emoticon-confused-outline' },
+  'm-connected': { kind: 'ion', name: 'people-outline' },
+  'm-bored': { kind: 'mci', name: 'emoticon-neutral-outline' },
 };
 
 export type AppIconName = keyof typeof REGISTRY;
@@ -232,6 +240,14 @@ export function moodIcon(moodId: string | undefined | null): AppIconName {
     case 'excited': return 'm-excited';
     case 'stressed': return 'm-stressed';
     case 'anxious': return 'm-anxious';
+    case 'proud': return 'm-proud';
+    case 'motivated': return 'm-motivated';
+    case 'relieved': return 'm-relieved';
+    case 'lonely': return 'm-lonely';
+    case 'frustrated': return 'm-frustrated';
+    case 'uncertain': return 'm-uncertain';
+    case 'connected': return 'm-connected';
+    case 'bored': return 'm-bored';
     case 'overwhelmed': return 'm-overwhelmed';
     case 'sad': return 'm-sad';
     case 'angry': return 'm-angry';

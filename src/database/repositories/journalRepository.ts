@@ -136,10 +136,21 @@ export const journalRepository = {
         (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
       );
       saveStoredEntries(mergedList).catch(() => {});
-      return wmEntries;
+      return mergedList;
     }
 
     return (stored ?? []).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+  },
+
+  async clearFallback(): Promise<void> { await saveStoredEntries([]); },
+
+  /** Merge a user-owned backup into the persistent fallback, preserving IDs. */
+  async importEntries(entries: any[]): Promise<number> {
+    const existing = await this.getAll();
+    const ids = new Set(existing.map((e: any) => String(e.id)));
+    const safe = entries.filter((e: any) => typeof e?.id === 'string' && typeof e?.body === 'string' && Number.isFinite(e?.createdAt) && !ids.has(e.id));
+    await saveStoredEntries([...safe, ...existing].sort((a, b) => b.createdAt - a.createdAt));
+    return safe.length;
   },
 
   async getByType(type: string): Promise<JournalEntry[] | any[]> {
@@ -243,18 +254,6 @@ export const journalRepository = {
   },
 
   async getByDateRange(startDate: number, endDate: number): Promise<JournalEntry[] | any[]> {
-    try {
-      const res = await journalCollection
-        .query(
-          Q.where('created_at', Q.between(startDate, endDate)),
-          Q.sortBy('created_at', Q.desc)
-        )
-        .fetch();
-      if (res.length > 0) return res;
-    } catch {
-      // Fallback
-    }
-
     const all = await this.getAll();
     return all.filter((e: any) => (e.createdAt || 0) >= startDate && (e.createdAt || 0) <= endDate);
   },

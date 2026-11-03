@@ -25,6 +25,14 @@ const moods: { id: MoodType; label: string; icon: AppIconName; color: string }[]
   { id: 'sad', label: 'Sad', icon: 'm-sad', color: '#877FC5' },
   { id: 'angry', label: 'Angry', icon: 'm-angry', color: '#EB876D' },
   { id: 'exhausted', label: 'Exhausted', icon: 'm-exhausted', color: '#74AC74' },
+  { id: 'proud', label: 'Proud', icon: 'm-proud', color: '#5A955A' },
+  { id: 'motivated', label: 'Motivated', icon: 'm-motivated', color: '#EB876D' },
+  { id: 'relieved', label: 'Relieved', icon: 'm-relieved', color: '#6B9BCD' },
+  { id: 'connected', label: 'Connected', icon: 'm-connected', color: '#877FC5' },
+  { id: 'lonely', label: 'Lonely', icon: 'm-lonely', color: '#877FC5' },
+  { id: 'frustrated', label: 'Frustrated', icon: 'm-frustrated', color: '#EB697F' },
+  { id: 'uncertain', label: 'Uncertain', icon: 'm-uncertain', color: '#6B9BCD' },
+  { id: 'bored', label: 'Bored', icon: 'm-bored', color: '#74AC74' },
 ];
 
 type Step = 'mood' | 'intensity' | 'stress' | 'energy' | 'context' | 'complete';
@@ -41,6 +49,8 @@ export function MoodCheckInScreen() {
   const [energy, setEnergy] = useState<'low' | 'medium' | 'high'>('medium');
   const [context, setContext] = useState('');
   const [needs, setNeeds] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const progress =
     (({
@@ -76,7 +86,10 @@ export function MoodCheckInScreen() {
     } else if (step === 'energy') {
       setStep('context');
     } else if (step === 'context') {
+      if (saving) return;
       if (selectedMood) {
+        setSaving(true);
+        setSaveError('');
         try {
           await moodRepository.create({
             mood: selectedMood,
@@ -88,7 +101,9 @@ export function MoodCheckInScreen() {
           });
         } catch (err) {
           console.error('Failed to save mood check-in:', err);
-        }
+          setSaveError('We could not save this check-in. Please try again.');
+          return;
+        } finally { setSaving(false); }
       }
       setStep('complete');
       setTimeout(() => {
@@ -111,7 +126,8 @@ export function MoodCheckInScreen() {
               onPress={() => {
                 if (!mood?.id) return;
                 setSelectedMood(mood.id);
-                setTimeout(() => goNext(), 180);
+                // Avoid the stale selectedMood closure: advance using the selected id.
+                setStep('intensity');
               }}
               scaleDownTo={0.93}
               style={[
@@ -345,7 +361,7 @@ export function MoodCheckInScreen() {
           <PopIn index={0}>{renderEnergyStep()}</PopIn>
         )}
         {step === 'context' && (
-          <PopIn index={0}>{renderContextStep()}</PopIn>
+          <PopIn index={0}>{renderContextStep()}{saveError ? <Text accessibilityRole="alert" style={{ color: colors.accents.rose, textAlign: 'center', marginTop: 12 }}>{saveError}</Text> : null}</PopIn>
         )}
         {step === 'complete' && (
           <PopIn index={0}>{renderCompleteStep()}</PopIn>
@@ -358,7 +374,7 @@ export function MoodCheckInScreen() {
             <PrimaryButton title="Back" variant="outline" size="md" onPress={goBack} fullWidth />
           </View>
           <View style={{ flex: 1 }}>
-            <PrimaryButton title="Next" variant="primary" size="md" onPress={goNext} fullWidth />
+            <PrimaryButton title={saving ? 'Saving...' : 'Next'} variant="primary" size="md" onPress={goNext} fullWidth loading={saving} />
           </View>
         </View>
       )}

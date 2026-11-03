@@ -38,6 +38,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Ensure google-services.json is present
+        run: |
+          if [ ! -f "google-services.json" ]; then
+            if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+              echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > google-services.json
+            else
+              echo '{"project_info":{"project_number":"417740727864","project_id":"calmly-f135f","storage_bucket":"calmly-f135f.firebasestorage.app"},"client":[{"client_info":{"mobilesdk_app_id":"1:417740727864:android:3dfc2615f9432afff668cd","android_client_info":{"package_name":"com.anonymous.calmly"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyBBrsInGzDh9JsuQiv7vqiMUwvpF56vYLs"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}' > google-services.json
+            fi
+          fi
+
       # android/ is gitignored in this repo, so regenerate native code in CI.
       # We inject reactNativeArchitectures=arm64-v8a and expo.useLegacyPackaging=true
       # into the freshly generated android/gradle.properties so the APK packages only
@@ -48,6 +58,14 @@ jobs:
           echo "" >> android/gradle.properties
           echo "reactNativeArchitectures=arm64-v8a" >> android/gradle.properties
           echo "expo.useLegacyPackaging=true" >> android/gradle.properties
+
+      - name: Apply App Signing Key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: node scripts/apply-release-signing.js
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew

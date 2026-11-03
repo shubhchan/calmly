@@ -8,6 +8,8 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
 import { useTabBarOffset } from '../../utils/useTabBarOffset';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 interface TrackConfig {
   id: 'rain' | 'ocean' | 'birds' | 'night';
@@ -84,7 +86,7 @@ export function SoundscapesScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Soundscapes Sanctuary" subtitle="Acoustic Rest & Masking" bordered />
 
       <ScrollView
@@ -92,11 +94,15 @@ export function SoundscapesScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Full-Page Hero Illustration Card */}
-        <PopIn index={0}>
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
             <View style={[styles.heroAuraGlow, { backgroundColor: (colors.accents.sky) + '15' }]}>
-              <NatureSoundscapeIllustration width={190} height={155} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.calmHero('soundscapes')}
+                sharedTransitionStyle={sharedElementStyle}
+              >
+                <NatureSoundscapeIllustration width={190} height={155} />
+              </Animated.View>
             </View>
             <View style={styles.heroBadgeRow}>
               <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
@@ -109,7 +115,6 @@ export function SoundscapesScreen() {
             </View>
           </CardContent>
         </Card>
-        </PopIn>
 
         {/* Header Cue */}
         <PopIn index={1}>

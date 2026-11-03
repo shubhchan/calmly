@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
-import { RefreshControlProps, StyleProp, View, ViewStyle } from 'react-native';
+import { Platform, RefreshControlProps, StyleProp, View, ViewStyle } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import Animated, {
+  SharedTransitionBoundary,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -9,6 +11,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { motion, useAppReducedMotion } from '../../theme/motion';
+
+function WebBoundary({ children }: { isActive: boolean; children?: React.ReactNode }) {
+  return <>{children}</>;
+}
+
+const Boundary = Platform.OS === 'web' ? WebBoundary : SharedTransitionBoundary;
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -52,6 +60,7 @@ export function ScreenContainer({
   showsVerticalScrollIndicator,
 }: ScreenContainerProps) {
   const { colors } = useAppTheme();
+  const isFocused = useIsFocused();
 
   const reducedMotion = useAppReducedMotion();
   const progress = useSharedValue(animate ? 0 : 1);
@@ -82,23 +91,27 @@ export function ScreenContainer({
 
   if (!scroll) {
     return (
-      <View style={surfaceStyle}>
-        <Animated.View style={[{ flex: 1 }, style, animatedStyle]}>{children}</Animated.View>
-      </View>
+      <Boundary isActive={isFocused}>
+        <View style={surfaceStyle}>
+          <Animated.View style={[{ flex: 1 }, style, animatedStyle]}>{children}</Animated.View>
+        </View>
+      </Boundary>
     );
   }
 
   return (
-    <View style={surfaceStyle}>
-      <Animated.ScrollView
-        style={[{ flex: 1 }, style, animatedStyle]}
-        contentContainerStyle={[{ paddingBottom: bottomPadding }, contentContainerStyle]}
-        showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? false}
-        keyboardShouldPersistTaps={keyboardShouldPersistTaps ?? 'handled'}
-        refreshControl={refreshControl}
-      >
-        {children}
-      </Animated.ScrollView>
-    </View>
+    <Boundary isActive={isFocused}>
+      <View style={surfaceStyle}>
+        <Animated.ScrollView
+          style={[{ flex: 1 }, style, animatedStyle]}
+          contentContainerStyle={[{ paddingBottom: bottomPadding }, contentContainerStyle]}
+          showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? false}
+          keyboardShouldPersistTaps={keyboardShouldPersistTaps ?? 'handled'}
+          refreshControl={refreshControl}
+        >
+          {children}
+        </Animated.ScrollView>
+      </View>
+    </Boundary>
   );
 }

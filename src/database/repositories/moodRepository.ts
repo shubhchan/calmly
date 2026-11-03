@@ -82,84 +82,50 @@ export const moodRepository = {
   },
 
   async getLatest(): Promise<MoodEntry | any | null> {
-    try {
-      const entries = await moodCollection
-        .query(Q.sortBy('created_at', Q.desc), Q.take(1))
-        .fetch();
-      if (entries.length > 0) return entries[0];
-    } catch {
-      // Fallback below
-    }
-
-    const stored = await getStoredMoods();
-    return stored[0] || null;
+    return (await this.getAll())[0] || null;
   },
 
   async getByDateRange(startDate: number, endDate: number): Promise<MoodEntry[] | any[]> {
-    try {
-      const entries = await moodCollection
-        .query(
-          Q.where('created_at', Q.between(startDate, endDate)),
-          Q.sortBy('created_at', Q.desc)
-        )
-        .fetch();
-      if (entries.length > 0) return entries;
-    } catch {
-      // Fallback below
-    }
-
-    const stored = await getStoredMoods();
-    return stored.filter((e: any) => (e.createdAt || 0) >= startDate && (e.createdAt || 0) <= endDate);
+    const all = await this.getAll();
+    return all.filter((x: any) => (x.createdAt || 0) >= startDate && (x.createdAt || 0) <= endDate);
   },
 
   async getToday(): Promise<MoodEntry | any | null> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    try {
-      const entries = await moodCollection
-        .query(
-          Q.where('created_at', Q.between(today.getTime(), tomorrow.getTime())),
-          Q.sortBy('created_at', Q.desc)
-        )
-        .fetch();
-      if (entries.length > 0) return entries[0];
-    } catch {
-      // Fallback
-    }
-
-    const stored = await getStoredMoods();
-    return (
-      stored.find((e: any) => (e.createdAt || 0) >= today.getTime() && (e.createdAt || 0) < tomorrow.getTime()) ||
-      null
-    );
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const end = new Date(start); end.setDate(start.getDate() + 1);
+    return (await this.getByDateRange(start.getTime(), end.getTime() - 1))[0] || null;
   },
 
   async getAll(): Promise<MoodEntry[] | any[]> {
-    try {
-      const entries = await moodCollection.query(Q.sortBy('created_at', Q.desc)).fetch();
-      if (entries.length > 0) {
-        saveStoredMoods(entries.map((e: any) => ({
-          id: e.id,
-          mood: e.mood,
-          intensity: e.intensity,
-          stress: e.stress,
-          energy: e.energy,
-          context: e.context,
-          needs: e.needs,
-          createdAt: e.createdAt,
-          updatedAt: e.updatedAt,
-        }))).catch(() => {});
-        return entries;
-      }
-    } catch {
-      // Fallback
-    }
-
+    let wm: any[] = [];
+    try { wm = await moodCollection.query(Q.sortBy('created_at', Q.desc)).fetch(); }
+    catch (err) { console.warn('Mood database unavailable; reading saved fallback:', err); }
     const stored = await getStoredMoods();
-    return (stored ?? []).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+    const merged = new Map<string, any>();
+    // Never drop fallback-only entries, e.g. restored from a Drive snapshot.
+    [...stored, ...wm].forEach((item: any) => {
+      const id = item?.id || `legacy-${item?.createdAt}`;
+      if (!item) return;
+      merged.set(id, {
+        id, mood: item.mood, intensity: item.intensity, stress: item.stress,
+        energy: item.energy, context: item.context, needs: item.needs,
+        createdAt: item.createdAt, updatedAt: item.updatedAt,
+      });
+    });
+    const items = [...merged.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    await saveStoredMoods(items);
+    return items;
+  },
+
+  async clearFallback(): Promise<void> { await saveStoredMoods([]); },
+
+  /** Merge an encrypted cloud snapshot without overwriting local records. */
+  async importEntries(entries: any[]): Promise<number> {
+    const existing = await this.getAll();
+    const ids = new Set(existing.map((e: any) => String(e.id)));
+    const safe = entries.filter((e: any) => typeof e?.id === 'string' && typeof e?.mood === 'string' && Number.isFinite(e?.createdAt) && !ids.has(e.id));
+    await saveStoredMoods([...safe, ...existing].sort((a, b) => b.createdAt - a.createdAt));
+    return safe.length;
   },
 
   async getMoodDistribution(startDate: number, endDate: number): Promise<Record<string, number>> {

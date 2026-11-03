@@ -15,6 +15,8 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedHeroStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Habits'>['navigation'];
 
@@ -125,7 +127,16 @@ export function HabitListScreen() {
 
   const handleHabitPress = (habit: Habit) => {
     if (!habit?.id) return;
-    navigation.navigate('HabitDetail', { id: habit.id });
+    navigation.navigate('HabitDetail', {
+      id: habit.id,
+      preview: {
+        name: habit.name,
+        icon: habit.icon,
+        color: habit.color,
+        frequency: habit.frequency,
+        customDays: habit.customDays,
+      },
+    });
   };
 
   const isDueToday = (habit: Habit): boolean => {
@@ -149,7 +160,7 @@ export function HabitListScreen() {
 
   if (loading) {
     return (
-      <ScreenContainer contentContainerStyle={styles.content}>
+      <ScreenContainer animate={false} contentContainerStyle={styles.content}>
         <ListSkeleton rows={4} />
       </ScreenContainer>
     );
@@ -222,7 +233,12 @@ export function HabitListScreen() {
       {showEmptyState ? (
         <PopIn index={2}>
         <View style={styles.emptyState}>
-          <HabitPlantingIllustration width={160} height={135} style={{ marginBottom: 6 }} />
+          <Animated.View
+            sharedTransitionTag={sharedTransitionTags.habitPlantingHero}
+            sharedTransitionStyle={sharedHeroStyle}
+          >
+            <HabitPlantingIllustration width={160} height={135} style={{ marginBottom: 6 }} />
+          </Animated.View>
           <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>No habits yet</Text>
           <Text style={[styles.emptyText, { color: colors.text.secondary }]}>{getHabitEncouragement('empty')}</Text>
           <PrimaryButton onPress={handleAddHabit} title="Create Your First Habit" style={styles.emptyButton} />
@@ -261,9 +277,13 @@ export function HabitListScreen() {
                   ]}
                 >
                   <View style={styles.habitLeft}>
-                    <View style={[styles.habitIcon, { backgroundColor: habitColor }]}>
+                    <Animated.View
+                      sharedTransitionTag={habit?.id ? sharedTransitionTags.habitIcon(habit.id) : undefined}
+                      sharedTransitionStyle={sharedElementStyle}
+                      style={[styles.habitIcon, { backgroundColor: habitColor }]}
+                    >
                       <Ionicons name={getIconName(habit?.icon)} size={22} color="#FFFFFF" />
-                    </View>
+                    </Animated.View>
                     <View style={styles.habitInfo}>
                       <Text
                         style={[

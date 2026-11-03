@@ -14,6 +14,8 @@ import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { FormSkeleton } from '../../components/interactive/LoadingState';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedHeroStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'HabitForm'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'HabitForm'>['route'];
@@ -49,17 +51,28 @@ export function HabitFormScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
   const { colors } = useAppTheme();
-  const { id } = route.params ?? {};
+  const { id, preview } = route.params ?? {};
   const isEditing = !!id;
 
-  const [name, setName] = useState('');
-  const [icon, setIcon] = useState('water');
-  const [color, setColor] = useState(COLORS[0]);
-  const [frequency, setFrequency] = useState<'daily' | 'weekdays' | 'custom'>('daily');
-  const [customDays, setCustomDays] = useState<string[]>([]);
-  const [reminderTime, setReminderTime] = useState('');
-  const [goal, setGoal] = useState(1);
-  const [notes, setNotes] = useState('');
+  const initialCustomDays = (() => {
+    try {
+      const parsed = JSON.parse(preview?.customDays || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const [name, setName] = useState(preview?.name ?? '');
+  const [icon, setIcon] = useState(preview?.icon ?? 'water');
+  const [color, setColor] = useState(preview?.color ?? COLORS[0]);
+  const [frequency, setFrequency] = useState<'daily' | 'weekdays' | 'custom'>(
+    (preview?.frequency as 'daily' | 'weekdays' | 'custom') ?? 'daily'
+  );
+  const [customDays, setCustomDays] = useState<string[]>(initialCustomDays);
+  const [reminderTime, setReminderTime] = useState(preview?.reminderTime ?? '');
+  const [goal, setGoal] = useState(preview?.goal ?? 1);
+  const [notes, setNotes] = useState(preview?.notes ?? '');
   const [loading, setLoading] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -67,7 +80,7 @@ export function HabitFormScreen() {
 
   const loadHabit = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
+    if (!preview) setLoading(true);
     try {
       const habit = await habitRepository.getById(id);
       if (habit) {
@@ -91,7 +104,7 @@ export function HabitFormScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, preview]);
 
   useEffect(() => {
     loadHabit();
@@ -230,14 +243,14 @@ export function HabitFormScreen() {
 
   if (isEditing && loading && !name) {
     return (
-      <ScreenContainer contentContainerStyle={styles.scrollContent}>
+      <ScreenContainer animate={false} contentContainerStyle={styles.scrollContent}>
         <FormSkeleton fields={5} />
       </ScreenContainer>
     );
   }
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer scroll={false} animate={false} backgroundColor={colors.background.default}>
       <ScreenHeader title={isEditing ? 'Edit Habit' : 'New Habit'} />
 
       <ScrollView
@@ -247,14 +260,17 @@ export function HabitFormScreen() {
         onTouchStart={() => Keyboard.dismiss()}
         showsVerticalScrollIndicator={false}
       >
-        <PopIn index={0}>
         <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginBottom: 4 }}>
-          <HabitPlantingIllustration width={140} height={110} />
+          <Animated.View
+            sharedTransitionTag={sharedTransitionTags.habitPlantingHero}
+            sharedTransitionStyle={sharedHeroStyle}
+          >
+            <HabitPlantingIllustration width={140} height={110} />
+          </Animated.View>
           <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: 8 }}>
             {isEditing ? 'Adjust your daily practice' : 'Plant a tiny mindful habit for daily growth'}
           </Text>
         </View>
-        </PopIn>
 
         <PopIn index={1}>
         <Card style={styles.section}>
@@ -271,14 +287,17 @@ export function HabitFormScreen() {
         </Card>
         </PopIn>
 
-        <PopIn index={2}>
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Icon & Color Identity</Text>
           <View style={styles.iconColorRow}>
             <TactilePressable onPress={() => setShowIconPicker(true)} style={styles.iconPreview}>
-              <View style={[styles.iconPreviewCircle, { backgroundColor: color }]}>
+              <Animated.View
+                sharedTransitionTag={id ? sharedTransitionTags.habitIcon(id) : undefined}
+                sharedTransitionStyle={sharedElementStyle}
+                style={[styles.iconPreviewCircle, { backgroundColor: color }]}
+              >
                 <Ionicons name={getIconName(icon) as any} size={28} color="#FFFFFF" />
-              </View>
+              </Animated.View>
               <Text style={[styles.iconPreviewLabel, { color: colors.text.secondary }]}>Select Icon</Text>
             </TactilePressable>
             <TactilePressable onPress={() => setShowColorPicker(true)} style={styles.colorPreview}>
@@ -287,7 +306,6 @@ export function HabitFormScreen() {
             </TactilePressable>
           </View>
         </Card>
-        </PopIn>
 
         <PopIn index={3}>
         <Card style={styles.section}>

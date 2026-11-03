@@ -11,6 +11,8 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
 import { useTabBarOffset } from '../../utils/useTabBarOffset';
+import Animated from 'react-native-reanimated';
+import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -89,7 +91,7 @@ export function BreathworkStudioScreen() {
   const tabBarOffset = useTabBarOffset();
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Breathwork Studio" subtitle="Parasympathetic Cadence" bordered />
 
       <ScrollView
@@ -97,11 +99,15 @@ export function BreathworkStudioScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Full-Page Hero Illustration Card */}
-        <PopIn index={0}>
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
             <View style={[styles.heroAuraGlow, { backgroundColor: colors.primary.subtle }]}>
-              <MeditationHeroIllustration width={190} height={155} />
+              <Animated.View
+                sharedTransitionTag={sharedTransitionTags.calmHero('breathwork')}
+                sharedTransitionStyle={sharedElementStyle}
+              >
+                <MeditationHeroIllustration width={190} height={155} />
+              </Animated.View>
             </View>
             <View style={styles.heroBadgeRow}>
               <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
@@ -112,7 +118,6 @@ export function BreathworkStudioScreen() {
             </View>
           </CardContent>
         </Card>
-        </PopIn>
 
         {/* Cadence Selection Header */}
         <PopIn index={1}>
