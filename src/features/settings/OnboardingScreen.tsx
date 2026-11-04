@@ -13,6 +13,8 @@ import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { TactilePressable } from '../../components';
 import { useTabBarOffset } from '../../utils/useTabBarOffset';
+import { loginWithGoogle, getCalmlyAuth } from '../../services/calmlyAuth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Onboarding'>['navigation'];
 
@@ -49,6 +51,40 @@ export function OnboardingScreen() {
   const [timeOfDay, setTimeOfDay] = useState<string>('');
   const [selectedHabits, setSelectedHabits] = useState<string[]>([]);
   const [name, setName] = useState('');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  React.useEffect(() => {
+    const auth = getCalmlyAuth();
+    if (!auth) return;
+    return onAuthStateChanged(auth, (u) => {
+      setCurrentUser(u);
+      if (u?.displayName && !name) {
+        const firstName = u.displayName.split(' ')[0] || u.displayName;
+        setName(firstName);
+      }
+    });
+  }, [name]);
+
+  const handleGoogleSignIn = async () => {
+    setIsLoggingIn(true);
+    try {
+      const u = await loginWithGoogle();
+      setCurrentUser(u);
+      if (u?.displayName && !name) {
+        const firstName = u.displayName.split(' ')[0] || u.displayName;
+        setName(firstName);
+      }
+      Alert.alert(
+        'Google Connected',
+        `Welcome, ${u.displayName || u.email}! You can now sync encrypted backups to your Google Drive.`
+      );
+    } catch (error: any) {
+      Alert.alert('Sign-In Note', error?.message || 'Google sign-in was not completed.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   const STEPS = [
     { title: 'Welcome to Calmly', subtitle: 'A private offline sanctuary for mental peace and mindfulness' },
@@ -74,7 +110,7 @@ export function OnboardingScreen() {
           reminderTime: habit?.reminder,
         });
       }
-      (navigation as any)?.replace?.('Main');
+      (navigation as any)?.replace?.('App');
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
       Alert.alert('Error', 'Failed to save onboarding setup.');
@@ -102,7 +138,11 @@ export function OnboardingScreen() {
   }, [step, goals, timeOfDay, selectedHabits, name]);
 
   const handleBack = () => {
-    if (step > 0) setStep(step - 1);
+    if (step > 0) {
+      setStep(step - 1);
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
   };
 
   const toggleGoal = (goalId: string) => {
@@ -131,6 +171,45 @@ export function OnboardingScreen() {
             <Text style={[styles.welcomeText, { color: colors.text.secondary }]}>
               An offline-first, private sanctuary crafted for genuine presence, emotional balance, and mindful living.
             </Text>
+
+            {/* Google Sign-In Card */}
+            <View style={[styles.authCard, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
+              {currentUser ? (
+                <View style={styles.authConnectedRow}>
+                  <Ionicons name="checkmark-circle" size={24} color={colors.primary.default} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[styles.authConnectedTitle, { color: colors.text.primary }]}>
+                      Google Account Connected
+                    </Text>
+                    <Text style={[styles.authConnectedSub, { color: colors.text.secondary }]}>
+                      {currentUser.email}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <Text style={[styles.authCardTitle, { color: colors.text.primary }]}>
+                    Sync with Google Account
+                  </Text>
+                  <Text style={[styles.authCardSub, { color: colors.text.tertiary }]}>
+                    Sign in to enable encrypted backups to your private Google Drive.
+                  </Text>
+                  <TactilePressable
+                    onPress={handleGoogleSignIn}
+                    disabled={isLoggingIn}
+                    style={[styles.googleButton, { backgroundColor: colors.primary.default }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue with Google"
+                  >
+                    <Ionicons name="logo-google" size={18} color="#FFFFFF" />
+                    <Text style={styles.googleButtonText}>
+                      {isLoggingIn ? 'Connecting…' : 'Continue with Google'}
+                    </Text>
+                  </TactilePressable>
+                </>
+              )}
+            </View>
+
             <View style={styles.features}>
               {[
                 { icon: 'shield-checkmark-outline', text: '100% Offline & Private — zero trackers, zero cloud accounts' },
@@ -308,6 +387,31 @@ export function OnboardingScreen() {
                 </View>
               ))}
             </View>
+
+            {currentUser ? (
+              <View style={[styles.privacyConnectedBox, { backgroundColor: colors.surface.default, borderColor: colors.primary.default }]}>
+                <Ionicons name="cloud-done-outline" size={22} color={colors.primary.default} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[styles.privacyConnectedTitle, { color: colors.text.primary }]}>
+                    Google Account Linked
+                  </Text>
+                  <Text style={[styles.privacyConnectedSub, { color: colors.text.secondary }]}>
+                    Encrypted snapshots can be backed up to your Google Drive ({currentUser.email}).
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <TactilePressable
+                onPress={handleGoogleSignIn}
+                disabled={isLoggingIn}
+                style={[styles.googleButtonSecondary, { borderColor: colors.border.default, backgroundColor: colors.surface.default }]}
+              >
+                <Ionicons name="logo-google" size={18} color={colors.primary.default} />
+                <Text style={[styles.googleButtonSecondaryText, { color: colors.text.primary }]}>
+                  {isLoggingIn ? 'Connecting…' : 'Connect Google Account (Optional)'}
+                </Text>
+              </TactilePressable>
+            )}
           </View>
         );
       default:
@@ -335,14 +439,16 @@ export function OnboardingScreen() {
       <View style={[styles.bottomBar, { bottom: tabBarOffset, borderTopColor: colors.border.default, backgroundColor: colors.background.default }]}>
         <TouchableOpacity
           onPress={handleBack}
-          disabled={step === 0}
+          disabled={step === 0 && !navigation.canGoBack()}
           style={[
             styles.backButton,
             { borderColor: colors.border.default, backgroundColor: colors.surface.default },
-            step === 0 && { opacity: 0.3 },
+            step === 0 && !navigation.canGoBack() && { opacity: 0.3 },
           ]}
         >
-          <Text style={[styles.backButtonText, { color: colors.text.primary }]}>Back</Text>
+          <Text style={[styles.backButtonText, { color: colors.text.primary }]}>
+            {step === 0 && navigation.canGoBack() ? 'Close' : 'Back'}
+          </Text>
         </TouchableOpacity>
         <View style={{ flex: 2 }}>
           <PrimaryButton
@@ -451,4 +557,55 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   backButtonText: { fontSize: 15, fontWeight: '600' },
+  authCard: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
+  },
+  authCardTitle: { fontSize: 15, fontWeight: '600', textAlign: 'center' },
+  authCardSub: { fontSize: 13, textAlign: 'center', lineHeight: 18, paddingHorizontal: 10 },
+  authConnectedRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  authConnectedTitle: { fontSize: 14, fontWeight: '600' },
+  authConnectedSub: { fontSize: 13 },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    width: '100%',
+    marginTop: 4,
+  },
+  googleButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  privacyConnectedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 14,
+    width: '100%',
+  },
+  privacyConnectedTitle: { fontSize: 14, fontWeight: '600' },
+  privacyConnectedSub: { fontSize: 12, lineHeight: 16 },
+  googleButtonSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 14,
+    width: '100%',
+  },
+  googleButtonSecondaryText: { fontSize: 14, fontWeight: '600' },
 });

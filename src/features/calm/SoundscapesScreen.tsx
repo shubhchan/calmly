@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { Card, CardContent, NatureSoundscapeIllustration, ScreenHeader, TactilePressable } from '../../components';

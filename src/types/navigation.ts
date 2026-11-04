@@ -1,5 +1,6 @@
 export type RootStackParamList = {
   App: undefined;
+  Main?: undefined;
   Home: undefined;
   HomeMain: undefined;
   Journal: undefined;

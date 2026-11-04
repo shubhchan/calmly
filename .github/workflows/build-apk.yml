@@ -38,6 +38,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Ensure .env is present with public config
+        run: |
+          if [ ! -f ".env" ]; then
+            echo "EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSyBBrsInGzDh9JsuQiv7vqiMUwvpF56vYLs" >> .env
+            echo "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=calmly-f135f.firebaseapp.com" >> .env
+            echo "EXPO_PUBLIC_FIREBASE_PROJECT_ID=calmly-f135f" >> .env
+            echo "EXPO_PUBLIC_FIREBASE_APP_ID=1:417740727864:android:3dfc2615f9432afff668cd" >> .env
+            echo "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=417740727864-obo3qs5la48s1u401hpu1r6vcljpc7bh.apps.googleusercontent.com" >> .env
+          fi
+
       - name: Ensure google-services.json is present
         run: |
           if [ ! -f "google-services.json" ]; then

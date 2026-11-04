@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFontStore } from '../../theme/fontStore';
 import { useMotionPrefs } from '../../theme/motion';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { getCalmlyAuth } from '../../services/calmlyAuth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 
@@ -57,6 +59,13 @@ export function SettingsScreen() {
   const setReduceAnimations = useMotionPrefs((s) => s.setReduceMotion);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [highContrast, setHighContrast] = useState(false);
+  const [cloudUser, setCloudUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const auth = getCalmlyAuth();
+    if (!auth) return;
+    return onAuthStateChanged(auth, setCloudUser);
+  }, []);
 
   return (
     <ScreenContainer contentContainerStyle={styles.content} backgroundColor={colors.background.default}>
@@ -221,9 +230,11 @@ export function SettingsScreen() {
             >
               <View style={styles.menuTextWrap}>
                 <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Google Account & Drive</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Optional Google sign-in and encrypted Drive backups</Text>
+                <Text style={[styles.menuSubtitle, { color: cloudUser ? colors.primary.default : colors.text.tertiary }]}>
+                  {cloudUser ? `Connected: ${cloudUser.email || cloudUser.uid}` : 'Sign in for encrypted Google Drive backups'}
+                </Text>
               </View>
-              <Ionicons name="cloud-outline" size={18} color={colors.primary.default} />
+              <Ionicons name="cloud-outline" size={18} color={cloudUser ? colors.primary.default : colors.text.tertiary} />
               <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
             </TactilePressable>
 

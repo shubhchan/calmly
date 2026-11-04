@@ -4,12 +4,12 @@ import { GoogleAuthProvider, getAuth, initializeAuth, getReactNativePersistence,
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const config = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyBBrsInGzDh9JsuQiv7vqiMUwvpF56vYLs',
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'calmly-f135f.firebaseapp.com',
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'calmly-f135f',
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:417740727864:android:3dfc2615f9432afff668cd',
 };
-const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '417740727864-obo3qs5la48s1u401hpu1r6vcljpc7bh.apps.googleusercontent.com';
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let configured = false;

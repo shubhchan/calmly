@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { Suspense, useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { StackActions } from '@react-navigation/native';
@@ -51,6 +51,7 @@ import { PanicAnchorScreen } from '../features/calm/PanicAnchorScreen';
 import { MoodCalendarScreen } from '../features/insights/MoodCalendarScreen';
 import { ReflectionReportScreen } from '../features/insights/ReflectionReportScreen';
 import { CloudStorageScreen } from '../features/settings/CloudStorageScreen';
+import { settingsRepository } from '../database/repositories/settingsRepository';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticFeedback } from '../utils/haptics';
 import { fontFamilies } from '../theme/typography';
@@ -471,6 +472,32 @@ function AppLockRoute({ navigation }: any) {
 export function RootNavigator() {
   useRenderLog('root-navigator-render');
   const reducedMotion = useAppReducedMotion();
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [initialRoute, setInitialRoute] = useState<'App' | 'Onboarding'>('App');
+
+  useEffect(() => {
+    let mounted = true;
+    bootLog('root-navigator-checking-onboarding');
+    settingsRepository
+      .getSettings()
+      .then((settings) => {
+        if (mounted) {
+          const needsOnboarding = !settings.onboardingComplete;
+          setInitialRoute(needsOnboarding ? 'Onboarding' : 'App');
+          setOnboardingChecked(true);
+          bootLog(`root-navigator-onboarding-${needsOnboarding ? 'required' : 'skipped'}`);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setOnboardingChecked(true);
+        }
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   useEffect(() => {
     bootLog('root-navigator-mounted');
   }, []);
@@ -480,9 +507,14 @@ export function RootNavigator() {
   const modal = useMemo(() => modalTransition(reducedMotion), [reducedMotion]);
   const immersive = useMemo(() => immersiveTransition(reducedMotion), [reducedMotion]);
 
+  if (!onboardingChecked) {
+    return <TabLoadingFallback />;
+  }
+
   return (
-    <RootStack.Navigator initialRouteName="App" screenOptions={push}>
+    <RootStack.Navigator initialRouteName={initialRoute} screenOptions={push}>
       <RootStack.Screen name="App" component={AppNavigator} />
+      <RootStack.Screen name="Main" component={AppNavigator} />
 
       {/* Introspective Modals & Sheet Flows */}
       <RootStack.Screen name="JournalEntry" component={JournalEntryScreen} options={modal} />
