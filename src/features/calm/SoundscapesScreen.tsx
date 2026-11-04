@@ -86,7 +86,7 @@ export function SoundscapesScreen() {
   };
 
   return (
-    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Soundscapes Sanctuary" subtitle="Acoustic Rest & Masking" bordered />
 
       <ScrollView

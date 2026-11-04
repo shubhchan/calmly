@@ -142,7 +142,7 @@ export function JournalEntryScreen() {
   };
 
   return (
-    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       <PopIn index={0}>
       <ScreenHeader
         title={isEditing ? 'Edit Reflection' : 'New Reflection'}

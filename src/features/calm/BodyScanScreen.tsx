@@ -79,7 +79,7 @@ export function BodyScanScreen() {
   };
 
   return (
-    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Somatic Body Scan" subtitle="Muscle Tension Reliever" bordered />
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>

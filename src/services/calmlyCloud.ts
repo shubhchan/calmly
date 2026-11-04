@@ -7,7 +7,8 @@ import * as Crypto from 'expo-crypto';
 import { gcm } from '@noble/ciphers/aes.js';
 import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex, hexToBytes, utf8ToBytes, bytesToUtf8 } from '@noble/hashes/utils.js';
+import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils.js';
+const bytesToUtf8 = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 import { journalRepository } from '../database/repositories/journalRepository';
 import { moodRepository } from '../database/repositories/moodRepository';
 

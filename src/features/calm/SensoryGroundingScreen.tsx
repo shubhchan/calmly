@@ -23,7 +23,7 @@ export function SensoryGroundingScreen() {
   };
 
   return (
-    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="5-4-3-2-1 Grounding" subtitle="Sensory Presence Anchor" bordered />
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>

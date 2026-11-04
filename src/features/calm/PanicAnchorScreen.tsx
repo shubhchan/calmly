@@ -34,7 +34,7 @@ export function PanicAnchorScreen() {
   };
 
   return (
-    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Acute Panic Anchor" subtitle="Biological SOS Aid" bordered />
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>

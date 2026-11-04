@@ -91,7 +91,7 @@ export function BreathworkStudioScreen() {
   const tabBarOffset = useTabBarOffset();
 
   return (
-    <ScreenContainer animate={false} scroll={false} animate={false} backgroundColor={colors.background.default}>
+    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Breathwork Studio" subtitle="Parasympathetic Cadence" bordered />
 
       <ScrollView
