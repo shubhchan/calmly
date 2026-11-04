@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Image } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Card, CardContent, PrimaryButton, JournalReflectionIllustration, PageHeader, StaggeredEntry, TactilePressable } from '../../components';
 import { useAppTheme } from '../../theme/ThemeContext';
@@ -188,6 +188,12 @@ export function JournalScreen() {
               const rawDate = entry.createdAt ? new Date(entry.createdAt) : new Date();
               const formattedDate = format(rawDate, 'MMM d, yyyy');
               const typeConfig = journalTypes.find((t) => t.id === entry.type) || journalTypes[0];
+              const attachments = (entry as any)?.attachments || [];
+              const photoCount = attachments.filter((a: any) => a.type === 'image').length;
+              const audioCount = attachments.filter((a: any) => a.type === 'audio').length;
+              const videoCount = attachments.filter((a: any) => a.type === 'video').length;
+              const docCount = attachments.filter((a: any) => a.type === 'document').length;
+              const firstImage = attachments.find((a: any) => a.type === 'image');
 
               return (
                 <StaggeredEntry key={entry.id} index={Math.min(idx, 8)}>
@@ -252,9 +258,54 @@ export function JournalScreen() {
                         style={[styles.entrySnippet, { color: colors.text.secondary }]}
                         numberOfLines={2}
                       >
-                        {entry.body || 'No written reflection text'}
+                        {entry.body || (attachments.length > 0 ? 'Media reflection' : 'No written reflection text')}
                       </Text>
+
+                      {attachments.length > 0 ? (
+                        <View style={styles.entryAttachmentRow}>
+                          {photoCount > 0 ? (
+                            <View style={[styles.entryAttachmentPill, { backgroundColor: colors.primary.subtle }]}>
+                              <Ionicons name="images-outline" size={11} color={colors.primary.default} />
+                              <Text style={[styles.entryAttachmentText, { color: colors.primary.default }]}>
+                                {photoCount}
+                              </Text>
+                            </View>
+                          ) : null}
+                          {audioCount > 0 ? (
+                            <View style={[styles.entryAttachmentPill, { backgroundColor: 'rgba(235, 105, 127, 0.12)' }]}>
+                              <Ionicons name="mic-outline" size={11} color="#EB697F" />
+                              <Text style={[styles.entryAttachmentText, { color: '#EB697F' }]}>
+                                {audioCount}
+                              </Text>
+                            </View>
+                          ) : null}
+                          {videoCount > 0 ? (
+                            <View style={[styles.entryAttachmentPill, { backgroundColor: 'rgba(168, 85, 247, 0.12)' }]}>
+                              <Ionicons name="videocam-outline" size={11} color="#A855F7" />
+                              <Text style={[styles.entryAttachmentText, { color: '#A855F7' }]}>
+                                {videoCount}
+                              </Text>
+                            </View>
+                          ) : null}
+                          {docCount > 0 ? (
+                            <View style={[styles.entryAttachmentPill, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
+                              <Ionicons name="document-text-outline" size={11} color="#3B82F6" />
+                              <Text style={[styles.entryAttachmentText, { color: '#3B82F6' }]}>
+                                {docCount}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      ) : null}
                     </View>
+
+                    {firstImage ? (
+                      <Image
+                        source={{ uri: firstImage.uri }}
+                        style={styles.entryThumbnail}
+                        resizeMode="cover"
+                      />
+                    ) : null}
 
                     <TactilePressable
                       onPress={() => {
@@ -473,6 +524,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     marginTop: 2,
+  },
+  entryAttachmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  entryAttachmentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  entryAttachmentText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  entryThumbnail: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    marginLeft: 6,
+    alignSelf: 'center',
   },
   favoriteButton: {
     padding: 4,

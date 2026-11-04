@@ -2,6 +2,8 @@ import { database } from '..';
 import { Q } from '@nozbe/watermelondb';
 import { JournalEntry } from '../models';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NoteAttachment } from '../../types/attachment';
+import { parseAttachments } from '../../utils/attachmentStorage';
 
 const STORAGE_KEY = '@calmly_journal_entries';
 const journalCollection = database.get<JournalEntry>('journal_entries');
@@ -44,9 +46,19 @@ export const journalRepository = {
     favorite?: boolean;
     imageUri?: string;
     audioUri?: string;
+    attachments?: NoteAttachment[];
   }) {
     const now = Date.now();
     let watermelonRecord: any = null;
+
+    const resolvedImageUri =
+      data.attachments !== undefined
+        ? (data.attachments.length > 0 ? JSON.stringify(data.attachments) : '')
+        : (data.imageUri || '');
+    const resolvedAudioUri =
+      data.attachments !== undefined
+        ? (data.attachments.find((a) => a.type === 'audio')?.uri || '')
+        : (data.audioUri || '');
 
     try {
       watermelonRecord = await database.write(async () => {
@@ -57,8 +69,8 @@ export const journalRepository = {
           entry.mood = data.mood || '';
           entry.tags = JSON.stringify(data.tags || []);
           entry.favorite = data.favorite || false;
-          entry.imageUri = data.imageUri || '';
-          entry.audioUri = data.audioUri || '';
+          entry.imageUri = resolvedImageUri;
+          entry.audioUri = resolvedAudioUri;
           entry.createdAt = now;
           entry.updatedAt = now;
         });
@@ -75,29 +87,69 @@ export const journalRepository = {
       mood: data.mood || '',
       tags: JSON.stringify(data.tags || []),
       favorite: data.favorite || false,
-      imageUri: data.imageUri || '',
-      audioUri: data.audioUri || '',
+      imageUri: resolvedImageUri,
+      audioUri: resolvedAudioUri,
       createdAt: now,
       updatedAt: now,
+      attachments: data.attachments || parseAttachments({ imageUri: resolvedImageUri, audioUri: resolvedAudioUri, createdAt: now }),
     };
 
     const existing = await getStoredEntries();
     const updated = [fallbackItem, ...(existing ?? []).filter((e: any) => e?.id !== fallbackItem.id)];
     await saveStoredEntries(updated);
 
-    return watermelonRecord || fallbackItem;
+    return watermelonRecord
+      ? {
+          ...watermelonRecord,
+          id: watermelonRecord.id,
+          type: watermelonRecord.type,
+          title: watermelonRecord.title,
+          body: watermelonRecord.body,
+          mood: watermelonRecord.mood,
+          tags: watermelonRecord.tags,
+          favorite: watermelonRecord.favorite,
+          imageUri: watermelonRecord.imageUri,
+          audioUri: watermelonRecord.audioUri,
+          createdAt: watermelonRecord.createdAt,
+          updatedAt: watermelonRecord.updatedAt,
+          attachments: parseAttachments(watermelonRecord),
+        }
+      : fallbackItem;
   },
 
   async getById(id: string): Promise<JournalEntry | any | null> {
     try {
       const entry = await journalCollection.find(id);
-      if (entry) return entry;
+      if (entry) {
+        return {
+          ...entry,
+          id: entry.id,
+          type: entry.type,
+          title: entry.title,
+          body: entry.body,
+          mood: entry.mood,
+          tags: entry.tags,
+          favorite: entry.favorite,
+          imageUri: entry.imageUri,
+          audioUri: entry.audioUri,
+          createdAt: entry.createdAt,
+          updatedAt: entry.updatedAt,
+          attachments: parseAttachments(entry),
+        };
+      }
     } catch {
       // Fallback below
     }
 
     const stored = await getStoredEntries();
-    return stored.find((e: any) => e?.id === id) || null;
+    const found = stored.find((e: any) => e?.id === id) || null;
+    if (found) {
+      return {
+        ...found,
+        attachments: parseAttachments(found),
+      };
+    }
+    return null;
   },
 
   async getAll(): Promise<JournalEntry[] | any[]> {
@@ -129,17 +181,20 @@ export const journalRepository = {
             audioUri: wm.audioUri,
             createdAt: wm.createdAt,
             updatedAt: wm.updatedAt,
+            attachments: parseAttachments(wm),
           });
         }
       });
-      const mergedList = Array.from(mergedMap.values()).sort(
-        (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
-      );
+      const mergedList = Array.from(mergedMap.values())
+        .map((item) => ({ ...item, attachments: parseAttachments(item) }))
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       saveStoredEntries(mergedList).catch(() => {});
       return mergedList;
     }
 
-    return (stored ?? []).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+    return (stored ?? [])
+      .map((item: any) => ({ ...item, attachments: parseAttachments(item) }))
+      .sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
   },
 
   async clearFallback(): Promise<void> { await saveStoredEntries([]); },
@@ -202,9 +257,20 @@ export const journalRepository = {
       favorite: boolean;
       imageUri: string;
       audioUri: string;
+      attachments: NoteAttachment[];
     }>
   ) {
     const now = Date.now();
+
+    const resolvedImageUri =
+      data.attachments !== undefined
+        ? (data.attachments.length > 0 ? JSON.stringify(data.attachments) : '')
+        : data.imageUri;
+    const resolvedAudioUri =
+      data.attachments !== undefined
+        ? (data.attachments.find((a) => a.type === 'audio')?.uri || '')
+        : data.audioUri;
+
     try {
       await database.write(async () => {
         const entry = await journalCollection.find(id);
@@ -214,8 +280,8 @@ export const journalRepository = {
           if (data.mood !== undefined) e.mood = data.mood;
           if (data.tags !== undefined) e.tags = JSON.stringify(data.tags);
           if (data.favorite !== undefined) e.favorite = data.favorite;
-          if (data.imageUri !== undefined) e.imageUri = data.imageUri;
-          if (data.audioUri !== undefined) e.audioUri = data.audioUri;
+          if (resolvedImageUri !== undefined) e.imageUri = resolvedImageUri;
+          if (resolvedAudioUri !== undefined) e.audioUri = resolvedAudioUri;
           e.updatedAt = now;
         });
       });
@@ -226,11 +292,17 @@ export const journalRepository = {
     const stored = await getStoredEntries();
     const updated = stored.map((item: any) => {
       if (item.id === id) {
-        return {
+        const updatedItem = {
           ...item,
           ...data,
+          imageUri: resolvedImageUri !== undefined ? resolvedImageUri : item.imageUri,
+          audioUri: resolvedAudioUri !== undefined ? resolvedAudioUri : item.audioUri,
           tags: data.tags !== undefined ? JSON.stringify(data.tags) : item.tags,
           updatedAt: now,
+        };
+        return {
+          ...updatedItem,
+          attachments: parseAttachments(updatedItem),
         };
       }
       return item;
