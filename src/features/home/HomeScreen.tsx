@@ -6,7 +6,7 @@ import type { AppIconName } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { moodRepository } from '../../database/repositories/moodRepository';
-import { settingsRepository } from '../../database/repositories/settingsRepository';
+import { settingsRepository, type AppSettings } from '../../database/repositories/settingsRepository';
 import { getDailyPrompt } from '../../utils/dailyPrompt';
 import { WelcomeCard } from './WelcomeCard';
 import Habit from '../../database/models/Habit';
@@ -20,6 +20,7 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
+import { ProfileAvatarView } from '../../components/profile/ProfileAvatarView';
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -30,6 +31,7 @@ export function HomeScreen() {
   const [recentJournals, setRecentJournals] = useState<any[]>([]);
   const [latestMood, setLatestMood] = useState<any>(null);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const [profileSettings, setProfileSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   const renderLoggedRef = useRef(false);
@@ -53,6 +55,7 @@ export function HomeScreen() {
       setTodayCompletions(completions ?? {});
       setRecentJournals((journals ?? []).slice(0, 3));
       setLatestMood(mood ?? null);
+      setProfileSettings(settings ?? null);
       setWelcomeVisible(!!settings && settings.welcomeCardDismissed !== true);
     } catch (error) {
       console.error('Failed to load home data:', error);
@@ -155,6 +158,7 @@ export function HomeScreen() {
   const heroTint = resolveTint(!!isDark, 'cream');
   const calmTint = resolveTint(!!isDark, 'coral');
   const journalTint = resolveTint(!!isDark, 'sky');
+  const mintTint = resolveTint(!!isDark, 'mint');
 
   return (
     <ScreenContainer
@@ -167,20 +171,21 @@ export function HomeScreen() {
           title={greeting}
           subtitle={dateLabel}
           right={
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: colors.primary.subtle,
-                borderWidth: 1,
-                borderColor: colors.primary.subtleBorder,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+            <TactilePressable
+              onPress={() => navigation?.navigate?.('Profile')}
+              scaleDownTo={0.92}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Open your profile"
+              style={{ borderRadius: 23 }}
             >
-              <AppIcon name="l-calm" size={26} />
-            </View>
+              <ProfileAvatarView
+                avatar={profileSettings?.userAvatar}
+                googlePhotoUrl={profileSettings?.googlePhotoUrl}
+                size={46}
+                showGuestBadge={!profileSettings?.googlePhotoUrl}
+              />
+            </TactilePressable>
           }
         />
       </PopIn>
@@ -338,6 +343,76 @@ export function HomeScreen() {
             </TactilePressable>
           </PopIn>
         </View>
+
+        {/* Full-width Zen Games Card */}
+        <PopIn index={5} style={{ marginTop: 12 }}>
+          <TactilePressable
+            onPress={() => navigation?.navigate?.('ZenPlayground')}
+            scaleDownTo={0.98}
+            hapticStyle="light"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 16,
+              paddingVertical: 14,
+              borderRadius: 20,
+              backgroundColor: mintTint.bg,
+              borderWidth: 1,
+              borderColor: mintTint.border,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 14,
+                  backgroundColor: mintTint.plate,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 24 }}>🫧</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: mintTint.text }}>
+                    Zen Playground
+                  </Text>
+                  <View
+                    style={{
+                      paddingHorizontal: 7,
+                      paddingVertical: 2,
+                      borderRadius: 8,
+                      backgroundColor: mintTint.plate,
+                    }}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: mintTint.accent }}>
+                      NEW
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 12, color: mintTint.muted, marginTop: 2 }} numberOfLines={1}>
+                  Bubble wrap, sand garden & cozy pet
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: mintTint.plate,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="arrow-forward" size={16} color={mintTint.accent} />
+            </View>
+          </TactilePressable>
+        </PopIn>
       </View>
 
       {/* Today's Habits */}
@@ -525,7 +600,7 @@ export function HomeScreen() {
                 </AppText>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary.default }}>Open →</Text>
               </View>
-              <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
                 <StatPill label="Avg Mood" value={latestMood?.intensity ? `${latestMood.intensity}/10` : '7.2/10'} trend="up" trendValue="+0.3" accentColor={colors.status.success.default} />
                 <StatPill label="Journaling" value={`${Math.max(recentJournals.length, 1)} entries`} trend="neutral" accentColor={colors.status.info.default} />
               </View>

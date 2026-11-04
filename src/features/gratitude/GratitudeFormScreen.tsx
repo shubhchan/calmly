@@ -171,7 +171,7 @@ export function GratitudeFormScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
-        onTouchStart={() => Keyboard.dismiss()}
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         <PopIn index={0}>

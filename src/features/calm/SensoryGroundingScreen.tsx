@@ -8,6 +8,7 @@ import { Card, CardContent, PrimaryButton, SensoryGroundingIllustration, AppIcon
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { useTabBarOffset } from '../../utils/useTabBarOffset';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
@@ -16,7 +17,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export function SensoryGroundingScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useAppTheme();
-  const tabBarOffset = useTabBarOffset();
+  const insets = useSafeAreaInsets();
 
   const handleStartExercise = () => {
     navigation.navigate('GroundingExercise', { type: '5-4-3-2-1' });
@@ -26,7 +27,7 @@ export function SensoryGroundingScreen() {
     <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="5-4-3-2-1 Grounding" subtitle="Sensory Presence Anchor" bordered />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {/* Full-Page Hero Illustration Card */}
         <Card variant="elevated" style={styles.heroCard}>
           <CardContent style={styles.heroCardContent}>
@@ -90,7 +91,16 @@ export function SensoryGroundingScreen() {
       </ScrollView>
 
       {/* Floating Bottom Action */}
-      <View style={[styles.bottomBar, { bottom: tabBarOffset, backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom: Math.max(insets.bottom + 14, 24),
+            backgroundColor: colors.background.default,
+            borderTopColor: colors.border.default,
+          },
+        ]}
+      >
         <PrimaryButton
           title="Start Guided 5-4-3-2-1 Guide"
           variant="primary"

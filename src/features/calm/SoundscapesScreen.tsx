@@ -8,8 +8,8 @@ import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
-import { useTabBarOffset } from '../../utils/useTabBarOffset';
-import Animated from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown, FadeOutDown, LinearTransition } from 'react-native-reanimated';
 import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 interface TrackConfig {
@@ -53,8 +53,8 @@ const TRACKS: TrackConfig[] = [
 
 export function SoundscapesScreen() {
   const { colors, isDark } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const skyTint = resolveTint(!!isDark, 'sky');
-  const tabBarOffset = useTabBarOffset();
 
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [selectedTimer, setSelectedTimer] = useState<string>('Off');
@@ -299,11 +299,16 @@ export function SoundscapesScreen() {
 
       {/* Floating Bottom Bar */}
       {activeSound && (
-        <View
+        <Animated.View
+          entering={FadeInDown.springify().damping(18).stiffness(200).mass(0.8)}
+          exiting={FadeOutDown.duration(160)}
+          layout={LinearTransition.springify().damping(18).stiffness(200)}
+          sharedTransitionTag={sharedTransitionTags.ambientPlayerBar}
+          sharedTransitionStyle={sharedElementStyle}
           style={[
             styles.bottomBar,
             {
-              bottom: tabBarOffset,
+              paddingBottom: Math.max(insets.bottom + 14, 24),
               backgroundColor: colors.surface.default,
               borderTopColor: colors.border.default,
             },
@@ -331,7 +336,7 @@ export function SoundscapesScreen() {
             <Ionicons name="stop" size={16} color={colors.primary.default} />
             <Text style={[styles.stopBtnText, { color: colors.primary.default }]}>Stop</Text>
           </TactilePressable>
-        </View>
+        </Animated.View>
       )}
     </ScreenContainer>
   );

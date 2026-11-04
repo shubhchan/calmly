@@ -11,6 +11,7 @@ import Animated, { FadeIn, FadeInRight, useReducedMotion } from 'react-native-re
 import { BlurView } from 'expo-blur';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { useTabBarOffset } from '../../utils/useTabBarOffset';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const groundingSteps: Record<GroundingType, { label: string; instruction: string; icon: AppIconName }[]> = {
   '5-4-3-2-1': [
@@ -62,7 +63,7 @@ export function GroundingExerciseScreen() {
   const [isComplete, setIsComplete] = useState(false);
 
   const { colors, isDark } = useAppTheme();
-  const tabBarOffset = useTabBarOffset();
+  const insets = useSafeAreaInsets();
 
   const reducedMotion = useReducedMotion();
   const safeCurrentStep = Math.max(0, Math.min(currentStep, Math.max(0, safeSteps.length - 1)));
@@ -82,7 +83,7 @@ export function GroundingExerciseScreen() {
         preset: safeType,
         duration: 180,
         completed: true,
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -101,7 +102,7 @@ export function GroundingExerciseScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 130 + tabBarOffset, alignItems: 'center' }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 130 + insets.bottom, alignItems: 'center' }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ marginBottom: 16, alignItems: 'center' }}>
@@ -177,12 +178,12 @@ export function GroundingExerciseScreen() {
       <View
         style={{
           position: 'absolute',
-          bottom: tabBarOffset,
+          bottom: 0,
           left: 0,
           right: 0,
           paddingHorizontal: 20,
           paddingTop: 12,
-          paddingBottom: 28,
+          paddingBottom: Math.max(insets.bottom + 14, 28),
           borderTopWidth: 1,
           borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : colors.border.default,
           overflow: 'hidden',

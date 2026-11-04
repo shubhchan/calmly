@@ -21,6 +21,7 @@ export type RootStackParamList = {
   SensoryGrounding: undefined;
   BodyScan: undefined;
   PanicAnchor: undefined;
+  ZenPlayground?: { initialGame?: 'bubbles' | 'sand' | 'pet' };
   BreathingSession?: { preset?: BreathingPreset; duration?: number };
   GroundingExercise?: { type: GroundingType };
   Insights: undefined;
@@ -29,6 +30,7 @@ export type RootStackParamList = {
   ReflectionReport: undefined;
   Settings: undefined;
   SettingsMain: undefined;
+  Profile: undefined;
   MoodCheckIn?: { fromHome?: boolean };
   Onboarding: undefined;
   AppLock: undefined;

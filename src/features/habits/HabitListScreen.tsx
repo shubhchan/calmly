@@ -261,12 +261,7 @@ export function HabitListScreen() {
 
             return (
               <StaggeredEntry key={habit?.id ?? 'ph-' + index} index={Math.min(index, 7)}>
-                <TactilePressable
-                  onPress={() => handleHabitPress(habit)}
-                  scaleDownTo={0.98}
-                  hapticStyle="none"
-                  accessibilityRole="button"
-                  accessibilityLabel={`${habit?.name ?? 'Habit'}${isCompleted ? ', completed' : ''}`}
+                <View
                   style={[
                     styles.habitCard,
                     {
@@ -276,7 +271,14 @@ export function HabitListScreen() {
                     isCompleted && { borderColor: habitColor + '55' },
                   ]}
                 >
-                  <View style={styles.habitLeft}>
+                  <TactilePressable
+                    onPress={() => handleHabitPress(habit)}
+                    scaleDownTo={0.98}
+                    hapticStyle="none"
+                    accessibilityRole="button"
+                    accessibilityLabel={`${habit?.name ?? 'Habit'}${isCompleted ? ', completed' : ''}`}
+                    style={styles.habitLeft}
+                  >
                     <Animated.View
                       sharedTransitionTag={habit?.id ? sharedTransitionTags.habitIcon(habit.id) : undefined}
                       sharedTransitionStyle={sharedElementStyle}
@@ -299,7 +301,7 @@ export function HabitListScreen() {
                         {habit?.frequency === 'custom' && dayLabels.length > 0 && ` • ${dayLabels.join(', ')}`}
                       </Text>
                     </View>
-                  </View>
+                  </TactilePressable>
 
                   <View style={styles.habitRight}>
                     <CelebratoryCheckbox
@@ -311,7 +313,7 @@ export function HabitListScreen() {
                       particleColors={COLORS}
                     />
                   </View>
-                </TactilePressable>
+                </View>
               </StaggeredEntry>
             );
           })}

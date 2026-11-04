@@ -1,6 +1,7 @@
 import { database, databaseAvailable } from '..';
 import { Q } from '@nozbe/watermelondb';
 import { UserSetting } from '../models';
+import type { ProfileAvatar } from '../../types/profile';
 
 const getSettingsCollection = () => database.get<UserSetting>('user_settings');
 
@@ -135,6 +136,14 @@ export interface AppSettings {
   notificationsEnabled: boolean;
   onboardingComplete?: boolean;
   userName?: string;
+  userBio?: string;
+  userMantra?: string;
+  userAvatar?: ProfileAvatar;
+  googlePhotoUrl?: string;
+  googleEmail?: string;
+  googleDisplayName?: string;
+  lastDriveSyncAt?: number;
+  firstUseAt?: number;
   welcomeCardDismissed?: boolean;
   notificationTimes: {
     morningCheckIn: string;

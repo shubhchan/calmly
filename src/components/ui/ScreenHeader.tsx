@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleProp, View, ViewStyle, StyleSheet } from 'react-native';
+import { StyleProp, View, ViewStyle, StyleSheet, Platform, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { borderWidths, iconButtonSizes, radius, spacing } from '../../theme/tokens';
 import { AppIcon } from '../AppIcon';
@@ -37,6 +38,8 @@ export function ScreenHeader({
 }: ScreenHeaderProps) {
   const { colors } = useAppTheme();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
+  const topPad = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0, spacing[3]);
 
   const handleBack = () => {
     if (onBack) {
@@ -50,6 +53,7 @@ export function ScreenHeader({
     <View
       style={[
         styles.row,
+        { paddingTop: topPad },
         bordered && {
           borderBottomWidth: borderWidths.thin,
           borderBottomColor: colors.border.default,

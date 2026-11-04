@@ -24,6 +24,7 @@ import { calmRepository } from '../../database/repositories/calmRepository';
 import { hapticFeedback } from '../../utils/haptics';
 import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -79,6 +80,7 @@ interface ActivePhase {
 export function BreathingSessionScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'BreathingSession'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const { preset = 'box', duration = 60 } = (route?.params ?? {}) as { preset?: BreathingPreset; duration?: number };
   const safePreset: BreathingPreset = preset && presetPatterns[preset] ? preset : 'box';
   const pattern = presetPatterns[safePreset] ?? presetPatterns.box;
@@ -509,7 +511,7 @@ export function BreathingSessionScreen() {
       </View>
 
       {/* Bottom Controls */}
-      <View style={{ paddingHorizontal: 24, paddingBottom: 44, alignItems: 'center' }}>
+      <View style={{ paddingHorizontal: 24, paddingBottom: Math.max(insets.bottom + 20, 52), alignItems: 'center' }}>
         <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
           <PrimaryButton
             title={isComplete ? 'Complete' : isRunning ? 'Pause' : 'Start'}

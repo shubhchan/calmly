@@ -20,4 +20,6 @@ export const sharedTransitionTags = {
   journalReflectionHero: 'journal-reflection-hero',
   routineIcon: (timeOfDay: string) => `routine-icon-${timeOfDay}`,
   calmHero: (key: 'soundscapes' | 'breathwork' | 'sensory' | 'bodyScan' | 'panic') => `calm-hero-${key}`,
+  ambientPlayerBar: 'ambient-player-bar',
+  ambientStatusBadge: 'ambient-status-badge',
 } as const;

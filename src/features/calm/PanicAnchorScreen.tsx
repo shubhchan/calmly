@@ -8,13 +8,14 @@ import { soundService } from '../../services/soundService';
 import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { useTabBarOffset } from '../../utils/useTabBarOffset';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 export function PanicAnchorScreen() {
   const navigation = useNavigation();
   const { colors } = useAppTheme();
-  const tabBarOffset = useTabBarOffset();
+  const insets = useSafeAreaInsets();
 
   const [sighCount, setSighCount] = useState<number>(0);
   const [isPlayingRain, setIsPlayingRain] = useState<boolean>(false);
@@ -37,7 +38,7 @@ export function PanicAnchorScreen() {
     <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title="Acute Panic Anchor" subtitle="Biological SOS Aid" bordered />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {/* Hero Card with SVG Illustration */}
         <Card variant="elevated" style={[styles.heroCard, { borderColor: (colors.accents.rose) + '50' }]}>
           <CardContent style={styles.heroCardContent}>
@@ -110,8 +111,8 @@ export function PanicAnchorScreen() {
                 {sighCount === 0
                   ? 'Tap to complete 1st sigh (Target: 3)'
                   : sighCount < 3
-                  ? `Completed ${sighCount} of 3 sighs — Tap for next`
-                  : '✓ 3 Sighs completed! Heart rate dropping.'}
+                    ? `Completed ${sighCount} of 3 sighs — Tap for next`
+                    : '✓ 3 Sighs completed! Heart rate dropping.'}
               </Text>
             </TactilePressable>
           </CardContent>
@@ -162,27 +163,35 @@ export function PanicAnchorScreen() {
         </Card>
 
         {/* Instant Nature Soundscape Anchor */}
-        <View style={styles.soundRow}>
+        <View
+          style={[
+            styles.soundRow,
+            {
+              backgroundColor: colors.surface.default,
+              borderColor: colors.border.default,
+            },
+          ]}
+        >
           <Text style={[styles.soundPromptText, { color: colors.text.secondary }]}>
             Need soothing acoustics right now?
           </Text>
           <TactilePressable
             onPress={handleToggleRain}
-            scaleDownTo={0.94}
+            scaleDownTo={0.96}
             style={[
               styles.soundToggleBtn,
               {
-                backgroundColor: isPlayingRain ? colors.primary.default : colors.surface.default,
-                borderColor: isPlayingRain ? colors.primary.default : colors.border.default,
+                backgroundColor: isPlayingRain ? colors.primary.default : colors.primary.subtle,
+                borderColor: isPlayingRain ? colors.primary.default : colors.primary.subtleBorder,
               },
             ]}
           >
             <Ionicons
               name={isPlayingRain ? 'pause' : 'volume-medium'}
-              size={16}
+              size={18}
               color={isPlayingRain ? '#FFFFFF' : colors.primary.default}
             />
-            <Text style={[styles.soundToggleBtnText, { color: isPlayingRain ? '#FFFFFF' : colors.text.primary }]}>
+            <Text style={[styles.soundToggleBtnText, { color: isPlayingRain ? '#FFFFFF' : colors.primary.default }]}>
               {isPlayingRain ? 'Pause Rain' : 'Play Gentle Rain'}
             </Text>
           </TactilePressable>
@@ -190,7 +199,16 @@ export function PanicAnchorScreen() {
       </ScrollView>
 
       {/* Floating Bottom Action */}
-      <View style={[styles.bottomBar, { bottom: tabBarOffset, backgroundColor: colors.background.default, borderTopColor: colors.border.default }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom: Math.max(insets.bottom + 14, 24),
+            backgroundColor: colors.background.default,
+            borderTopColor: colors.border.default,
+          },
+        ]}
+      >
         <PrimaryButton
           title="Return to Calm Sanctuary"
           variant="secondary"
@@ -289,26 +307,24 @@ const styles = StyleSheet.create({
   },
   sighButtonText: { fontFamily: fontFamilies.sans.bold, fontSize: 13, fontWeight: '700' },
   soundRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 18,
+    padding: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    marginTop: 4,
+    marginTop: 6,
+    gap: 12,
   },
-  soundPromptText: { fontFamily: fontFamilies.sans.medium, fontSize: 13, fontWeight: '500' },
+  soundPromptText: { fontFamily: fontFamilies.sans.medium, fontSize: 13.5, fontWeight: '500' },
   soundToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 9999,
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
     borderWidth: 1,
   },
-  soundToggleBtnText: { fontFamily: fontFamilies.sans.bold, fontSize: 12, fontWeight: '700' },
+  soundToggleBtnText: { fontFamily: fontFamilies.sans.bold, fontSize: 13, fontWeight: '700' },
   bottomBar: {
     position: 'absolute',
     left: 0,

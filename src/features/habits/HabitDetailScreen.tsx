@@ -217,16 +217,23 @@ export function HabitDetailScreen() {
   return (
     <ScreenContainer scroll={false} animate={false} backgroundColor={colors.background.default}>
       <ScreenHeader
+        title="Habit Details"
         right={
           <View style={styles.headerActions}>
             <TactilePressable
               onPress={handleEdit}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Edit habit"
               style={[styles.actionButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
             >
               <Ionicons name="create-outline" size={20} color={colors.primary.default} />
             </TactilePressable>
             <TactilePressable
               onPress={handleDelete}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Delete habit"
               style={[styles.actionButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
             >
               <Ionicons name="trash-outline" size={20} color={colors.accents.rose} />

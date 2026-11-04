@@ -2,6 +2,7 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { GoogleAuthProvider, getAuth, initializeAuth, getReactNativePersistence, signInWithCredential, signOut, type Auth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { forgetGoogleIdentity, rememberGoogleIdentity } from './profileIdentity';
 
 const config = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyBBrsInGzDh9JsuQiv7vqiMUwvpF56vYLs',
@@ -49,7 +50,17 @@ export async function loginWithGoogle() {
   const result = await GoogleSignin.signIn();
   if (result.type !== 'success' || !result.data.idToken) throw new Error('Google sign-in was cancelled or did not return an ID token.');
   const credential = GoogleAuthProvider.credential(result.data.idToken);
-  return (await signInWithCredential(instance, credential)).user;
+  const user = (await signInWithCredential(instance, credential)).user;
+  try {
+    await rememberGoogleIdentity({
+      photoUrl: result.data.user.photo,
+      displayName: user.displayName || result.data.user.name,
+      email: user.email || result.data.user.email,
+    });
+  } catch (error) {
+    console.warn('Could not remember Google profile:', error);
+  }
+  return user;
 }
 
 export async function getDriveToken(): Promise<string> {
@@ -73,4 +84,5 @@ export async function logoutCloud() {
   const instance = getCalmlyAuth();
   try { await googleModule().GoogleSignin.signOut(); } catch {}
   if (instance) await signOut(instance);
+  try { await forgetGoogleIdentity(); } catch (error) { console.warn('Could not clear Google profile:', error); }
 }

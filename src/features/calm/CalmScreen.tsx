@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, BreathingPreset } from '../../types/navigation';
@@ -22,7 +22,20 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
 import { borderWidths, iconSizes, layout, radius, sizes, spacing } from '../../theme/tokens';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+  withRepeat,
+  Easing,
+  FadeInDown,
+  FadeOutUp,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+} from 'react-native-reanimated';
 import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -46,6 +59,162 @@ const SOUND_ROWS: [QuickSound, QuickSound][] = [
   [SOUNDS[2], SOUNDS[3]],
 ];
 
+function MiniEqualizer({ color }: { color: string }) {
+  const bar1 = useSharedValue(5);
+  const bar2 = useSharedValue(12);
+  const bar3 = useSharedValue(7);
+
+  useEffect(() => {
+    bar1.value = withRepeat(
+      withSequence(
+        withTiming(13, { duration: 420, easing: Easing.inOut(Easing.quad) }),
+        withTiming(5, { duration: 420, easing: Easing.inOut(Easing.quad) })
+      ),
+      -1,
+      true
+    );
+    bar2.value = withRepeat(
+      withSequence(
+        withTiming(5, { duration: 360, easing: Easing.inOut(Easing.quad) }),
+        withTiming(13, { duration: 360, easing: Easing.inOut(Easing.quad) })
+      ),
+      -1,
+      true
+    );
+    bar3.value = withRepeat(
+      withSequence(
+        withTiming(11, { duration: 480, easing: Easing.inOut(Easing.quad) }),
+        withTiming(6, { duration: 480, easing: Easing.inOut(Easing.quad) })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const b1 = useAnimatedStyle(() => ({ height: bar1.value }));
+  const b2 = useAnimatedStyle(() => ({ height: bar2.value }));
+  const b3 = useAnimatedStyle(() => ({ height: bar3.value }));
+
+  return (
+    <View style={styles.equalizerRow}>
+      <Animated.View style={[styles.eqBar, { backgroundColor: color }, b1]} />
+      <Animated.View style={[styles.eqBar, { backgroundColor: color }, b2]} />
+      <Animated.View style={[styles.eqBar, { backgroundColor: color }, b3]} />
+    </View>
+  );
+}
+
+function AnimatedSoundTile({
+  snd,
+  isPlaying,
+  colors,
+  skyTint,
+  onPress,
+}: {
+  snd: QuickSound;
+  isPlaying: boolean;
+  colors: any;
+  skyTint: any;
+  onPress: () => void;
+}) {
+  const iconSpin = useSharedValue(0);
+  const orbScale = useSharedValue(1);
+
+  useEffect(() => {
+    if (isPlaying) {
+      iconSpin.value = withSequence(
+        withTiming(-14, { duration: 90, easing: Easing.out(Easing.quad) }),
+        withSpring(0, { damping: 14, stiffness: 220 })
+      );
+      orbScale.value = withRepeat(
+        withSequence(
+          withTiming(1.05, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+          withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) })
+        ),
+        -1,
+        true
+      );
+    } else {
+      iconSpin.value = withTiming(0, { duration: 120 });
+      orbScale.value = withTiming(1, { duration: 200 });
+    }
+  }, [isPlaying]);
+
+  const orbAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: orbScale.value }],
+  }));
+
+  const iconAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${iconSpin.value}deg` }],
+  }));
+
+  return (
+    <View style={{ flex: 1 }}>
+      <TactilePressable
+        onPress={onPress}
+        scaleDownTo={1}
+        accessibilityRole="button"
+        accessibilityLabel={`${snd.label}, ${isPlaying ? 'playing' : snd.atmosphere}`}
+        style={[
+          styles.soundTile,
+          {
+            backgroundColor: isPlaying ? colors.primary.subtle : skyTint.plate,
+            borderColor: isPlaying ? colors.primary.default : skyTint.border,
+          },
+        ]}
+      >
+        <View style={styles.soundTileTop}>
+          <Animated.View
+            style={[
+              styles.soundTileOrb,
+              orbAnimStyle,
+              {
+                backgroundColor: isPlaying ? colors.primary.default : colors.surface.default,
+                borderColor: isPlaying ? colors.primary.default : skyTint.border,
+              },
+            ]}
+          >
+            <Animated.View style={iconAnimStyle}>
+              <AppIcon
+                name={isPlaying ? 'i-pause' : snd.icon}
+                size={18}
+                color={isPlaying ? colors.primary.foreground : skyTint.accent}
+              />
+            </Animated.View>
+          </Animated.View>
+
+          {isPlaying && (
+            <Animated.View
+              entering={FadeIn.duration(200)}
+              exiting={FadeOut.duration(150)}
+              style={styles.playingIndicatorRow}
+            >
+              <MiniEqualizer color={colors.primary.default} />
+              <Badge label="Playing" tone="primary" size="sm" />
+            </Animated.View>
+          )}
+        </View>
+
+        <AppText
+          variant="label"
+          color={isPlaying ? colors.primary.default : skyTint.text}
+          numberOfLines={1}
+        >
+          {snd.label}
+        </AppText>
+        <AppText
+          variant="caption"
+          color={isPlaying ? colors.primary.default : skyTint.muted}
+          numberOfLines={1}
+          style={styles.soundTileSub}
+        >
+          {isPlaying ? 'Tap to pause' : snd.atmosphere}
+        </AppText>
+      </TactilePressable>
+    </View>
+  );
+}
+
 interface QuickBreathwork {
   id: BreathingPreset;
   title: string;
@@ -65,12 +234,85 @@ export function CalmScreen() {
   const { colors, isDark } = useAppTheme();
   const [activeSound, setActiveSound] = useState<string | null>(null);
 
+  // Animated values for badge pop and ambient playing indicators
+  const badgeScale = useSharedValue(1);
+  const iconRotate = useSharedValue(0);
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0.8);
+  const notesWobble = useSharedValue(0);
+
   useEffect(() => {
     const unsub = soundService.addListener((state) => {
       setActiveSound(state.activeTrack);
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if (activeSound) {
+      // Spring pop on badge expansion
+      badgeScale.value = withSequence(
+        withSpring(1.22, { damping: 9, stiffness: 280 }),
+        withSpring(1, { damping: 14, stiffness: 220 })
+      );
+      iconRotate.value = withSequence(
+        withTiming(-12, { duration: 120 }),
+        withSpring(0, { damping: 12, stiffness: 220 })
+      );
+      // Gentle pulsing ring
+      pulseScale.value = withRepeat(
+        withSequence(
+          withTiming(1.5, { duration: 800, easing: Easing.out(Easing.ease) }),
+          withTiming(1, { duration: 800, easing: Easing.in(Easing.ease) })
+        ),
+        -1,
+        true
+      );
+      pulseOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.25, { duration: 800 }),
+          withTiming(0.9, { duration: 800 })
+        ),
+        -1,
+        true
+      );
+      // Rocking notes in pill
+      notesWobble.value = withRepeat(
+        withSequence(
+          withTiming(-8, { duration: 550, easing: Easing.inOut(Easing.quad) }),
+          withTiming(8, { duration: 550, easing: Easing.inOut(Easing.quad) })
+        ),
+        -1,
+        true
+      );
+    } else {
+      badgeScale.value = withSequence(
+        withTiming(0.92, { duration: 90 }),
+        withSpring(1, { damping: 12, stiffness: 200 })
+      );
+      iconRotate.value = withTiming(0, { duration: 120 });
+      pulseScale.value = 1;
+      pulseOpacity.value = 0.8;
+      notesWobble.value = withTiming(0, { duration: 200 });
+    }
+  }, [activeSound]);
+
+  const badgeAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: badgeScale.value }],
+  }));
+
+  const iconAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${iconRotate.value}deg` }],
+  }));
+
+  const pulseAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
+  }));
+
+  const notesAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${notesWobble.value}deg` }],
+  }));
 
   const handleToggleSound = async (soundId: 'rain' | 'ocean' | 'birds' | 'night') => {
     if (activeSound === soundId) {
@@ -89,14 +331,18 @@ export function CalmScreen() {
   const creamTint = resolveTint(!!isDark, 'cream');
   const sageTint = resolveTint(!!isDark, 'sage');
   const blushTint = resolveTint(!!isDark, 'blush');
+  const mintTint = resolveTint(!!isDark, 'mint');
 
   // Ink for solid accent fills: white in light mode, deep surface in dark mode.
   const solidInk = isDark ? colors.background.default : '#FFFFFF';
 
   return (
     <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
-      {/* Sanctuary Top Bar */}
-      <View style={[styles.header, { borderBottomColor: colors.border.default }]}>
+      {/* Sanctuary Top Bar with smooth layout animation (seamless without divider line) */}
+      <Animated.View
+        layout={LinearTransition.springify().damping(24).stiffness(130).mass(0.8)}
+        style={styles.header}
+      >
         <View style={styles.headerTitleRow}>
           <View>
             <AppText variant="h1">Calm</AppText>
@@ -104,78 +350,139 @@ export function CalmScreen() {
               Tactile mindful tools & somatic rest
             </AppText>
           </View>
-          <TactilePressable
-            onPress={() => navigation.navigate('Soundscapes')}
-            scaleDownTo={0.92}
-            hitSlop={sizes.hitSlop}
-            accessibilityRole="button"
-            accessibilityLabel="Open soundscapes"
-            style={[
-              styles.soundStatusBadge,
-              {
-                backgroundColor: activeSound ? colors.primary.subtle : colors.surface.default,
-                borderColor: activeSound ? colors.primary.default : colors.border.default,
-              },
-            ]}
+          <Animated.View
+            sharedTransitionTag={sharedTransitionTags.ambientStatusBadge}
+            sharedTransitionStyle={sharedElementStyle}
+            style={badgeAnimStyle}
           >
-            <AppIcon
-              name={activeSound ? 'i-volume-medium' : 'i-headset-outline'}
-              size={18}
-              color={activeSound ? colors.primary.default : colors.text.tertiary}
-            />
-            {activeSound && <View style={[styles.pulseDot, { backgroundColor: colors.primary.default }]} />}
-          </TactilePressable>
-        </View>
-
-        {/* Live Audio Mini-Player Bar (When Sound is Active) */}
-        {activeSound && (
-          <TactilePressable
-            onPress={() => navigation.navigate('Soundscapes')}
-            scaleDownTo={0.98}
-            accessibilityRole="button"
-            accessibilityLabel="Open soundscapes player"
-            style={[
-              styles.miniPlayerBar,
-              {
-                backgroundColor: colors.primary.subtle,
-                borderColor: colors.primary.subtleBorder,
-              },
-            ]}
-          >
-            <View style={styles.miniPlayerInfo}>
-              <AppIcon name="i-musical-notes" size={16} color={colors.primary.default} />
-              <AppText
-                variant="labelSmall"
-                color={colors.primary.default}
-                numberOfLines={1}
-                style={styles.miniPlayerText}
-              >
-                Playing: {activeSound.toUpperCase()} Ambient Soundscape
-              </AppText>
-            </View>
             <TactilePressable
-              onPress={(e) => {
-                e.stopPropagation();
-                soundService.stop();
-              }}
-              scaleDownTo={0.88}
+              onPress={() => navigation.navigate('Soundscapes')}
+              scaleDownTo={0.92}
               hitSlop={sizes.hitSlop}
               accessibilityRole="button"
-              accessibilityLabel="Stop ambient sound"
-              style={styles.miniPlayerStop}
+              accessibilityLabel="Open soundscapes"
+              style={[
+                styles.soundStatusBadge,
+                {
+                  backgroundColor: activeSound ? colors.primary.subtle : colors.surface.default,
+                  borderColor: activeSound ? colors.primary.default : colors.border.default,
+                },
+              ]}
             >
-              <AppIcon name="i-pause" size={14} color={colors.primary.default} />
+              <Animated.View style={iconAnimStyle}>
+                <AppIcon
+                  name={activeSound ? 'i-volume-medium' : 'i-headset-outline'}
+                  size={18}
+                  color={activeSound ? colors.primary.default : colors.text.tertiary}
+                />
+              </Animated.View>
+              {activeSound && (
+                <Animated.View
+                  entering={FadeIn.duration(200)}
+                  exiting={FadeOut.duration(150)}
+                  style={[
+                    styles.pulseDot,
+                    { backgroundColor: colors.primary.default },
+                    pulseAnimStyle,
+                  ]}
+                />
+              )}
             </TactilePressable>
-          </TactilePressable>
+          </Animated.View>
+        </View>
+
+        {/* Live Audio Mini-Player Bar with Shared Element Transition & Buttery Soft Expanding Entrance */}
+        {activeSound && (
+          <Animated.View
+            entering={FadeInDown.duration(320).springify().damping(24).stiffness(130).mass(0.8)}
+            exiting={FadeOutUp.duration(180)}
+            layout={LinearTransition.springify().damping(24).stiffness(130).mass(0.8)}
+            sharedTransitionTag={sharedTransitionTags.ambientPlayerBar}
+            sharedTransitionStyle={sharedElementStyle}
+            style={styles.miniPlayerWrapper}
+          >
+            <TactilePressable
+              onPress={() => navigation.navigate('Soundscapes')}
+              scaleDownTo={0.98}
+              accessibilityRole="button"
+              accessibilityLabel="Open soundscapes player"
+              style={[
+                styles.miniPlayerBar,
+                {
+                  backgroundColor: colors.primary.subtle,
+                  borderColor: colors.primary.subtleBorder,
+                },
+              ]}
+            >
+              <View style={styles.miniPlayerInfo}>
+                <Animated.View style={notesAnimStyle}>
+                  <AppIcon name="i-musical-notes" size={16} color={colors.primary.default} />
+                </Animated.View>
+                <AppText
+                  variant="labelSmall"
+                  color={colors.primary.default}
+                  numberOfLines={1}
+                  style={styles.miniPlayerText}
+                >
+                  Playing: {activeSound.toUpperCase()} Ambient Soundscape
+                </AppText>
+              </View>
+              <TactilePressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  soundService.stop();
+                }}
+                scaleDownTo={0.88}
+                hitSlop={sizes.hitSlop}
+                accessibilityRole="button"
+                accessibilityLabel="Stop ambient sound"
+                style={styles.miniPlayerStop}
+              >
+                <AppIcon name="i-pause" size={14} color={colors.primary.default} />
+              </TactilePressable>
+            </TactilePressable>
+          </Animated.View>
         )}
-      </View>
+      </Animated.View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. Nature Soundscapes Interactive Player Hub — sky pop card */}
+        {/* 0. Cute Tactile Zen Playground Card — mint pop card */}
         <PopIn index={0}>
+        <Card
+          variant="elevated"
+          tone="mint"
+          onPress={() => navigation.navigate('ZenPlayground')}
+        >
+          <CardContent style={styles.cardInner}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardHeaderCopyWide}>
+                <Badge label="Cute & Relaxing" tone="primary" style={styles.badge} />
+                <AppText variant="h3" color={mintTint.text}>
+                  Zen Playground
+                </AppText>
+                <AppText variant="caption" color={mintTint.muted} numberOfLines={2} style={styles.sectionSub}>
+                  Cute tactile stress relievers: satisfying bubble wrap, sand garden & breathing companion
+                </AppText>
+                <View style={styles.inlineCta}>
+                  <AppText variant="label" color={mintTint.accent}>
+                    Play & De-Stress
+                  </AppText>
+                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={mintTint.accent} />
+                </View>
+              </View>
+              <View style={[styles.gameThumbBadge, { backgroundColor: mintTint.plate }]}>
+                <Text style={{ fontSize: 34 }}>🫧</Text>
+              </View>
+            </View>
+          </CardContent>
+        </Card>
+        </PopIn>
+
+        {/* 1. Nature Soundscapes Interactive Player Hub — sky pop card */}
+        <PopIn index={1}>
         <Card variant="elevated" tone="sky">
           <CardContent style={styles.cardInner}>
             <View style={styles.cardHeaderRow}>
@@ -203,64 +510,20 @@ export function CalmScreen() {
               </Animated.View>
             </View>
 
-            {/* Ambient Sound Grid (2x2 tactile cards) */}
+            {/* Ambient Sound Grid (2x2 tactile cards with subtle animated click & pulse) */}
             <View style={styles.soundGrid}>
               {SOUND_ROWS.map((row, rIdx) => (
                 <View key={rIdx} style={styles.soundGridRow}>
-                  {row.map((snd) => {
-                    const isPlaying = activeSound === snd.id;
-                    return (
-                      <TactilePressable
-                        key={snd.id}
-                        onPress={() => handleToggleSound(snd.id)}
-                        scaleDownTo={0.97}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${snd.label}, ${isPlaying ? 'playing' : snd.atmosphere}`}
-                        style={[
-                          styles.soundTile,
-                          {
-                            backgroundColor: isPlaying ? colors.primary.subtle : skyTint.plate,
-                            borderColor: isPlaying ? colors.primary.default : skyTint.border,
-                          },
-                        ]}
-                      >
-                        <View style={styles.soundTileTop}>
-                          <View
-                            style={[
-                              styles.soundTileOrb,
-                              {
-                                backgroundColor: isPlaying ? colors.primary.default : colors.surface.default,
-                                borderColor: isPlaying ? colors.primary.default : skyTint.border,
-                              },
-                            ]}
-                          >
-                            <AppIcon
-                              name={isPlaying ? 'i-pause' : snd.icon}
-                              size={18}
-                              color={isPlaying ? colors.primary.foreground : skyTint.accent}
-                            />
-                          </View>
-                          {isPlaying && <Badge label="Playing" tone="primary" size="sm" />}
-                        </View>
-
-                        <AppText
-                          variant="label"
-                          color={isPlaying ? colors.primary.default : skyTint.text}
-                          numberOfLines={1}
-                        >
-                          {snd.label}
-                        </AppText>
-                        <AppText
-                          variant="caption"
-                          color={isPlaying ? colors.primary.default : skyTint.muted}
-                          numberOfLines={1}
-                          style={styles.soundTileSub}
-                        >
-                          {isPlaying ? 'Tap to pause' : snd.atmosphere}
-                        </AppText>
-                      </TactilePressable>
-                    );
-                  })}
+                  {row.map((snd) => (
+                    <AnimatedSoundTile
+                      key={snd.id}
+                      snd={snd}
+                      isPlaying={activeSound === snd.id}
+                      colors={colors}
+                      skyTint={skyTint}
+                      onPress={() => handleToggleSound(snd.id)}
+                    />
+                  ))}
                 </View>
               ))}
             </View>
@@ -480,9 +743,11 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing[5],
     paddingTop: spacing[4],
-    paddingBottom: spacing[3],
-    borderBottomWidth: borderWidths.thin,
-    gap: spacing[3],
+    paddingBottom: spacing[2],
+  },
+  miniPlayerWrapper: {
+    marginTop: spacing[3],
+    overflow: 'hidden',
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -585,6 +850,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing[2],
   },
+  playingIndicatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  equalizerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2.5,
+    height: 14,
+  },
+  eqBar: {
+    width: 2.5,
+    borderRadius: 1.5,
+  },
   soundTileOrb: {
     width: 38,
     height: 38,
@@ -628,5 +908,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[2],
     borderRadius: radius.full,
+  },
+  gameThumbBadge: {
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

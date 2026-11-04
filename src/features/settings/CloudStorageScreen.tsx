@@ -7,6 +7,7 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { getCalmlyAuth, getDriveToken, isCalmlyCloudConfigured, loginWithGoogle, logoutCloud } from '../../services/calmlyAuth';
 import { backupToDrive, listDriveBackups, restoreFromDrive, type BackupSummary } from '../../services/calmlyCloud';
+import { settingsRepository } from '../../database/repositories/settingsRepository';
 
 export function CloudStorageScreen({ navigation }: any) {
   const { colors } = useAppTheme();
@@ -32,6 +33,7 @@ export function CloudStorageScreen({ navigation }: any) {
     if (passphrase.length < 12) throw new Error('Enter a 12+ character passphrase. Keep it safe; it cannot be recovered.');
     const token = await getDriveToken();
     const name = await backupToDrive(token, passphrase);
+    await settingsRepository.updateSettings({ lastDriveSyncAt: Date.now() }).catch(() => {});
     setBackups(await listDriveBackups(token)); setPassphrase(''); setMessage(`Encrypted backup created: ${name}`);
   });
   const restore = (file: BackupSummary) => {

@@ -48,9 +48,11 @@ import { SoundscapesScreen } from '../features/calm/SoundscapesScreen';
 import { SensoryGroundingScreen } from '../features/calm/SensoryGroundingScreen';
 import { BodyScanScreen } from '../features/calm/BodyScanScreen';
 import { PanicAnchorScreen } from '../features/calm/PanicAnchorScreen';
+import { ZenPlaygroundScreen } from '../features/calm/ZenPlaygroundScreen';
 import { MoodCalendarScreen } from '../features/insights/MoodCalendarScreen';
 import { ReflectionReportScreen } from '../features/insights/ReflectionReportScreen';
 import { CloudStorageScreen } from '../features/settings/CloudStorageScreen';
+import { ProfileScreen } from '../features/profile/ProfileScreen';
 import { settingsRepository } from '../database/repositories/settingsRepository';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticFeedback } from '../utils/haptics';
@@ -356,6 +358,13 @@ function CustomTabBar({ state, descriptors, navigation, insets }: BottomTabBarPr
   const barHeight = 58 + (bottomInset > 0 ? bottomInset : 10);
   const androidFallback = isDark ? 'rgba(24, 33, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)';
 
+  // Hide tab bar if active tab is displaying an inner/nested stack screen
+  const currentTab = state.routes[state.index];
+  const nested = (currentTab as any)?.state;
+  if (nested && typeof nested.index === 'number' && nested.index > 0) {
+    return null;
+  }
+
   return (
     <View
       style={[
@@ -530,6 +539,7 @@ export function RootNavigator() {
 
       {/* Pushed Sanctuaries (horizontal slide) */}
       <RootStack.Screen name="Onboarding" component={OnboardingScreen} options={push} />
+      <RootStack.Screen name="Profile" component={ProfileScreen} options={push} />
       <RootStack.Screen name="AppLock" component={AppLockRoute} options={push} />
       <RootStack.Screen name="Habits" component={HabitListScreen} options={push} />
       <RootStack.Screen name="HabitDetail" component={HabitDetailScreen} options={push} />
@@ -546,6 +556,7 @@ export function RootNavigator() {
       <RootStack.Screen name="DataManagement" component={DataManagementScreen} options={push} />
       <RootStack.Screen name="CloudStorage" component={CloudStorageScreen} options={push} />
       <RootStack.Screen name="BreathworkStudio" component={BreathworkStudioScreen} options={push} />
+      <RootStack.Screen name="ZenPlayground" component={ZenPlaygroundScreen} options={push} />
       <RootStack.Screen name="Soundscapes" component={SoundscapesScreen} options={push} />
       <RootStack.Screen name="SensoryGrounding" component={SensoryGroundingScreen} options={push} />
       <RootStack.Screen name="BodyScan" component={BodyScanScreen} options={push} />

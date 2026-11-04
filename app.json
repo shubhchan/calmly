@@ -51,7 +51,15 @@
         }
       ],
       "expo-sqlite",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Calmly uses your photo library so you can choose a profile picture and attach photos to reflections.",
+          "cameraPermission": "Calmly uses your camera so you can take a profile picture and capture moments for your reflections."
+        }
+      ],
+      "expo-video"
     ]
   }
 }
