@@ -12,9 +12,8 @@ interface StaggeredEntryProps {
 }
 
 /**
- * @deprecated Use PopIn directly. This is now an alias so the whole app shares
- * one entrance physics — it previously used a separate layout-animation path
- * whose stagger rhythm drifted from PopIn's.
+ * @deprecated Use PopIn directly. Static alias kept for API compatibility, so
+ * screens play only their single native route transition.
  */
 export function StaggeredEntry({
   index = 0,

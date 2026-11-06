@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Pressable } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -30,6 +30,17 @@ export function GratitudeScreen() {
   const [entries, setEntries] = useState<(GratitudeEntry | PositiveMoment)[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredEntries = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return entries ?? [];
+    return (entries ?? []).filter((entry) => {
+      const text = (entry?.text ?? '').toLowerCase();
+      const mood = (entry?.mood ?? '').toLowerCase();
+      return text.includes(q) || mood.includes(q);
+    });
+  }, [entries, searchQuery]);
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
@@ -127,6 +138,27 @@ export function GratitudeScreen() {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
+      {(entries ?? []).length > 0 && (
+        <View style={[styles.searchBar, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
+          <Ionicons name="search" size={17} color={colors.text.tertiary} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={type === 'gratitude' ? 'Search gratitude reflections…' : 'Search positive moments…'}
+            placeholderTextColor={colors.text.tertiary}
+            style={[styles.searchInput, { color: colors.text.primary }]}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear search">
+              <Ionicons name="close-circle" size={17} color={colors.text.tertiary} />
+            </Pressable>
+          )}
+        </View>
+      )}
+
       {(entries ?? []).length === 0 ? (
         <PopIn index={1}>
         <View style={styles.emptyState}>
@@ -140,9 +172,25 @@ export function GratitudeScreen() {
           <PrimaryButton onPress={handleAdd} title={type === 'gratitude' ? 'Record Gratitude' : 'Save Good Thing'} style={styles.emptyButton} />
         </View>
         </PopIn>
+      ) : filteredEntries.length === 0 && searchQuery.length > 0 ? (
+        <View style={styles.emptySearchContainer}>
+          <Ionicons name="search-outline" size={36} color={colors.text.tertiary} style={{ marginBottom: 6 }} />
+          <Text style={[styles.emptySearchTitle, { color: colors.text.primary }]}>
+            No entries found
+          </Text>
+          <Text style={[styles.emptySearchSubtitle, { color: colors.text.secondary }]}>
+            No entries match “{searchQuery.trim()}”.
+          </Text>
+          <TactilePressable
+            onPress={() => setSearchQuery('')}
+            style={[styles.clearSearchBtn, { borderColor: colors.border.default }]}
+          >
+            <Text style={[styles.clearSearchText, { color: colors.primary.default }]}>Clear Search</Text>
+          </TactilePressable>
+        </View>
       ) : (
         <View style={styles.list}>
-          {(entries ?? []).map((entry, idx) => {
+          {(filteredEntries ?? []).map((entry, idx) => {
             const tint = resolveTint(!!isDark, tintForIndex(idx));
             return (
             <PopIn key={entry?.id ?? String(idx)} index={Math.min(idx + 1, 8)}>
@@ -220,6 +268,46 @@ export function GratitudeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13.5,
+    paddingVertical: 0,
+  },
+  emptySearchContainer: {
+    alignItems: 'center',
+    paddingVertical: 36,
+    paddingHorizontal: 20,
+    gap: 6,
+  },
+  emptySearchTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  emptySearchSubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  clearSearchBtn: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  clearSearchText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   filterButton: {
     width: 42,
     height: 42,
@@ -248,11 +336,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 20,
     borderWidth: 1,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
   },
   entryContent: { flex: 1, gap: 10 },
   entryText: { fontSize: 16, lineHeight: 23, fontWeight: '500' },

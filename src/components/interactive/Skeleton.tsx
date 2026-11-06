@@ -32,22 +32,16 @@ export function Skeleton({ width, height = 16, radius = 10, style, shimmer = tru
   const { colors, isDark } = useAppTheme();
   const containerWidth = useSharedValue(0);
   const sweep = useSharedValue(0);
-  const pulse = useSharedValue(0);
 
   useEffect(() => {
     if (!shimmer) return;
     sweep.value = 0;
     sweep.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.linear }), -1, false);
-    pulse.value = withRepeat(withTiming(1, { duration: 950, easing: Easing.inOut(Easing.quad) }), -1, true);
-  }, [shimmer, sweep, pulse]);
+  }, [shimmer, sweep]);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     containerWidth.value = event.nativeEvent?.layout?.width ?? 0;
   };
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    opacity: shimmer ? interpolate(pulse.value, [0, 1], [0.55, 0.85]) : 0.6,
-  }));
 
   const bandStyle = useAnimatedStyle(() => {
     const travel = containerWidth.value + BAND_TRAVEL_PADDING * 2;
@@ -74,8 +68,8 @@ export function Skeleton({ width, height = 16, radius = 10, style, shimmer = tru
           borderRadius: radius,
           backgroundColor: baseColor,
           overflow: 'hidden',
+          opacity: 0.75,
         },
-        pulseStyle,
         style,
       ]}
     >

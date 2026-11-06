@@ -7,7 +7,6 @@ import { RootStackParamList, GroundingType } from '../../types/navigation';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { calmRepository } from '../../database/repositories/calmRepository';
 import { hapticFeedback } from '../../utils/haptics';
-import Animated, { FadeIn, FadeInRight, useReducedMotion } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { useTabBarOffset } from '../../utils/useTabBarOffset';
@@ -65,7 +64,6 @@ export function GroundingExerciseScreen() {
   const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
 
-  const reducedMotion = useReducedMotion();
   const safeCurrentStep = Math.max(0, Math.min(currentStep, Math.max(0, safeSteps.length - 1)));
   const current = safeSteps[safeCurrentStep] ?? safeSteps[0];
   const progress = safeSteps.length > 0 ? (safeCurrentStep + 1) / safeSteps.length : 0;
@@ -133,12 +131,8 @@ export function GroundingExerciseScreen() {
           ))}
         </View>
 
-        {/* Exercise Card with animated step transition */}
-        <Animated.View
-          key={safeCurrentStep}
-          entering={reducedMotion ? FadeIn.duration(150) : FadeInRight.duration(260)}
-          style={{ width: '100%', marginBottom: 24 }}
-        >
+        {/* Exercise card — the native route transition owns entry motion. */}
+        <View key={safeCurrentStep} style={{ width: '100%', marginBottom: 24 }}>
           <Card variant="elevated">
             <View style={{ padding: 22 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
@@ -171,7 +165,7 @@ export function GroundingExerciseScreen() {
               </Text>
             </View>
           </Card>
-        </Animated.View>
+        </View>
       </ScrollView>
 
       {/* Liquid Glass Bottom Floating Bar */}

@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { AppText, ScreenHeader, TactilePressable } from '../../components';
+import { AppText, ScreenHeader, TactilePressable, PrivacySanctuaryIllustration } from '../../components';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { getCalmlyAuth, getDriveToken, isCalmlyCloudConfigured, loginWithGoogle, logoutCloud } from '../../services/calmlyAuth';
@@ -50,7 +51,8 @@ export function CloudStorageScreen({ navigation }: any) {
   return <ScreenContainer contentContainerStyle={styles.page} backgroundColor={colors.background.default}>
     <ScreenHeader title="Your cloud backups" subtitle="Keep your reflections in your own Google Drive" onBack={() => navigation.goBack()} />
     <View style={[styles.card, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-      <View style={styles.row}><Ionicons name="cloud-outline" size={30} color={colors.primary.default} /><AppText variant="title">Local-first, always</AppText></View>
+      <PrivacySanctuaryIllustration width={150} height={120} style={{ alignSelf: 'center', marginBottom: 8 }} />
+      <View style={styles.row}><Ionicons name="shield-checkmark-outline" size={26} color={colors.primary.default} /><AppText variant="title">Local-first, always</AppText></View>
       <AppText tone="secondary">Calmly works offline. When you opt in, this feature stores encrypted snapshots in a Calmly Backups folder in the Google Drive account you sign in with.</AppText>
       <AppText variant="bodySmall" tone="tertiary">Google Drive stores files; it does not host a running backend. No journal data is uploaded unless you select Back up now.</AppText>
     </View>

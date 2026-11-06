@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { ScreenHeader, TactilePressable } from '../../components';
+import { ScreenHeader, TactilePressable, ThoughtReframingIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -116,9 +116,7 @@ export function ThoughtReframingScreen() {
       <ScreenContainer contentContainerStyle={styles.content}>
         <PopIn index={0}>
         <Card tone="sage" style={styles.completeCard}>
-          <View style={[styles.completeIconWrap, { backgroundColor: sageTint.plate }]}>
-            <Ionicons name="sparkles" size={48} color={sageTint.accent} />
-          </View>
+          <ThoughtReframingIllustration width={190} height={145} style={{ marginBottom: 8 }} />
           <Text style={[styles.completeTitle, { color: sageTint.text }]}>Perspective Shifted</Text>
           <Text style={[styles.completeText, { color: sageTint.text }]}>
             You stepped back from distortion and re-anchored your mind in balanced wisdom.

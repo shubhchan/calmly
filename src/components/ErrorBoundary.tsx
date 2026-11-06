@@ -205,9 +205,11 @@ export function GlobalErrorShield({ children }: Props) {
       } catch {
         // logging must never crash the app
       }
-      // Keep the first crash (avoid loops if the crash screen itself errors —
-      // that case is owned by the outer ErrorBoundary).
-      setCrash((prev) => prev ?? { error, where: 'uncaught-js', isFatal });
+      // Only show full crash screen for truly fatal errors that would otherwise kill the app.
+      // Non-fatal background/promise errors should not unmount the active user screen.
+      if (isFatal) {
+        setCrash((prev) => prev ?? { error, where: 'uncaught-js', isFatal });
+      }
       // In dev, still forward to the default handler so RedBox/LogBox works.
       const isDev = (globalThis as any)?.__DEV__ === true;
       if (isDev && typeof prevHandler === 'function') {

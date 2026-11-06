@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Alert, Switch, Platform } from 'react-native';
+import { View, Text, StyleSheet, Switch, Platform } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';

@@ -7,6 +7,7 @@ export * from './Card';
 export * from './Checkbox';
 export * from './Chip';
 export * from './ConfirmDialog';
+export * from './DateRangePicker';
 export * from './Divider';
 export * from './EmptyState';
 export * from './IconButton';

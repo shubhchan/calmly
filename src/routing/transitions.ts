@@ -10,8 +10,8 @@ import type { NativeStackNavigationOptions } from '@react-navigation/native-stac
  * tab stack so navigation always feels the same wherever you are.
  *
  * When reduced motion is on (OS setting or the in-app toggle), all route
- * animations collapse to 'none' — content still crossfades via
- * ScreenContainer / ContentReveal.
+ * animations collapse to 'none'. Screen content itself does not animate on
+ * mount, so a route never plays two entrances at once.
  */
 
 /** Standard pushed pages: horizontal slide (Android) / platform push (iOS). */
@@ -47,9 +47,9 @@ export function immersiveTransition(reducedMotion: boolean): NativeStackNavigati
  * Tab switches: instant swap.
  *
  * A scene cross-fade here dims BOTH pages over the container background and
- * double-fades with each screen's own content entrance, which reads as a
- * flash. Instead the new page paints immediately — opaque, themed, with its
- * shimmering skeletons already in place — and content fades in on its own.
+ * fights the native stack transition, which reads as a flash. Instead the new
+ * page paints immediately — opaque and themed, with its skeletons already in
+ * place.
  */
 export function tabTransition() {
   return {

@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  Dimensions,
-} from 'react-native';
+import { Modal, View, Text, StyleSheet, Dimensions } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import { Ionicons } from '@expo/vector-icons';
 import {
   useAudioRecorder,

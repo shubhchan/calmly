@@ -102,7 +102,6 @@ class SoundService {
     try {
       if (this.currentPlayer) {
         try {
-          this.currentPlayer.setActiveForLockScreen?.(false);
           this.currentPlayer.pause();
           this.currentPlayer.remove();
         } catch {}
@@ -113,14 +112,6 @@ class SoundService {
       player.loop = true;
       player.volume = this.volume;
       player.play();
-
-      // Surface the track on the lock screen / notification shade so playback
-      // is controllable (and visibly alive) while the screen is off.
-      try {
-        player.setActiveForLockScreen?.(true, { title: track.title, artist: 'Calmly' });
-      } catch (e) {
-        console.warn('[SoundService] Lock screen controls unavailable:', e);
-      }
 
       this.currentPlayer = player;
       this.currentTrackId = trackId;
@@ -157,7 +148,6 @@ class SoundService {
 
     if (this.currentPlayer) {
       try {
-        this.currentPlayer.setActiveForLockScreen?.(false);
         this.currentPlayer.pause();
         this.currentPlayer.remove();
       } catch {}

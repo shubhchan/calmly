@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { ScreenHeader, TactilePressable } from '../../components';
+import { ScreenHeader, TactilePressable, SphereOfControlIllustration } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
@@ -78,9 +78,7 @@ export function WhatCanIControlScreen() {
       <ScreenContainer contentContainerStyle={styles.content}>
         <PopIn index={0}>
         <Card tone="sky" style={styles.completeCard}>
-          <View style={[styles.completeIconWrap, { backgroundColor: skyTint.plate }]}>
-            <Ionicons name="shield-checkmark" size={48} color={skyTint.accent} />
-          </View>
+          <SphereOfControlIllustration width={190} height={145} style={{ marginBottom: 8 }} />
           <Text style={[styles.completeTitle, { color: skyTint.text }]}>Clarity Unlocked</Text>
           <Text style={[styles.completeText, { color: skyTint.text }]}>
             You have separated what you can change from what you must release. Channel your energy with calm intention.

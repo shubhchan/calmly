@@ -1,4 +1,5 @@
 /** Native Google account sign-in + Firebase identity. No service account key. */
+import { Platform, NativeModules, TurboModuleRegistry } from 'react-native';
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { GoogleAuthProvider, getAuth, initializeAuth, getReactNativePersistence, signInWithCredential, signOut, type Auth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,7 +34,23 @@ export function getCalmlyAuth(): Auth | null {
   } catch (e) { console.warn('Firebase initialization failed:', e); return null; }
 }
 
+export function isGoogleSigninSupported(): boolean {
+  try {
+    if (Platform.OS === 'web') return false;
+    // Check if the native turbo module or bridge is present before requiring the package,
+    // which prevents TurboModuleRegistry.getEnforcing from throwing in Expo Go.
+    const hasTurbo = typeof (TurboModuleRegistry as any)?.get === 'function' && (TurboModuleRegistry as any).get('RNGoogleSignin') != null;
+    const hasNative = NativeModules?.RNGoogleSignin != null;
+    return Boolean(hasTurbo || hasNative);
+  } catch {
+    return false;
+  }
+}
+
 function googleModule() {
+  if (!isGoogleSigninSupported()) {
+    throw new Error('Google Sign-In requires a custom development build (EAS Build), not Expo Go.');
+  }
   // Lazy native import, so local-only mode can still start in Expo Go.
   // Google sign-in requires an EAS/development build after native configuration.
   return require('@react-native-google-signin/google-signin') as typeof import('@react-native-google-signin/google-signin');
@@ -44,7 +61,7 @@ export async function loginWithGoogle() {
   if (!instance || !WEB_CLIENT_ID) throw new Error('Configure Firebase and Google OAuth before connecting. See CLOUD_SETUP.md.');
   let GoogleSignin;
   try { ({ GoogleSignin } = googleModule()); }
-  catch { throw new Error('Google Sign-In requires a development or production build, not Expo Go.'); }
+  catch (err: any) { throw new Error(err?.message || 'Google Sign-In requires a development or production build, not Expo Go.'); }
   configureGoogle(GoogleSignin);
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
   const result = await GoogleSignin.signIn();
@@ -66,6 +83,9 @@ export async function loginWithGoogle() {
 export async function getDriveToken(): Promise<string> {
   const instance = getCalmlyAuth();
   if (!instance?.currentUser) throw new Error('Sign in with Google to access your Drive.');
+  if (!isGoogleSigninSupported()) {
+    throw new Error('Google Drive access requires a custom development build, not Expo Go.');
+  }
   const { GoogleSignin } = googleModule();
   configureGoogle(GoogleSignin);
   if (!GoogleSignin.getCurrentUser()) {
@@ -82,7 +102,9 @@ export async function getDriveToken(): Promise<string> {
 
 export async function logoutCloud() {
   const instance = getCalmlyAuth();
-  try { await googleModule().GoogleSignin.signOut(); } catch {}
+  if (isGoogleSigninSupported()) {
+    try { await googleModule().GoogleSignin.signOut(); } catch {}
+  }
   if (instance) await signOut(instance);
   try { await forgetGoogleIdentity(); } catch (error) { console.warn('Could not clear Google profile:', error); }
 }

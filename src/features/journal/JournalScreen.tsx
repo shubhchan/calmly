@@ -1,45 +1,73 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Image } from 'react-native';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
+import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, JournalReflectionIllustration, PageHeader, StaggeredEntry, TactilePressable } from '../../components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  AppIcon,
+  Divider,
+  EmptyState,
+  IconButton,
+  ListItem,
+  Modal,
+  PageHeader,
+  SearchInput,
+} from '../../components';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { Ionicons } from '@expo/vector-icons';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { format } from 'date-fns';
 import { hapticFeedback } from '../../utils/haptics';
-import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
-import { resolveTint } from '../../theme/tints';
 import Animated from 'react-native-reanimated';
-import { sharedElementStyle, sharedHeroStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
+import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
+import { shape, spacing } from '../../theme/tokens';
 
 interface JournalTemplate {
   id: string;
   label: string;
   desc: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: string;
   color: string;
 }
 
 const journalTypes: JournalTemplate[] = [
-  { id: 'free', label: 'Free Writing', desc: 'Unstructured flow of thoughts', icon: 'create-outline', color: '#5EBE7B' },
-  { id: 'daily_reflection', label: 'Daily Review', desc: 'Reflect upon today’s events', icon: 'sunny-outline', color: '#F59E0B' },
-  { id: 'gratitude', label: 'Gratitude', desc: 'Counting subtle blessings', icon: 'heart-outline', color: '#F43F5E' },
-  { id: 'stress', label: 'Stress Release', desc: 'Release mental tension', icon: 'leaf-outline', color: '#10B981' },
-  { id: 'sleep', label: 'Sleep & Dreams', desc: 'Nighttime closure & rest', icon: 'moon-outline', color: '#6366F1' },
-  { id: 'morning', label: 'Morning Pages', desc: 'Mindful dawn clarity', icon: 'cafe-outline', color: '#0EA5E9' },
-  { id: 'brain_dump', label: 'Brain Dump', desc: 'Declutter racing thoughts', icon: 'sparkles-outline', color: '#8B5CF6' },
+  { id: 'free', label: 'Free Writing', desc: 'Unstructured flow of thoughts', icon: 'i-create-outline', color: '#5EBE7B' },
+  { id: 'daily_reflection', label: 'Daily Review', desc: 'Reflect upon today’s events', icon: 'i-sunny-outline', color: '#F59E0B' },
+  { id: 'gratitude', label: 'Gratitude', desc: 'Counting subtle blessings', icon: 'i-heart-outline', color: '#F43F5E' },
+  { id: 'stress', label: 'Stress Release', desc: 'Release mental tension', icon: 'i-leaf-outline', color: '#10B981' },
+  { id: 'sleep', label: 'Sleep & Dreams', desc: 'Nighttime closure & rest', icon: 'i-moon-outline', color: '#6366F1' },
+  { id: 'morning', label: 'Morning Pages', desc: 'Mindful dawn clarity', icon: 'i-cafe-outline', color: '#0EA5E9' },
+  { id: 'brain_dump', label: 'Brain Dump', desc: 'Declutter racing thoughts', icon: 'i-sparkles-outline', color: '#8B5CF6' },
 ];
+
+const DOCK_HEIGHT = 52;
+const DOCK_GAP = spacing[3];
+const TAB_BAR_BASE_HEIGHT = 58;
 
 export function JournalScreen() {
   const navigation = useNavigation<any>();
-  const { colors, isDark } = useAppTheme();
-  const lilacTint = resolveTint(!!isDark, 'lilac');
+  const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [templatesVisible, setTemplatesVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const hasLoadedRef = useRef(false);
+
+  const tabBarHeight = TAB_BAR_BASE_HEIGHT + Math.max(insets.bottom, 10);
+  const dockOffset = tabBarHeight + DOCK_GAP;
+  const contentBottom = dockOffset + DOCK_HEIGHT + spacing[5];
+
+  const filteredEntries = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return entries;
+    return entries.filter((entry) => {
+      const title = (entry.title ?? '').toLowerCase();
+      const body = (entry.body ?? '').toLowerCase();
+      const typeLabel = (journalTypes.find((t) => t.id === entry.type)?.label ?? '').toLowerCase();
+      return title.includes(q) || body.includes(q) || typeLabel.includes(q);
+    });
+  }, [entries, searchQuery]);
 
   const loadEntries = useCallback(async (showSpinner: boolean = false) => {
     if (showSpinner || !hasLoadedRef.current) setLoading(true);
@@ -55,11 +83,18 @@ export function JournalScreen() {
     }
   }, []);
 
-  // Reload every time the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadEntries();
     }, [loadEntries])
+  );
+
+  const openEntry = useCallback(
+    (type: string) => {
+      setTemplatesVisible(false);
+      navigation?.navigate?.('JournalEntry', { type });
+    },
+    [navigation]
   );
 
   const handleToggleFavorite = async (entry: any) => {
@@ -72,292 +107,164 @@ export function JournalScreen() {
     }
   };
 
-  const renderJournalType = (item: JournalTemplate, index: number) => (
-    <StaggeredEntry index={index} key={item.id}>
-      <TactilePressable
-        onPress={() => {
-          navigation?.navigate?.('JournalEntry', { type: item.id as any });
-        }}
-        scaleDownTo={0.95}
-        hapticStyle="light"
-        accessibilityRole="button"
-        accessibilityLabel={`${item.label}. ${item.desc}`}
-        style={[
-          styles.templateButton,
-          {
-            backgroundColor: lilacTint.plate,
-            borderColor: lilacTint.border,
-          },
-        ]}
-      >
-      <View style={styles.iconOrbContainer}>
-        <Animated.View
-          sharedTransitionTag={sharedTransitionTags.journalTemplateIcon(item.id)}
-          sharedTransitionStyle={sharedElementStyle}
-          style={[
-            styles.templateIconOrb,
-            {
-              backgroundColor: item.color + '1A',
-              borderColor: item.color + '38',
-            },
-          ]}
-        >
-          <Ionicons name={item.icon} size={22} color={item.color} style={{ textAlign: 'center' }} />
-        </Animated.View>
+  const renderEntry = (entry: any, index: number) => {
+    const typeConfig = journalTypes.find((t) => t.id === entry.type) ?? journalTypes[0];
+    const formattedDate = format(entry.createdAt ? new Date(entry.createdAt) : new Date(), 'MMM d, yyyy');
+    const snippet = (entry.body ?? '').replace(/\s+/g, ' ').trim();
+    const title = (entry.title ?? '').trim() || typeConfig.label;
+    const subtitle = snippet ? `${formattedDate} · ${snippet}` : `${formattedDate} · ${typeConfig.label}`;
+
+    return (
+      <View key={entry.id}>
+        {index > 0 ? <Divider /> : null}
+        <ListItem
+          title={title}
+          subtitle={subtitle}
+          onPress={() =>
+            navigation.navigate('JournalEntry', {
+              id: entry.id,
+              type: (entry.type ?? 'free') as any,
+              preview: { title: entry.title, body: entry.body, favorite: !!entry.favorite },
+            })
+          }
+          left={
+            <Animated.View
+              sharedTransitionTag={entry.id ? sharedTransitionTags.journalEntryIcon(entry.id) : undefined}
+              sharedTransitionStyle={sharedElementStyle}
+              style={[styles.entryIcon, { backgroundColor: typeConfig.color + '1F' }]}
+            >
+              <AppIcon name={typeConfig.icon} size={20} color={typeConfig.color} />
+            </Animated.View>
+          }
+          right={
+            <IconButton
+              icon={entry.favorite ? 'i-heart' : 'i-heart-outline'}
+              accessibilityLabel={entry.favorite ? 'Remove from favorites' : 'Add to favorites'}
+              variant="ghost"
+              size="sm"
+              tone={entry.favorite ? 'error' : 'subtle'}
+              onPress={() => handleToggleFavorite(entry)}
+            />
+          }
+          style={styles.entryRow}
+        />
       </View>
-      <View style={styles.templateTextContainer}>
-        <Text style={[styles.templateTitle, { color: lilacTint.text }]} numberOfLines={1}>
-          {item.label}
-        </Text>
-        <Text style={[styles.templateDesc, { color: lilacTint.muted }]} numberOfLines={2}>
-          {item.desc}
-        </Text>
-      </View>
-      </TactilePressable>
-    </StaggeredEntry>
-  );
+    );
+  };
+
+  const showEmptyState = !loading && entries.length === 0;
+  const showNoResults = !loading && entries.length > 0 && filteredEntries.length === 0;
 
   return (
-    <ScreenContainer
-      animate={false}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => loadEntries(true)} tintColor={colors.primary.default} />
-      }
-    >
-      {/* Header */}
-      <PageHeader
-        title="My Journal"
-        subtitle={`${entries.length} reflection${entries.length === 1 ? '' : 's'} recorded · Choose a template or free write`}
-        style={{ marginBottom: 2 }}
-      />
-
-      {/* Prompts & Templates Card Container — lilac pop card */}
-      <PopIn index={0}>
-      <Card variant="outlined" tone="lilac" style={styles.templatesSectionCard}>
-        <CardContent style={styles.templatesCardContent}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: lilacTint.text }]}>
-              Prompts & Templates
-            </Text>
-            <View style={[styles.cardTag, { backgroundColor: lilacTint.plate }]}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: lilacTint.accent }}>
-                Guided
-              </Text>
-            </View>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.templatesScrollView}
-            contentContainerStyle={styles.templatesScroll}
-          >
-            {journalTypes.map((item, index) => renderJournalType(item, index))}
-          </ScrollView>
-        </CardContent>
-      </Card>
-      </PopIn>
-
-      {/* Recent Reflections Feed */}
-      <PopIn index={1}>
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Recent Reflections
-          </Text>
-          <TactilePressable
-            onPress={() => {
-              navigation.navigate('JournalEntry', { type: 'free' });
-            }}
-            scaleDownTo={0.96}
-            hapticStyle="light"
-            accessibilityRole="button"
-            accessibilityLabel="New journal entry"
-            style={styles.newActionLink}
-          >
-            <Ionicons name="add" size={16} color={colors.primary.default} />
-            <Text style={[styles.newActionText, { color: colors.primary.default }]}>New entry</Text>
-          </TactilePressable>
-        </View>
+    <ScreenContainer scroll={false} bottomPadding={0} style={styles.container}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: contentBottom }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={() => loadEntries(true)}
+            tintColor={colors.primary.default}
+          />
+        }
+      >
+        <PageHeader
+          title="My Journal"
+          subtitle={`${entries.length} reflection${entries.length === 1 ? '' : 's'} recorded`}
+          right={
+            <IconButton
+              icon="i-sparkles"
+              accessibilityLabel="Open journal templates"
+              variant="subtle"
+              tone="primary"
+              onPress={() => setTemplatesVisible(true)}
+            />
+          }
+        />
 
         {loading && entries.length === 0 ? (
           <ListSkeleton rows={4} showHeader={false} />
-        ) : entries.length > 0 ? (
-          <View style={styles.entriesList}>
-            {entries.map((entry, idx) => {
-              const rawDate = entry.createdAt ? new Date(entry.createdAt) : new Date();
-              const formattedDate = format(rawDate, 'MMM d, yyyy');
-              const typeConfig = journalTypes.find((t) => t.id === entry.type) || journalTypes[0];
-              const attachments = (entry as any)?.attachments || [];
-              const photoCount = attachments.filter((a: any) => a.type === 'image').length;
-              const audioCount = attachments.filter((a: any) => a.type === 'audio').length;
-              const videoCount = attachments.filter((a: any) => a.type === 'video').length;
-              const docCount = attachments.filter((a: any) => a.type === 'document').length;
-              const firstImage = attachments.find((a: any) => a.type === 'image');
-
-              return (
-                <StaggeredEntry key={entry.id} index={Math.min(idx, 8)}>
-                <TactilePressable
-                  onPress={() => {
-                    navigation.navigate('JournalEntry', {
-                      id: entry.id,
-                      type: (entry.type ?? 'free') as any,
-                      preview: {
-                        title: entry.title,
-                        body: entry.body,
-                        favorite: !!entry.favorite,
-                      },
-                    });
-                  }}
-                  scaleDownTo={0.985}
-                  hapticStyle="light"
-                  accessibilityRole="button"
-                  accessibilityLabel={`${typeConfig.label} entry from ${formattedDate}`}
-                  style={[
-                    styles.entryCard,
-                    {
-                      backgroundColor: isDark ? '#1E293B' : colors.background.secondary,
-                      borderColor: isDark ? '#354760' : colors.border.strong,
-                    },
-                  ]}
-                >
-                  <View style={styles.entryRow}>
-                    <Animated.View
-                      sharedTransitionTag={entry.id ? sharedTransitionTags.journalEntryIcon(entry.id) : undefined}
-                      sharedTransitionStyle={sharedElementStyle}
-                      style={[
-                        styles.entryIconOrb,
-                        {
-                          backgroundColor: typeConfig.color + '1A',
-                          borderColor: typeConfig.color + '38',
-                        },
-                      ]}
-                    >
-                      <Ionicons name={typeConfig.icon} size={20} color={typeConfig.color} />
-                    </Animated.View>
-
-                    <View style={styles.entryBody}>
-                      <View style={styles.entryMeta}>
-                        <Text style={[styles.entryDate, { color: colors.text.tertiary }]}>
-                          {formattedDate}
-                        </Text>
-                        <View style={[styles.typeBadge, { backgroundColor: typeConfig.color + '18' }]}>
-                          <Text style={[styles.typeBadgeText, { color: typeConfig.color }]}>
-                            {typeConfig.label}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {entry.title ? (
-                        <Text style={[styles.entryTitle, { color: colors.text.primary }]} numberOfLines={1}>
-                          {entry.title}
-                        </Text>
-                      ) : null}
-
-                      <Text
-                        style={[styles.entrySnippet, { color: colors.text.secondary }]}
-                        numberOfLines={2}
-                      >
-                        {entry.body || (attachments.length > 0 ? 'Media reflection' : 'No written reflection text')}
-                      </Text>
-
-                      {attachments.length > 0 ? (
-                        <View style={styles.entryAttachmentRow}>
-                          {photoCount > 0 ? (
-                            <View style={[styles.entryAttachmentPill, { backgroundColor: colors.primary.subtle }]}>
-                              <Ionicons name="images-outline" size={11} color={colors.primary.default} />
-                              <Text style={[styles.entryAttachmentText, { color: colors.primary.default }]}>
-                                {photoCount}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {audioCount > 0 ? (
-                            <View style={[styles.entryAttachmentPill, { backgroundColor: 'rgba(235, 105, 127, 0.12)' }]}>
-                              <Ionicons name="mic-outline" size={11} color="#EB697F" />
-                              <Text style={[styles.entryAttachmentText, { color: '#EB697F' }]}>
-                                {audioCount}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {videoCount > 0 ? (
-                            <View style={[styles.entryAttachmentPill, { backgroundColor: 'rgba(168, 85, 247, 0.12)' }]}>
-                              <Ionicons name="videocam-outline" size={11} color="#A855F7" />
-                              <Text style={[styles.entryAttachmentText, { color: '#A855F7' }]}>
-                                {videoCount}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {docCount > 0 ? (
-                            <View style={[styles.entryAttachmentPill, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
-                              <Ionicons name="document-text-outline" size={11} color="#3B82F6" />
-                              <Text style={[styles.entryAttachmentText, { color: '#3B82F6' }]}>
-                                {docCount}
-                              </Text>
-                            </View>
-                          ) : null}
-                        </View>
-                      ) : null}
-                    </View>
-
-                    {firstImage ? (
-                      <Image
-                        source={{ uri: firstImage.uri }}
-                        style={styles.entryThumbnail}
-                        resizeMode="cover"
-                      />
-                    ) : null}
-
-                    <TactilePressable
-                      onPress={() => {
-                        handleToggleFavorite(entry);
-                      }}
-                      scaleDownTo={0.8}
-                      hapticStyle="selection"
-                      style={styles.favoriteButton}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel={entry.favorite ? 'Remove from favorites' : 'Add to favorites'}
-                    >
-                      <Ionicons
-                        name={entry.favorite ? 'heart' : 'heart-outline'}
-                        size={20}
-                        color={entry.favorite ? '#DB3A60' : colors.text.tertiary}
-                      />
-                    </TactilePressable>
-                  </View>
-                </TactilePressable>
-                </StaggeredEntry>
-              );
-            })}
-          </View>
+        ) : showEmptyState ? (
+          <EmptyState
+            iconName="i-create-outline"
+            iconTone="sage"
+            title="A fresh blank canvas"
+            description="Write down your thoughts, a moment of presence, or release whatever weighs on you."
+            action={{ label: 'Start first entry', onPress: () => openEntry('free') }}
+            style={styles.stateBlock}
+          />
+        ) : showNoResults ? (
+          <EmptyState
+            iconName="i-search"
+            iconTone="lilac"
+            title="No reflections found"
+            description={`No entries match “${searchQuery.trim()}”. Try different keywords.`}
+            action={{ label: 'Clear search', onPress: () => setSearchQuery(''), variant: 'secondary' }}
+            style={styles.stateBlock}
+          />
         ) : (
-          <Card variant="outlined" style={styles.emptyCard}>
-            <CardContent style={styles.emptyContent}>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.journalReflectionHero}
-                sharedTransitionStyle={sharedHeroStyle}
-              >
-                <JournalReflectionIllustration width={150} height={125} style={{ marginBottom: 4 }} />
-              </Animated.View>
-              <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
-                A fresh blank canvas
-              </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.text.tertiary }]}>
-                Write down your thoughts, a moment of presence, or release whatever weighs on you.
-              </Text>
-              <PrimaryButton
-                title="Start First Entry"
-                variant="primary"
-                size="md"
-                onPress={() => navigation.navigate('JournalEntry', { type: 'free' })}
-                style={styles.emptyButton}
-                fullWidth={false}
-              />
-            </CardContent>
-          </Card>
+          <View
+            style={[
+              styles.list,
+              { backgroundColor: colors.surface.default, borderColor: colors.border.default },
+            ]}
+          >
+            {filteredEntries.map(renderEntry)}
+          </View>
         )}
+      </ScrollView>
+
+      <View style={[styles.dock, { bottom: dockOffset }]} pointerEvents="box-none">
+        <View
+          style={[
+            styles.searchShell,
+            { backgroundColor: colors.surface.default },
+          ]}
+        >
+          <SearchInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search reflections"
+            accessibilityLabel="Search journal entries"
+            style={styles.searchField}
+          />
+        </View>
+        <IconButton
+          icon="i-add"
+          accessibilityLabel="New journal entry"
+          variant="solid"
+          size="lg"
+          onPress={() => openEntry('free')}
+        />
       </View>
-      </PopIn>
+
+      <Modal
+        visible={templatesVisible}
+        onClose={() => setTemplatesVisible(false)}
+        position="bottom"
+        scrollable
+        title="Start a reflection"
+      >
+        <View style={styles.templateList}>
+          {journalTypes.map((item) => (
+            <ListItem
+              key={item.id}
+              title={item.label}
+              subtitle={item.desc}
+              chevron
+              onPress={() => openEntry(item.id)}
+              left={
+                <View style={[styles.templateIcon, { backgroundColor: item.color + '1F' }]}>
+                  <AppIcon name={item.icon} size={20} color={item.color} />
+                </View>
+              }
+              style={styles.templateRow}
+            />
+          ))}
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -366,218 +273,61 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scroll: {
+    flex: 1,
+  },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 110,
-    gap: 22,
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
+    gap: spacing[6],
   },
-  section: {
-    gap: 12,
+  stateBlock: {
+    marginTop: spacing[6],
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    fontFamily: fontFamilies.calming.bold,
-    fontSize: 20,
-    letterSpacing: 0.1,
-  },
-  newActionLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  newActionText: {
-    fontFamily: fontFamilies.sans.semiBold,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  templatesSectionCard: {
-    borderRadius: 24,
-    borderWidth: 1.2,
-  },
-  templatesCardContent: {
-    padding: 16,
-    gap: 12,
-  },
-  cardTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 9999,
-  },
-  templatesScrollView: {
-    marginHorizontal: -16,
-  },
-  templatesScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 2,
-    gap: 10,
-  },
-  templateButton: {
-    width: 124,
-    minHeight: 140,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    borderRadius: 18,
-    borderWidth: 1.2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  iconOrbContainer: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 6,
-  },
-  templateIconOrb: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  list: {
+    borderRadius: shape.card,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
-  templateTextContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    gap: 3,
-  },
-  templateTitle: {
-    fontFamily: fontFamilies.sans.bold,
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 17,
-    textAlign: 'center',
-    letterSpacing: -0.2,
-  },
-  templateDesc: {
-    fontFamily: fontFamilies.sans.regular,
-    fontSize: 11,
-    lineHeight: 14,
-    textAlign: 'center',
-    paddingHorizontal: 2,
-  },
-  entriesList: {
-    gap: 12,
-  },
-  entryCard: {
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1.2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    paddingHorizontal: spacing[2],
   },
   entryRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
+    paddingHorizontal: spacing[2],
   },
-  entryIconOrb: {
+  entryIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
   },
-  entryBody: {
+  dock: {
+    position: 'absolute',
+    left: spacing[5],
+    right: spacing[5],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+  },
+  searchShell: {
     flex: 1,
-    gap: 4,
+    height: DOCK_HEIGHT,
+    borderRadius: shape.searchInput,
+    justifyContent: 'center',
   },
-  entryMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  searchField: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  entryDate: {
-    fontFamily: fontFamilies.sans.medium,
-    fontSize: 12,
-    fontWeight: '500',
+  templateList: {
+    gap: spacing[1],
   },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 9999,
+  templateRow: {
+    paddingHorizontal: spacing[2],
   },
-  typeBadgeText: {
-    fontFamily: fontFamilies.sans.bold,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  entryTitle: {
-    fontFamily: fontFamilies.serif.semiBold,
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  entrySnippet: {
-    fontFamily: fontFamilies.sans.regular,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 2,
-  },
-  entryAttachmentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-    flexWrap: 'wrap',
-  },
-  entryAttachmentPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  entryAttachmentText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  entryThumbnail: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    marginLeft: 6,
-    alignSelf: 'center',
-  },
-  favoriteButton: {
-    padding: 4,
-  },
-  emptyCard: {
-    borderRadius: 24,
-  },
-  emptyContent: {
+  templateIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 28,
-    paddingHorizontal: 16,
-  },
-  emptyTitle: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 12,
-  },
-  emptySubtitle: {
-    fontFamily: fontFamilies.sans.regular,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
-    marginTop: 6,
-    maxWidth: 260,
-  },
-  emptyButton: {
-    marginTop: 18,
   },
 });

@@ -1,11 +1,20 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { AppIcon } from '../../components/AppIcon';
+import {
+  MeditationHeroIllustration,
+  BreathworkIllustration,
+  SensoryGroundingIllustration,
+  HabitPlantingIllustration,
+  MoodAuraIllustration,
+  PrivacySanctuaryIllustration,
+} from '../../components/illustrations';
 import type { AppIconName } from '../../components/AppIcon';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { habitRepository } from '../../database/repositories/habitRepository';
@@ -159,14 +168,21 @@ export function OnboardingScreen() {
 
   const progress = (step + 1) / STEPS.length;
 
+  const ONBOARD_ART = [
+    <MeditationHeroIllustration key="a0" width={150} height={120} />,
+    <BreathworkIllustration key="a1" width={150} height={120} />,
+    <SensoryGroundingIllustration key="a2" width={150} height={120} />,
+    <HabitPlantingIllustration key="a3" width={150} height={120} />,
+    <MoodAuraIllustration key="a4" width={150} height={120} />,
+    <PrivacySanctuaryIllustration key="a5" width={150} height={120} />,
+  ];
+
   const renderStep = () => {
     switch (step) {
       case 0:
         return (
           <View style={styles.welcomeStep}>
-            <View style={[styles.welcomeIconWrap, { backgroundColor: colors.primary.default + '18' }]}>
-              <AppIcon name="i-leaf" size={48} color={colors.primary.default} />
-            </View>
+            {ONBOARD_ART[0]}
             <Text style={[styles.welcomeTitle, { color: colors.text.primary }]}>Welcome to Calmly</Text>
             <Text style={[styles.welcomeText, { color: colors.text.secondary }]}>
               An offline-first, private sanctuary crafted for genuine presence, emotional balance, and mindful living.
@@ -227,6 +243,7 @@ export function OnboardingScreen() {
       case 1:
         return (
           <View style={styles.selectionStep}>
+            <View style={{ alignItems: 'center' }}>{ONBOARD_ART[1]}</View>
             <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>What brings you here?</Text>
             <Text style={[styles.stepHint, { color: colors.text.secondary }]}>Select all that resonate with you</Text>
             <View style={styles.goalGrid}>
@@ -263,6 +280,7 @@ export function OnboardingScreen() {
       case 2:
         return (
           <View style={styles.selectionStep}>
+            <View style={{ alignItems: 'center' }}>{ONBOARD_ART[2]}</View>
             <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>When do you prefer to check in?</Text>
             <Text style={[styles.stepHint, { color: colors.text.secondary }]}>We tailor mindful invitations to your preferred rhythm</Text>
             <View style={styles.timeOptions}>
@@ -305,6 +323,7 @@ export function OnboardingScreen() {
       case 3:
         return (
           <View style={styles.selectionStep}>
+            <View style={{ alignItems: 'center' }}>{ONBOARD_ART[3]}</View>
             <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>Start with tiny habits</Text>
             <Text style={[styles.stepHint, { color: colors.text.secondary }]}>Pick 1-3 tiny rituals to start gentle momentum</Text>
             <View style={styles.habitGrid}>
@@ -349,6 +368,7 @@ export function OnboardingScreen() {
       case 4:
         return (
           <View style={styles.inputStep}>
+            <View style={{ alignItems: 'center' }}>{ONBOARD_ART[4]}</View>
             <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>What should we call you?</Text>
             <Text style={[styles.stepHint, { color: colors.text.secondary }]}>Used for a warm, personalized greeting</Text>
             <TextInput
@@ -369,9 +389,7 @@ export function OnboardingScreen() {
       case 5:
         return (
           <View style={styles.privacyStep}>
-            <View style={[styles.welcomeIconWrap, { backgroundColor: colors.primary.default + '18' }]}>
-              <Ionicons name="shield-checkmark" size={48} color={colors.primary.default} />
-            </View>
+            <View style={{ alignItems: 'center', marginBottom: 4 }}>{ONBOARD_ART[5]}</View>
             <Text style={[styles.welcomeTitle, { color: colors.text.primary }]}>Privacy First & Always</Text>
             <View style={styles.privacyPoints}>
               {[

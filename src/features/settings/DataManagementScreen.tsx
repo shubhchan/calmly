@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, ActivityIndicator, Share } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Share } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/Card';

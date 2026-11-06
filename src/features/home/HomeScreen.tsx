@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, InteractionManager } from 'react-native';
+import { View, Text } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, AppText, PageHeader, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration, TactilePressable, StaggeredEntry, CelebratoryCheckbox } from '../../components';
+import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, AppText, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration, TactilePressable, StaggeredEntry, CelebratoryCheckbox, ListItem, Divider } from '../../components';
 import type { AppIconName } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
@@ -21,6 +21,9 @@ import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
 import { ProfileAvatarView } from '../../components/profile/ProfileAvatarView';
+
+/** Number of newest journal entries shown on the home screen. */
+const RECENT_JOURNAL_LIMIT = 4;
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -53,7 +56,7 @@ export function HomeScreen() {
       ]);
       setHabits(allHabits ?? []);
       setTodayCompletions(completions ?? {});
-      setRecentJournals((journals ?? []).slice(0, 3));
+      setRecentJournals((journals ?? []).slice(0, RECENT_JOURNAL_LIMIT));
       setLatestMood(mood ?? null);
       setProfileSettings(settings ?? null);
       setWelcomeVisible(!!settings && settings.welcomeCardDismissed !== true);
@@ -75,10 +78,8 @@ export function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const task = InteractionManager.runAfterInteractions(() => {
-        loadHomeData();
-      });
-      return () => task.cancel();
+      const timer = setTimeout(loadHomeData, 0);
+      return () => clearTimeout(timer);
     }, [loadHomeData])
   );
 
@@ -159,35 +160,70 @@ export function HomeScreen() {
   const calmTint = resolveTint(!!isDark, 'coral');
   const journalTint = resolveTint(!!isDark, 'sky');
   const mintTint = resolveTint(!!isDark, 'mint');
+  const overviewTiles = [
+    { label: 'Meditation', icon: 'l-breathe' as const, tint: mintTint, onPress: handleCalmDown },
+    { label: 'Journal', icon: 'l-book' as const, tint: journalTint, onPress: () => navigation?.navigate?.('Journal') },
+    { label: 'Mood', icon: 'l-heart' as const, tint: calmTint, onPress: handleMoodCheckIn },
+    { label: 'Insights', icon: 'l-chart' as const, tint: heroTint, onPress: () => navigation?.navigate?.('Insights') },
+  ];
 
   return (
     <ScreenContainer
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}
       backgroundColor={colors.background.default}
     >
-      {/* Header Greeting */}
-      <PopIn index={0} style={{ marginBottom: 22, marginTop: 4 }}>
-        <PageHeader
-          title={greeting}
-          subtitle={dateLabel}
-          right={
-            <TactilePressable
-              onPress={() => navigation?.navigate?.('Profile')}
-              scaleDownTo={0.92}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Open your profile"
-              style={{ borderRadius: 23 }}
-            >
-              <ProfileAvatarView
-                avatar={profileSettings?.userAvatar}
-                googlePhotoUrl={profileSettings?.googlePhotoUrl}
-                size={46}
-                showGuestBadge={!profileSettings?.googlePhotoUrl}
-              />
-            </TactilePressable>
-          }
-        />
+      {/* Dark greeting hero — avatar, greeting, date, daily completion */}
+      <PopIn index={0}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+            backgroundColor: isDark ? '#1E2A3C' : '#293D2D',
+            borderRadius: 22,
+            paddingHorizontal: 18,
+            paddingVertical: 16,
+            marginBottom: 20,
+            marginTop: 4,
+          }}
+        >
+          <TactilePressable
+            onPress={() => navigation?.navigate?.('Profile')}
+            scaleDownTo={0.92}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Open your profile"
+            style={{ borderRadius: 26 }}
+          >
+            <ProfileAvatarView
+              avatar={profileSettings?.userAvatar}
+              googlePhotoUrl={profileSettings?.googlePhotoUrl}
+              size={52}
+              showGuestBadge={!profileSettings?.googlePhotoUrl}
+            />
+          </TactilePressable>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+              {greeting}{profileSettings?.userName ? `, ${profileSettings.userName}` : ''}
+            </Text>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>{dateLabel}</Text>
+          </View>
+          <View style={{ alignItems: 'center', gap: 4 }}>
+            <ProgressRing
+              progress={dueHabits.length ? Object.values(todayCompletions ?? {}).filter(Boolean).length / Math.max(dueHabits.length, 1) : 0}
+              size={44}
+              strokeWidth={4}
+              showPercentage={false}
+              trackColor="rgba(255,255,255,0.3)"
+              progressColor="#FFFFFF"
+            />
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#FFFFFF' }}>
+              {dueHabits.length
+                ? `${Math.round((Object.values(todayCompletions ?? {}).filter(Boolean).length / Math.max(dueHabits.length, 1)) * 100)}%`
+                : '0%'}
+            </Text>
+          </View>
+        </View>
       </PopIn>
 
       {/* First-run welcome card — shown once per install until dismissed */}
@@ -265,87 +301,10 @@ export function HomeScreen() {
       </Card>
       </PopIn>
 
-      {/* Quick Mindful Actions — colorful popping tiles */}
+      {/* Zen Playground shortcut */}
       <View style={{ marginBottom: 22 }}>
-        <PopIn index={2}>
-          <AppText variant="h3" style={{ marginBottom: 12 }}>
-            Quick Practices
-          </AppText>
-        </PopIn>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <PopIn index={3} style={{ flex: 1 }}>
-            <TactilePressable
-              onPress={handleCalmDown}
-              scaleDownTo={0.97}
-              hapticStyle="light"
-              style={{
-                padding: 16,
-                borderRadius: 20,
-                backgroundColor: calmTint.bg,
-                borderWidth: 1,
-                borderColor: calmTint.border,
-              }}
-            >
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 14,
-                  backgroundColor: calmTint.plate,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 10,
-                }}
-              >
-                <AppIcon name="l-breathe" size={22} />
-              </View>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: calmTint.text }}>
-                Calm Space
-              </Text>
-              <Text style={{ fontSize: 12, color: calmTint.muted, marginTop: 2, lineHeight: 16 }}>
-                Breathing & grounding
-              </Text>
-            </TactilePressable>
-          </PopIn>
-
-          <PopIn index={4} style={{ flex: 1 }}>
-            <TactilePressable
-              onPress={() => navigation?.navigate?.('Journal')}
-              scaleDownTo={0.97}
-              hapticStyle="light"
-              style={{
-                padding: 16,
-                borderRadius: 20,
-                backgroundColor: journalTint.bg,
-                borderWidth: 1,
-                borderColor: journalTint.border,
-              }}
-            >
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 14,
-                  backgroundColor: journalTint.plate,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 10,
-                }}
-              >
-                <AppIcon name="l-book" size={22} />
-              </View>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: journalTint.text }}>
-                Daily Journal
-              </Text>
-              <Text style={{ fontSize: 12, color: journalTint.muted, marginTop: 2, lineHeight: 16 }}>
-                Reflect & write
-              </Text>
-            </TactilePressable>
-          </PopIn>
-        </View>
-
         {/* Full-width Zen Games Card */}
-        <PopIn index={5} style={{ marginTop: 12 }}>
+        <PopIn index={2}>
           <TactilePressable
             onPress={() => navigation?.navigate?.('ZenPlayground')}
             scaleDownTo={0.98}
@@ -556,38 +515,52 @@ export function HomeScreen() {
               colors={colors}
             />
           ) : (
-            <View style={{ gap: 10 }}>
-              {(recentJournals ?? []).slice(0, 2).map((entry) => (
-                <TactilePressable
-                  key={entry.id}
-                  onPress={() => navigation?.navigate?.('JournalEntry', { id: entry.id, type: entry.type })}
-                  scaleDownTo={0.98}
-                  style={{
-                    padding: 14,
-                    backgroundColor: colors.surface.default,
-                    borderRadius: 16,
-                    borderWidth: 1.2,
-                    borderColor: colors.border.default,
-                    gap: 6,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text.primary, flex: 1, marginRight: 8 }} numberOfLines={1}>
-                      {entry.title || (entry.type ? String(entry.type).replace('_', ' ') : 'Reflection')}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: colors.text.tertiary }}>
-                      {entry.createdAt ? format(new Date(entry.createdAt), 'MMM d') : ''}
-                    </Text>
+            <View>
+              {(recentJournals ?? []).slice(0, RECENT_JOURNAL_LIMIT).map((entry, index) => {
+                const title = entry.title || (entry.type ? String(entry.type).replace(/_/g, ' ') : 'Reflection');
+
+                return (
+                  <View key={entry.id}>
+                    {index > 0 ? <Divider /> : null}
+                    <ListItem
+                      title={title}
+                      subtitle={entry.body || undefined}
+                      leftIconName="l-book"
+                      valueText={entry.createdAt ? format(new Date(entry.createdAt), 'MMM d') : undefined}
+                      chevron
+                      density="compact"
+                      onPress={() => navigation?.navigate?.('JournalEntry', { id: entry.id, type: entry.type })}
+                    />
                   </View>
-                  <Text style={{ fontSize: 13, color: colors.text.secondary, lineHeight: 18 }} numberOfLines={2}>
-                    {entry.body}
-                  </Text>
-                </TactilePressable>
-              ))}
+                );
+              })}
             </View>
           )}
         </CardContent>
       </Card>
+
+      {/* Overview grid */}
+      <View style={{ marginBottom: 20, marginTop: 8 }}>
+        <AppText variant="h3" style={{ marginBottom: 12 }}>Overview</AppText>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          {overviewTiles.map((tile) => (
+            <TactilePressable
+              key={tile.label}
+              onPress={tile.onPress}
+              scaleDownTo={0.97}
+              hapticStyle="light"
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${tile.label}`}
+              style={{ flexBasis: '47%', flexGrow: 1, padding: 16, borderRadius: 20, backgroundColor: tile.tint.bg, borderWidth: 1, borderColor: tile.tint.border }}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: tile.tint.plate, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                <AppIcon name={tile.icon} size={20} />
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: tile.tint.text }}>{tile.label}</Text>
+            </TactilePressable>
+          ))}
+        </View>
+      </View>
 
       {/* Weekly Insights */}
       <PopIn index={5}>

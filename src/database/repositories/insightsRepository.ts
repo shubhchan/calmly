@@ -44,13 +44,13 @@ export const insightsRepository = {
     return this.getStatsForRange(Date.now() - 7 * 86400000, Date.now());
   },
 
-  async getHabitStats(days = 7): Promise<HabitStats[]> {
-    const now = Date.now();
-    const weekAgo = now - days * 86400000;
+  async getHabitStats(days = 7, range?: { start: number; end: number }): Promise<HabitStats[]> {
+    const end = range?.end ?? Date.now();
+    const start = range?.start ?? end - days * 86400000;
 
     const [habits, completions] = await Promise.all([
       habitCollection.query(Q.where('archived', false)).fetch(),
-      completionCollection.query(Q.where('created_at', Q.between(weekAgo, now)), Q.where('completed', true)).fetch(),
+      completionCollection.query(Q.where('created_at', Q.between(start, end)), Q.where('completed', true)).fetch(),
     ]);
 
     const completionByHabit: Record<string, number> = {};
@@ -90,8 +90,10 @@ export const insightsRepository = {
     return data;
   },
 
-  async generateInsights(days = 7): Promise<Insight[]> {
-    const stats = await this.getStatsForRange(Date.now() - days * 86400000, Date.now());
+  async generateInsights(days = 7, range?: { start: number; end: number }): Promise<Insight[]> {
+    const end = range?.end ?? Date.now();
+    const start = range?.start ?? end - days * 86400000;
+    const stats = await this.getStatsForRange(start, end);
     const insights: Insight[] = [];
 
     if ((stats.moodCount ?? 0) > 0 && stats.avgStress < 4 && stats.calmSessions > 3) {
@@ -113,7 +115,7 @@ export const insightsRepository = {
     if (stats.habitCompletionRate > 60) {
       insights.push({
         id: '3',
-        text: `You completed ${stats.habitCompletionRate}% of habits this week. Consistency builds momentum.`,
+        text: `You completed ${stats.habitCompletionRate}% of habits this period. Consistency builds momentum.`,
         type: 'positive',
       });
     }
@@ -121,7 +123,7 @@ export const insightsRepository = {
     if (stats.breathingMinutes > 20) {
       insights.push({
         id: '4',
-        text: `${stats.breathingMinutes} minutes of breathing this week. Your nervous system thanks you.`,
+        text: `${stats.breathingMinutes} minutes of breathing this period. Your nervous system thanks you.`,
         type: 'positive',
       });
     }

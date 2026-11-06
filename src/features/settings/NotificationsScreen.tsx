@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, Switch, Modal, Pressable, Linking } from 'react-native';
+import { View, Text, StyleSheet, Switch, Modal, Pressable, Linking } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/Card';
 import { ScreenHeader, TactilePressable } from '../../components';

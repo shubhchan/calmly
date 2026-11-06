@@ -10,3 +10,8 @@ export { GratitudeBloomIllustration } from './GratitudeBloomIllustration';
 export { MoodAuraIllustration } from './MoodAuraIllustration';
 export { SelfCompassionIllustration } from './SelfCompassionIllustration';
 export { NatureSoundscapeIllustration } from './NatureSoundscapeIllustration';
+export { PrivacySanctuaryIllustration } from './PrivacySanctuaryIllustration';
+export { AffirmationsRadianceIllustration } from './AffirmationsRadianceIllustration';
+export { ThoughtReframingIllustration } from './ThoughtReframingIllustration';
+export { SphereOfControlIllustration } from './SphereOfControlIllustration';
+export { RestSanctuaryIllustration } from './RestSanctuaryIllustration';

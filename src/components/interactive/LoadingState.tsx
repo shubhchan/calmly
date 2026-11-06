@@ -1,8 +1,6 @@
 import React, { useEffect } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
-  FadeIn,
-  FadeOut,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -42,9 +40,7 @@ export function BrandedLoader({ label, compact = false }: { label?: string; comp
   }));
 
   return (
-    <Animated.View
-      entering={FadeIn.duration(motion.duration.fast)}
-      exiting={reducedMotion ? undefined : FadeOut.duration(motion.duration.normal)}
+    <View
       style={[
         styles.brandedLoader,
         compact && { paddingVertical: 12, paddingHorizontal: 20, flexDirection: 'row', gap: 10 },
@@ -58,7 +54,6 @@ export function BrandedLoader({ label, compact = false }: { label?: string; comp
       </Animated.View>
       {label ? (
         <Animated.Text
-          entering={FadeIn.delay(120).duration(motion.duration.normal)}
           style={[
             styles.brandedLabel,
             compact && { marginTop: 0, fontSize: 13 },
@@ -68,28 +63,24 @@ export function BrandedLoader({ label, compact = false }: { label?: string; comp
           {label}
         </Animated.Text>
       ) : null}
-    </Animated.View>
+    </View>
   );
 }
 
 /**
- * Shared frame for every skeleton preset. Fades in on mount and dissolves
- * when data resolves, so placeholder -> content is always a soft crossfade
- * rather than a hard blink.
+ * Shared frame for every skeleton preset. Renders statically: the route
+ * transition already animates the screen, and the shimmer signals activity.
  */
 function LoadingShell({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  const reducedMotion = useAppReducedMotion();
   return (
-    <Animated.View
-      entering={FadeIn.duration(motion.duration.normal)}
-      exiting={reducedMotion ? undefined : FadeOut.duration(motion.duration.normal)}
+    <View
       accessible={false}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={[styles.shell, style]}
     >
       {children}
-    </Animated.View>
+    </View>
   );
 }
 
@@ -163,8 +154,8 @@ export function FormSkeleton({ fields = 3, style }: { fields?: number; style?: S
 }
 
 /**
- * Uniform skeleton -> content crossfade. Wrap any screen body:
- * `loading` decides which branch renders; both fade in with the same motion.
+ * Uniform skeleton -> content swap. Renders statically so content does not
+ * double-animate against the native route transition.
  */
 export function ContentReveal({
   loading,
@@ -180,11 +171,7 @@ export function ContentReveal({
   if (loading) {
     return <View style={[styles.shell, style]}>{skeleton}</View>;
   }
-  return (
-    <Animated.View entering={FadeIn.duration(motion.duration.normal)} style={style}>
-      {children}
-    </Animated.View>
-  );
+  return <View style={style}>{children}</View>;
 }
 
 const styles = StyleSheet.create({

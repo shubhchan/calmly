@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TextInput, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
 import {
   Card,

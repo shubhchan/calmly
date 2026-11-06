@@ -1,10 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Share } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { differenceInCalendarDays } from 'date-fns';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository, WeeklyStats, Insight, HabitStats } from '../../database/repositories/insightsRepository';
-import { Card, CardContent, PrimaryButton, AppIcon, PageHeader, MoodLandscapeIllustration, HabitPlantingIllustration, MoodAuraIllustration, StaggeredEntry, TactilePressable } from '../../components';
+import { AppText, Card, CardContent, ProgressBar, ListItem, Divider, ConfirmDialog, InlineAlert, AppIcon, IconButton, PageHeader, Chip, DateRangePicker, formatDateRange, MoodLandscapeIllustration, HabitPlantingIllustration, MoodAuraIllustration, TactilePressable, type DateRange } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useAppTheme } from '../../theme/ThemeContext';
@@ -14,6 +15,7 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
 import { resolveTint } from '../../theme/tints';
+import { borderWidths, radius, shape, spacing } from '../../theme/tokens';
 import { moodRepository } from '../../database/repositories/moodRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
 
@@ -33,18 +35,50 @@ export function InsightsScreen() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [moodTrend, setMoodTrend] = useState<MoodTrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'week' | 'month'>('week');
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+  const [status, setStatus] = useState<{ tone: 'success' | 'error' | 'info'; title: string; message?: string } | null>(null);
+  const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('week');
+  const [customRange, setCustomRange] = useState<DateRange | null>(null);
+  const [rangePickerVisible, setRangePickerVisible] = useState(false);
   const hasLoadedRef = useRef(false);
+
+  const resolveRange = useCallback((): DateRange => {
+    if (timeRange === 'custom' && customRange) return customRange;
+    const days = timeRange === 'today' ? 1 : timeRange === 'week' ? 7 : timeRange === 'month' ? 30 : 365;
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - days + 1);
+    return { start: start.getTime(), end: Date.now() };
+  }, [timeRange, customRange]);
+
+  const loadMoodTrend = useCallback(async (range: DateRange): Promise<MoodTrendPoint[]> => {
+    // Read the repository rather than WatermelonDB directly so fallback data
+    // (including restored entries) is reflected consistently in the chart.
+    const entries = await moodRepository.getByDateRange(range.start, range.end);
+    const byDate = new Map<string, { sumIntensity: number; sumStress: number; count: number }>();
+    for (const e of entries || []) {
+      const date = format(new Date(e.createdAt), 'yyyy-MM-dd');
+      const value = byDate.get(date) || { sumIntensity: 0, sumStress: 0, count: 0 };
+      value.sumIntensity += Number(e.intensity) || 0;
+      value.sumStress += Number(e.stress) || 0;
+      value.count += 1;
+      byDate.set(date, value);
+    }
+    return [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date: format(new Date(`${date}T12:00:00`), 'MM/dd'), intensity: v.sumIntensity / v.count, stress: v.sumStress / v.count }));
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!hasLoadedRef.current) setLoading(true);
     try {
-      const days = timeRange === 'week' ? 7 : 30;
+      const range = resolveRange();
+      const days = Math.max(1, differenceInCalendarDays(new Date(range.end), new Date(range.start)) + 1);
       const [s, h, i, m] = await Promise.all([
-        insightsRepository.getStatsForRange(Date.now() - days * 86400000, Date.now()),
-        insightsRepository.getHabitStats(days),
-        insightsRepository.generateInsights(days),
-        loadMoodTrend(),
+        insightsRepository.getStatsForRange(range.start, range.end),
+        insightsRepository.getHabitStats(days, range),
+        insightsRepository.generateInsights(days, range),
+        loadMoodTrend(range),
       ]);
       setStats(s ?? null);
       setHabitStats(Array.isArray(h) ? h : []);
@@ -60,25 +94,7 @@ export function InsightsScreen() {
       hasLoadedRef.current = true;
       setLoading(false);
     }
-  }, [timeRange]);
-
-  const loadMoodTrend = async (): Promise<MoodTrendPoint[]> => {
-    // Read the repository rather than WatermelonDB directly so fallback data
-    // (including restored entries) is reflected consistently in the chart.
-    const now = Date.now();
-    const days = timeRange === 'week' ? 7 : 30;
-    const entries = await moodRepository.getByDateRange(now - days * 86400000, now);
-    const byDate = new Map<string, { sumIntensity: number; sumStress: number; count: number }>();
-    for (const e of entries || []) {
-      const date = format(new Date(e.createdAt), 'yyyy-MM-dd');
-      const value = byDate.get(date) || { sumIntensity: 0, sumStress: 0, count: 0 };
-      value.sumIntensity += Number(e.intensity) || 0;
-      value.sumStress += Number(e.stress) || 0;
-      value.count += 1;
-      byDate.set(date, value);
-    }
-    return [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date: format(new Date(`${date}T12:00:00`), 'MM/dd'), intensity: v.sumIntensity / v.count, stress: v.sumStress / v.count }));
-  };
+  }, [resolveRange, loadMoodTrend]);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,6 +103,8 @@ export function InsightsScreen() {
   );
 
   const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
     try {
       const { database } = require('../../database');
 
@@ -120,49 +138,47 @@ export function InsightsScreen() {
         title: 'Calmly Data Export',
         message: JSON.stringify(exportData, null, 2),
       });
+      setStatus({ tone: 'success', title: 'Export ready', message: 'Your records were prepared to share.' });
     } catch (error) {
       console.error('Export failed:', error);
-      Alert.alert('Export Failed', 'Could not export data. Please try again.');
+      setStatus({ tone: 'error', title: 'Export failed', message: 'Could not export data. Please try again.' });
+    } finally {
+      setExporting(false);
     }
   };
 
   const handleDeleteAll = () => {
     hapticFeedback.warning();
-    Alert.alert(
-      'Delete All Data?',
-      'This will permanently delete all your mood entries, journals, habits, gratitudes, and calm sessions. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Everything',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { database } = require('../../database');
-              await database.write(async () => {
-                const collections = [
-                  'mood_entries', 'journal_entries', 'habits', 'habit_completions',
-                  'gratitude_entries', 'positive_moments', 'calm_sessions', 'breathing_sessions',
-                  'meditation_sessions', 'sleep_entries', 'reflections', 'affirmations',
-                  'favorites', 'tags', 'routines', 'routine_items', 'goals', 'user_settings',
-                ];
-                await Promise.all(
-                  (collections ?? []).map(name => database.get(name).query().fetch().then((items: any[]) =>
-                    Promise.all((items ?? []).map((item: any) => item?.destroyPermanently?.()))
-                  ))
-                );
-              });
-              await Promise.all([moodRepository.clearFallback(), journalRepository.clearFallback()]);
-              Alert.alert('Done', 'All local data has been deleted. Drive backups must be deleted separately.');
-              loadData();
-            } catch (error) {
-              console.error('Delete failed:', error);
-              Alert.alert('Error', 'Failed to delete data.');
-            }
-          },
-        },
-      ]
-    );
+    setConfirmDeleteVisible(true);
+  };
+
+  const deleteAllData = async () => {
+    setDeleting(true);
+    try {
+      const { database } = require('../../database');
+      await database.write(async () => {
+        const collections = [
+          'mood_entries', 'journal_entries', 'habits', 'habit_completions',
+          'gratitude_entries', 'positive_moments', 'calm_sessions', 'breathing_sessions',
+          'meditation_sessions', 'sleep_entries', 'reflections', 'affirmations',
+          'favorites', 'tags', 'routines', 'routine_items', 'goals', 'user_settings',
+        ];
+        await Promise.all(
+          (collections ?? []).map(name => database.get(name).query().fetch().then((items: any[]) =>
+            Promise.all((items ?? []).map((item: any) => item?.destroyPermanently?.()))
+          ))
+        );
+      });
+      await Promise.all([moodRepository.clearFallback(), journalRepository.clearFallback()]);
+      setStatus({ tone: 'success', title: 'All records deleted', message: 'Drive backups must be deleted separately.' });
+      loadData();
+    } catch (error) {
+      console.error('Delete failed:', error);
+      setStatus({ tone: 'error', title: 'Delete failed', message: 'Failed to delete data.' });
+    } finally {
+      setConfirmDeleteVisible(false);
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -188,73 +204,52 @@ export function InsightsScreen() {
       <PageHeader
         title="Insights"
         subtitle="Understand your personal emotional rhythms and consistency"
-        right={
-          <View style={[styles.headerBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
-            <AppIcon name="l-chart" size={18} />
-            <Text style={[styles.headerBadgeText, { color: colors.primary.default }]}>Mindful Data</Text>
-          </View>
-        }
         style={{ marginBottom: 2 }}
       />
 
       <TactilePressable
         onPress={() => navigation.navigate('ReflectionReport')}
         accessibilityRole="button"
-        style={{ backgroundColor: colors.primary.default + '12', borderColor: colors.primary.default + '50', borderWidth: 1, borderRadius: 18, padding: 16, flexDirection: 'row', gap: 14, alignItems: 'center' }}
+        style={[
+          styles.mapCard,
+          { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder },
+        ]}
       >
-        <Ionicons name="git-network-outline" size={27} color={colors.primary.default} />
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text.primary }}>Your reflection map</Text>
-          <Text style={{ fontSize: 12, lineHeight: 18, color: colors.text.secondary }}>Real saved moods, daily notes and weekly/monthly patterns</Text>
+        <View style={[styles.mapIcon, { backgroundColor: colors.surface.default }]}>
+          <AppIcon name="i-git-network-outline" size={22} color={colors.primary.default} />
         </View>
-        <Ionicons name="chevron-forward" color={colors.primary.default} size={18} />
+        <View style={styles.mapCopy}>
+          <Text style={[styles.mapTitle, { color: colors.text.primary }]}>Your reflection map</Text>
+          <Text style={[styles.mapBody, { color: colors.text.secondary }]}>
+            Real saved moods, daily notes and weekly, monthly or yearly patterns
+          </Text>
+        </View>
+        <AppIcon name="i-chevron-forward" size={18} color={colors.primary.default} />
       </TactilePressable>
 
-      {/* Segmented Time Range Picker */}
-      <View style={[styles.segmentedControl, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-        <TactilePressable
-          onPress={() => {
-            setTimeRange('week');
-          }}
-          scaleDownTo={0.97}
-          hapticStyle="selection"
-          style={[
-            styles.segmentButton,
-            timeRange === 'week' && [styles.segmentButtonActive, { backgroundColor: colors.primary.default }],
-          ]}
-        >
-          <Text
-            style={[
-              styles.segmentText,
-              { color: colors.text.secondary },
-              timeRange === 'week' && styles.segmentTextActive,
-            ]}
-          >
-            Past 7 Days
-          </Text>
-        </TactilePressable>
-        <TactilePressable
-          onPress={() => {
-            setTimeRange('month');
-          }}
-          scaleDownTo={0.97}
-          hapticStyle="selection"
-          style={[
-            styles.segmentButton,
-            timeRange === 'month' && [styles.segmentButtonActive, { backgroundColor: colors.primary.default }],
-          ]}
-        >
-          <Text
-            style={[
-              styles.segmentText,
-              { color: colors.text.secondary },
-              timeRange === 'month' && styles.segmentTextActive,
-            ]}
-          >
-            Past 30 Days
-          </Text>
-        </TactilePressable>
+      {/* Range pill selector */}
+      <View style={styles.rangeRow}>
+        {(['today', 'week', 'month', 'year'] as const).map((value) => (
+          <Chip
+            key={value}
+            label={value === 'today' ? 'Today' : value === 'week' ? 'Week' : value === 'month' ? 'Month' : 'Year'}
+            selected={timeRange === value}
+            onPress={() => setTimeRange(value)}
+            style={styles.rangeChip}
+          />
+        ))}
+        <IconButton
+          icon="i-calendar"
+          accessibilityLabel="Choose a custom date range"
+          variant={timeRange === 'custom' ? 'solid' : 'outline'}
+          onPress={() => setRangePickerVisible(true)}
+        />
       </View>
+      {timeRange === 'custom' && customRange ? (
+        <AppText variant="caption" tone="tertiary" style={styles.rangeCaption}>
+          {formatDateRange(customRange)}
+        </AppText>
+      ) : null}
 
       {/* 2x2 Metric Grid (Symmetrical 2-row layout) */}
       <PopIn index={0}>
@@ -266,11 +261,6 @@ export function InsightsScreen() {
               <View style={styles.metricTopRow}>
                 <View style={[styles.metricIconOrb, { backgroundColor: lilacTint.plate }]}>
                   <AppIcon name="l-heart" size={26} loop />
-                </View>
-                <View style={[styles.trendBadge, { backgroundColor: lilacTint.accent + '15' }]}>
-                  <Text style={[styles.trendBadgeText, { color: lilacTint.accent }]}>
-                    {'Recorded'}
-                  </Text>
                 </View>
               </View>
               <Text style={[styles.metricValue, { color: lilacTint.text }]}>
@@ -288,11 +278,6 @@ export function InsightsScreen() {
               <View style={styles.metricTopRow}>
                 <View style={[styles.metricIconOrb, { backgroundColor: skyTint.plate }]}>
                   <AppIcon name="l-expand" size={26} loop />
-                </View>
-                <View style={[styles.trendBadge, { backgroundColor: skyTint.plate }]}>
-                  <Text style={[styles.trendBadgeText, { color: skyTint.accent }]}>
-                    Somatic
-                  </Text>
                 </View>
               </View>
               <Text style={[styles.metricValue, { color: skyTint.text }]}>
@@ -313,11 +298,6 @@ export function InsightsScreen() {
                 <View style={[styles.metricIconOrb, { backgroundColor: creamTint.plate }]}>
                   <AppIcon name="l-book" size={26} loop />
                 </View>
-                <View style={[styles.trendBadge, { backgroundColor: creamTint.plate }]}>
-                  <Text style={[styles.trendBadgeText, { color: creamTint.accent }]}>
-                    {(stats?.journalCount ?? 0) >= 3 ? 'Active' : 'Light'}
-                  </Text>
-                </View>
               </View>
               <Text style={[styles.metricValue, { color: creamTint.text }]}>
                 {stats?.journalCount ? `${stats.journalCount} logs` : '0 logs'}
@@ -334,11 +314,6 @@ export function InsightsScreen() {
               <View style={styles.metricTopRow}>
                 <View style={[styles.metricIconOrb, { backgroundColor: coralTint.plate }]}>
                   <AppIcon name="l-star" size={26} loop />
-                </View>
-                <View style={[styles.trendBadge, { backgroundColor: coralTint.plate }]}>
-                  <Text style={[styles.trendBadgeText, { color: coralTint.accent }]}>
-                    Streak
-                  </Text>
                 </View>
               </View>
               <Text style={[styles.metricValue, { color: coralTint.text }]}>
@@ -361,7 +336,7 @@ export function InsightsScreen() {
             <View>
               <Text style={[styles.sectionTitle, { color: navyTint.text }]}>Mood & Stress Rhythm</Text>
               <Text style={[styles.sectionSubtitle, { color: navyTint.muted }]}>
-                {timeRange === 'week' ? 'Daily emotional progression' : 'Monthly overview'}
+                {timeRange === 'today' ? "Today's snapshot" : timeRange === 'week' ? 'Daily emotional progression' : timeRange === 'month' ? 'Monthly overview' : timeRange === 'year' ? 'Yearly patterns' : 'Custom date range'}
               </Text>
             </View>
             <TactilePressable
@@ -441,56 +416,44 @@ export function InsightsScreen() {
             Habit Consistency
           </Text>
           <Text style={[styles.sectionSubtitle, { color: mintTint.muted, marginBottom: 14 }]}>
-            Completion rates over the past 7 days
+            Completion rates
           </Text>
 
           {(habitStats ?? []).length === 0 ? (
             <View style={styles.emptyInlineBox}>
               <HabitPlantingIllustration width={120} height={100} style={{ marginBottom: 4 }} />
               <Text style={[styles.emptyInlineText, { color: mintTint.muted }]}>
-                No habits tracked yet this week.
+                No habits tracked in this range.
               </Text>
             </View>
           ) : (
-            <View style={styles.habitList}>
-              {(habitStats ?? []).slice(0, 5).map((h, index) => {
+            <View>
+              {(habitStats ?? []).slice(0, 5).map((h, index, habits) => {
                 const completed = h?.completedThisWeek ?? 0;
                 const total = h?.totalThisWeek ?? 0;
                 const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
                 const habitColor = h?.color || colors.primary.default;
 
                 return (
-                  <StaggeredEntry key={h?.id ?? 'ph-' + index} index={Math.min(index, 7)}>
-                  <View
-                    style={[styles.habitRowCard, { backgroundColor: mintTint.plate, borderColor: mintTint.border }]}
-                  >
-                    <View style={styles.habitRowHeader}>
-                      <View style={styles.habitTitleRow}>
-                        <View style={[styles.habitColorDot, { backgroundColor: habitColor }]} />
-                        <Text style={[styles.habitName, { color: mintTint.text }]} numberOfLines={1}>
-                          {h?.name ?? 'Habit'}
+                  <View key={h?.id ?? 'ph-' + index}>
+                    <ListItem
+                      title={h?.name ?? 'Habit'}
+                      left={<View style={[styles.habitColorDot, { backgroundColor: habitColor }]} />}
+                      right={
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: mintTint.text }}>
+                          {`${completed}/${total} · ${percentage}%`}
                         </Text>
-                      </View>
-                      <View style={[styles.habitRateBadge, { backgroundColor: habitColor + '18' }]}>
-                        <Text style={[styles.habitRateText, { color: habitColor }]}>
-                          {completed}/{total} ({percentage}%)
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={[styles.progressBarTrack, { backgroundColor: mintTint.border }]}>
-                      <View
-                        style={[
-                          styles.progressBarFill,
-                          {
-                            width: `${Math.min(percentage, 100)}%`,
-                            backgroundColor: habitColor,
-                          },
-                        ]}
-                      />
-                    </View>
+                      }
+                      density="compact"
+                    />
+                    <ProgressBar
+                      value={Math.min(percentage, 100) / 100}
+                      color={habitColor}
+                      trackColor={mintTint.border}
+                      style={{ marginBottom: 8 }}
+                    />
+                    {index < habits.length - 1 ? <Divider /> : null}
                   </View>
-                  </StaggeredEntry>
                 );
               })}
             </View>
@@ -499,9 +462,9 @@ export function InsightsScreen() {
       </Card>
       </PopIn>
 
-      {/* Mindful Reflections & Insights Card — lilac pop card */}
+      {/* Mindful Reflections — flat rows, no nested cards */}
       <PopIn index={3}>
-      <Card variant="outlined" tone="lilac" style={styles.sectionCard}>
+      <Card variant="elevated" tone="lilac" style={styles.sectionCard}>
         <CardContent style={styles.sectionCardContent}>
           <Text style={[styles.sectionTitle, { color: lilacTint.text, marginBottom: 4 }]}>
             Mindful Reflections
@@ -518,88 +481,135 @@ export function InsightsScreen() {
               </Text>
             </View>
           ) : (
-            <View style={styles.insightsList}>
-              {(insights ?? []).map((insight, index) => (
-                <StaggeredEntry key={insight?.id ?? 'ph-' + index} index={Math.min(index, 7)}>
-                <View
-                  style={[
-                    styles.insightCard,
-                    {
-                      backgroundColor: lilacTint.plate,
-                      borderColor: lilacTint.border,
-                    },
-                    insight?.type === 'positive' && {
-                      borderColor: colors.primary.default + '50',
-                      backgroundColor: colors.primary.default + '0E',
-                    },
-                    insight?.type === 'action' && {
-                      borderColor: colors.accents.peach + '50',
-                      backgroundColor: colors.accents.peach + '0E',
-                    },
-                  ]}
-                >
-                  <View style={styles.insightIconOrb}>
+            <View>
+              {(insights ?? []).map((insight, index) => {
+                const isLast = index === (insights ?? []).length - 1;
+                const iconColor =
+                  insight?.type === 'positive'
+                    ? colors.primary.default
+                    : insight?.type === 'action'
+                      ? colors.accents.peach
+                      : lilacTint.accent;
+
+                return (
+                  <View
+                    key={insight?.id ?? 'ph-' + index}
+                    style={[
+                      styles.insightRow,
+                      !isLast && {
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderBottomColor: lilacTint.border,
+                      },
+                    ]}
+                  >
                     <AppIcon
                       name={insight?.type === 'positive' ? 'l-heart' : insight?.type === 'action' ? 'l-star' : 'l-calm'}
-                      size={24}
-                      loop
+                      size={22}
+                      color={iconColor}
+                      animated={false}
                     />
+                    <Text style={[styles.insightText, { color: lilacTint.text }]}>
+                      {insight?.text ?? ''}
+                    </Text>
                   </View>
-                  <Text style={[styles.insightText, { color: lilacTint.text }]}>
-                    {insight?.text ?? ''}
-                  </Text>
-                </View>
-                </StaggeredEntry>
-              ))}
+                );
+              })}
             </View>
           )}
         </CardContent>
       </Card>
       </PopIn>
 
-      {/* Export & Actions — cream pop card */}
+      {/* Data Management — flat action rows, no nested cards */}
       <PopIn index={4}>
       <Card variant="elevated" tone="cream" style={styles.sectionCard}>
         <CardContent style={styles.sectionCardContent}>
-          <Text style={[styles.sectionTitle, { color: creamTint.text, marginBottom: 12 }]}>
+          <Text style={[styles.sectionTitle, { color: creamTint.text, marginBottom: 4 }]}>
             Data Management
           </Text>
-          <View style={styles.actionButtons}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton
-                title="Mood Calendar"
-                variant="primary"
-                size="md"
-                onPress={() => navigation.navigate('MoodCalendar')}
-                fullWidth
-                leftIcon={<Ionicons name="calendar-outline" size={18} color="#FFFFFF" />}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton
-                title="Export JSON"
-                variant="outline"
-                size="md"
-                onPress={handleExport}
-                fullWidth
-                leftIcon={<Ionicons name="download-outline" size={18} color={colors.primary.default} />}
-              />
-            </View>
+          <Text style={[styles.sectionSubtitle, { color: creamTint.muted, marginBottom: 14 }]}>
+            Review, export, or clear the records saved on this device
+          </Text>
+
+          {status ? (
+            <InlineAlert
+              tone={status.tone}
+              title={status.title}
+              message={status.message}
+              onDismiss={() => setStatus(null)}
+              style={{ marginBottom: 12 }}
+            />
+          ) : null}
+
+          <View>
+            <ListItem
+              title="Mood calendar"
+              leftIconName="i-calendar"
+              chevron
+              onPress={() => navigation.navigate('MoodCalendar')}
+            />
+            <Divider spacingToken={1} />
+            <ListItem
+              title={exporting ? 'Preparing export…' : 'Export data as JSON'}
+              leftIconName="i-download"
+              right={
+                exporting ? <ActivityIndicator size="small" color={creamTint.accent} /> : undefined
+              }
+              chevron={!exporting}
+              disabled={exporting}
+              onPress={handleExport}
+            />
+            <Divider spacingToken={1} />
+            <ListItem
+              title="Clear all app records"
+              left={
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.status.error.subtle,
+                  }}
+                >
+                  <AppIcon name="l-trash" size={20} color={colors.status.error.default} animated={false} />
+                </View>
+              }
+              chevron
+              onPress={handleDeleteAll}
+            />
           </View>
-          <TactilePressable
-            onPress={handleDeleteAll}
-            scaleDownTo={0.96}
-            hapticStyle="none"
-            style={styles.deleteLink}
-          >
-            <Ionicons name="trash-outline" size={15} color={colors.accents.rose} />
-            <Text style={[styles.deleteLinkText, { color: colors.accents.rose }]}>
-              Clear all app records
-            </Text>
-          </TactilePressable>
+
+          <Text style={[styles.disclaimer, { color: creamTint.muted }]}>
+            Trends show your own logged reflections only. They are not medical advice. For diagnosis and treatment, consult a trained professional.
+          </Text>
         </CardContent>
       </Card>
       </PopIn>
+
+      <DateRangePicker
+        visible={rangePickerVisible}
+        onClose={() => setRangePickerVisible(false)}
+        onApply={(range) => {
+          setCustomRange(range);
+          setTimeRange('custom');
+          setRangePickerVisible(false);
+        }}
+        initialRange={customRange ?? undefined}
+      />
+
+      <ConfirmDialog
+        visible={confirmDeleteVisible}
+        title="Delete all app records?"
+        message="This permanently deletes your moods, journals, habits, gratitudes, sessions and settings on this device. This cannot be undone."
+        confirmLabel="Delete everything"
+        cancelLabel="Cancel"
+        destructive
+        loading={deleting}
+        onConfirm={deleteAllData}
+        onCancel={() => setConfirmDeleteVisible(false)}
+      />
     </ScreenContainer>
   );
 }
@@ -619,50 +629,46 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
     gap: 16,
   },
-  headerBadge: {
+  mapCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    borderWidth: 1,
+    gap: spacing[3],
+    padding: spacing[4],
+    borderRadius: shape.card,
+    borderWidth: borderWidths.thin,
   },
-  headerBadgeText: {
-    fontFamily: fontFamilies.sans.bold,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 4,
-    gap: 6,
-  },
-  segmentButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
+  mapIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  segmentButtonActive: {
-    elevation: 2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+  mapCopy: {
+    flex: 1,
+    gap: spacing[1],
   },
-  segmentText: {
-    fontFamily: fontFamilies.sans.semiBold,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  segmentTextActive: {
+  mapTitle: {
     fontFamily: fontFamilies.sans.bold,
-    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '700',
+  },
+  mapBody: {
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 12.5,
+    lineHeight: 18,
+  },
+  rangeRow: {
+    flexDirection: 'row',
+    gap: spacing[2],
+  },
+  rangeChip: {
+    flex: 1,
+    paddingHorizontal: spacing[1],
+  },
+  rangeCaption: {
+    marginTop: -spacing[2],
+    textAlign: 'center',
   },
   metricRow: {
     flexDirection: 'row',
@@ -688,16 +694,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  trendBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 9999,
-  },
-  trendBadgeText: {
-    fontFamily: fontFamilies.sans.bold,
-    fontSize: 11,
-    fontWeight: '700',
   },
   metricValue: {
     fontFamily: fontFamilies.sans.bold,
@@ -840,69 +836,16 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.sans.regular,
     fontSize: 13,
   },
-  habitList: {
-    gap: 10,
-  },
-  habitRowCard: {
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 8,
-  },
-  habitRowHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  habitTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
   habitColorDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
   },
-  habitName: {
-    fontFamily: fontFamilies.sans.bold,
-    fontSize: 14,
-    fontWeight: '700',
-    flex: 1,
-  },
-  habitRateBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  habitRateText: {
-    fontFamily: fontFamilies.sans.bold,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  progressBarTrack: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  insightsList: {
-    gap: 10,
-  },
-  insightCard: {
+  insightRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  insightIconOrb: {
-    marginTop: 2,
+    paddingVertical: 13,
   },
   insightText: {
     fontFamily: fontFamilies.sans.regular,
@@ -911,21 +854,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '500',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  deleteLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+  disclaimer: {
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 11,
+    lineHeight: 16,
     marginTop: 14,
-    paddingVertical: 6,
-  },
-  deleteLinkText: {
-    fontFamily: fontFamilies.sans.semiBold,
-    fontSize: 12,
-    fontWeight: '600',
   },
 });

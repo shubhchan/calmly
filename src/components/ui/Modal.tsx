@@ -18,7 +18,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppReducedMotion } from '../../theme/motion';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { motion, motionPresets, resolveShadow, shape, spacing } from '../../theme/tokens';
+import { motion, motionPresets, shape, spacing } from '../../theme/tokens';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
 
@@ -167,7 +167,6 @@ export function Modal({
               paddingBottom: position === 'bottom' ? spacing[5] + insets.bottom : spacing[5],
               ...(position === 'bottom' ? shape.bottomSheet : { borderRadius: shape.dialog }),
             },
-            resolveShadow('xl', theme.isDark, c.text.primary),
             panelAnimatedStyle,
             panelStyle,
           ]}

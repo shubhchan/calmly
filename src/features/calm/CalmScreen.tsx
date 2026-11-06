@@ -7,35 +7,26 @@ import { useAppTheme } from '../../theme/ThemeContext';
 import {
   AppText,
   AppIcon,
-  Badge,
   Card,
   CardContent,
+  Chip,
+  Button,
   TactilePressable,
   BreathworkIllustration,
   NatureSoundscapeIllustration,
   SensoryGroundingIllustration,
   BodyScanIllustration,
   PanicAnchorIllustration,
+  AffirmationsRadianceIllustration,
+  ThoughtReframingIllustration,
+  SphereOfControlIllustration,
 } from '../../components';
 import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
 import { borderWidths, iconSizes, layout, radius, sizes, spacing } from '../../theme/tokens';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  withSequence,
-  withRepeat,
-  Easing,
-  FadeInDown,
-  FadeOutUp,
-  FadeIn,
-  FadeOut,
-  LinearTransition,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -59,47 +50,13 @@ const SOUND_ROWS: [QuickSound, QuickSound][] = [
   [SOUNDS[2], SOUNDS[3]],
 ];
 
+/** Static three-bar glyph shown while an ambient sound plays. */
 function MiniEqualizer({ color }: { color: string }) {
-  const bar1 = useSharedValue(5);
-  const bar2 = useSharedValue(12);
-  const bar3 = useSharedValue(7);
-
-  useEffect(() => {
-    bar1.value = withRepeat(
-      withSequence(
-        withTiming(13, { duration: 420, easing: Easing.inOut(Easing.quad) }),
-        withTiming(5, { duration: 420, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-    bar2.value = withRepeat(
-      withSequence(
-        withTiming(5, { duration: 360, easing: Easing.inOut(Easing.quad) }),
-        withTiming(13, { duration: 360, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-    bar3.value = withRepeat(
-      withSequence(
-        withTiming(11, { duration: 480, easing: Easing.inOut(Easing.quad) }),
-        withTiming(6, { duration: 480, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-  }, []);
-
-  const b1 = useAnimatedStyle(() => ({ height: bar1.value }));
-  const b2 = useAnimatedStyle(() => ({ height: bar2.value }));
-  const b3 = useAnimatedStyle(() => ({ height: bar3.value }));
-
   return (
     <View style={styles.equalizerRow}>
-      <Animated.View style={[styles.eqBar, { backgroundColor: color }, b1]} />
-      <Animated.View style={[styles.eqBar, { backgroundColor: color }, b2]} />
-      <Animated.View style={[styles.eqBar, { backgroundColor: color }, b3]} />
+      <View style={[styles.eqBar, { backgroundColor: color, height: 9 }]} />
+      <View style={[styles.eqBar, { backgroundColor: color, height: 13 }]} />
+      <View style={[styles.eqBar, { backgroundColor: color, height: 7 }]} />
     </View>
   );
 }
@@ -117,37 +74,6 @@ function AnimatedSoundTile({
   skyTint: any;
   onPress: () => void;
 }) {
-  const iconSpin = useSharedValue(0);
-  const orbScale = useSharedValue(1);
-
-  useEffect(() => {
-    if (isPlaying) {
-      iconSpin.value = withSequence(
-        withTiming(-14, { duration: 90, easing: Easing.out(Easing.quad) }),
-        withSpring(0, { damping: 14, stiffness: 220 })
-      );
-      orbScale.value = withRepeat(
-        withSequence(
-          withTiming(1.05, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
-          withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) })
-        ),
-        -1,
-        true
-      );
-    } else {
-      iconSpin.value = withTiming(0, { duration: 120 });
-      orbScale.value = withTiming(1, { duration: 200 });
-    }
-  }, [isPlaying]);
-
-  const orbAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: orbScale.value }],
-  }));
-
-  const iconAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${iconSpin.value}deg` }],
-  }));
-
   return (
     <View style={{ flex: 1 }}>
       <TactilePressable
@@ -164,34 +90,26 @@ function AnimatedSoundTile({
         ]}
       >
         <View style={styles.soundTileTop}>
-          <Animated.View
+          <View
             style={[
               styles.soundTileOrb,
-              orbAnimStyle,
               {
                 backgroundColor: isPlaying ? colors.primary.default : colors.surface.default,
                 borderColor: isPlaying ? colors.primary.default : skyTint.border,
               },
             ]}
           >
-            <Animated.View style={iconAnimStyle}>
-              <AppIcon
-                name={isPlaying ? 'i-pause' : snd.icon}
-                size={18}
-                color={isPlaying ? colors.primary.foreground : skyTint.accent}
-              />
-            </Animated.View>
-          </Animated.View>
+            <AppIcon
+              name={isPlaying ? 'i-pause' : snd.icon}
+              size={18}
+              color={isPlaying ? colors.primary.foreground : skyTint.accent}
+            />
+          </View>
 
           {isPlaying && (
-            <Animated.View
-              entering={FadeIn.duration(200)}
-              exiting={FadeOut.duration(150)}
-              style={styles.playingIndicatorRow}
-            >
+            <View style={styles.playingIndicatorRow}>
               <MiniEqualizer color={colors.primary.default} />
-              <Badge label="Playing" tone="primary" size="sm" />
-            </Animated.View>
+            </View>
           )}
         </View>
 
@@ -233,13 +151,7 @@ export function CalmScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useAppTheme();
   const [activeSound, setActiveSound] = useState<string | null>(null);
-
-  // Animated values for badge pop and ambient playing indicators
-  const badgeScale = useSharedValue(1);
-  const iconRotate = useSharedValue(0);
-  const pulseScale = useSharedValue(1);
-  const pulseOpacity = useSharedValue(0.8);
-  const notesWobble = useSharedValue(0);
+  const [category, setCategory] = useState('Breathing');
 
   useEffect(() => {
     const unsub = soundService.addListener((state) => {
@@ -247,72 +159,6 @@ export function CalmScreen() {
     });
     return unsub;
   }, []);
-
-  useEffect(() => {
-    if (activeSound) {
-      // Spring pop on badge expansion
-      badgeScale.value = withSequence(
-        withSpring(1.22, { damping: 9, stiffness: 280 }),
-        withSpring(1, { damping: 14, stiffness: 220 })
-      );
-      iconRotate.value = withSequence(
-        withTiming(-12, { duration: 120 }),
-        withSpring(0, { damping: 12, stiffness: 220 })
-      );
-      // Gentle pulsing ring
-      pulseScale.value = withRepeat(
-        withSequence(
-          withTiming(1.5, { duration: 800, easing: Easing.out(Easing.ease) }),
-          withTiming(1, { duration: 800, easing: Easing.in(Easing.ease) })
-        ),
-        -1,
-        true
-      );
-      pulseOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.25, { duration: 800 }),
-          withTiming(0.9, { duration: 800 })
-        ),
-        -1,
-        true
-      );
-      // Rocking notes in pill
-      notesWobble.value = withRepeat(
-        withSequence(
-          withTiming(-8, { duration: 550, easing: Easing.inOut(Easing.quad) }),
-          withTiming(8, { duration: 550, easing: Easing.inOut(Easing.quad) })
-        ),
-        -1,
-        true
-      );
-    } else {
-      badgeScale.value = withSequence(
-        withTiming(0.92, { duration: 90 }),
-        withSpring(1, { damping: 12, stiffness: 200 })
-      );
-      iconRotate.value = withTiming(0, { duration: 120 });
-      pulseScale.value = 1;
-      pulseOpacity.value = 0.8;
-      notesWobble.value = withTiming(0, { duration: 200 });
-    }
-  }, [activeSound]);
-
-  const badgeAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: badgeScale.value }],
-  }));
-
-  const iconAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${iconRotate.value}deg` }],
-  }));
-
-  const pulseAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-    opacity: pulseOpacity.value,
-  }));
-
-  const notesAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${notesWobble.value}deg` }],
-  }));
 
   const handleToggleSound = async (soundId: 'rain' | 'ocean' | 'birds' | 'night') => {
     if (activeSound === soundId) {
@@ -335,14 +181,18 @@ export function CalmScreen() {
 
   // Ink for solid accent fills: white in light mode, deep surface in dark mode.
   const solidInk = isDark ? colors.background.default : '#FFFFFF';
+  const PRACTICES = ['Breathing', 'Body Scan', 'Senses', 'Soundscapes'] as const;
+  const startPractice = () => {
+    if (category === 'Body Scan') navigation.navigate('BodyScan');
+    else if (category === 'Senses') navigation.navigate('SensoryGrounding');
+    else if (category === 'Soundscapes') navigation.navigate('Soundscapes');
+    else navigation.navigate('BreathingSession', { preset: 'box', duration: 180 });
+  };
 
   return (
     <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
-      {/* Sanctuary Top Bar with smooth layout animation (seamless without divider line) */}
-      <Animated.View
-        layout={LinearTransition.springify().damping(24).stiffness(130).mass(0.8)}
-        style={styles.header}
-      >
+      {/* Sanctuary Top Bar */}
+      <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <View>
             <AppText variant="h1">Calm</AppText>
@@ -353,7 +203,6 @@ export function CalmScreen() {
           <Animated.View
             sharedTransitionTag={sharedTransitionTags.ambientStatusBadge}
             sharedTransitionStyle={sharedElementStyle}
-            style={badgeAnimStyle}
           >
             <TactilePressable
               onPress={() => navigation.navigate('Soundscapes')}
@@ -369,34 +218,28 @@ export function CalmScreen() {
                 },
               ]}
             >
-              <Animated.View style={iconAnimStyle}>
-                <AppIcon
-                  name={activeSound ? 'i-volume-medium' : 'i-headset-outline'}
-                  size={18}
-                  color={activeSound ? colors.primary.default : colors.text.tertiary}
-                />
-              </Animated.View>
+              <AppIcon
+                name={activeSound ? 'i-volume-medium' : 'i-headset-outline'}
+                size={18}
+                color={activeSound ? colors.primary.default : colors.text.tertiary}
+              />
               {activeSound && (
-                <Animated.View
-                  entering={FadeIn.duration(200)}
-                  exiting={FadeOut.duration(150)}
-                  style={[
-                    styles.pulseDot,
-                    { backgroundColor: colors.primary.default },
-                    pulseAnimStyle,
-                  ]}
-                />
+                <View style={styles.pulseDotWrapper}>
+                  <View
+                    style={[
+                      styles.pulseDotInner,
+                      { backgroundColor: colors.primary.default },
+                    ]}
+                  />
+                </View>
               )}
             </TactilePressable>
           </Animated.View>
         </View>
 
-        {/* Live Audio Mini-Player Bar with Shared Element Transition & Buttery Soft Expanding Entrance */}
+        {/* Live Audio Mini-Player Bar */}
         {activeSound && (
           <Animated.View
-            entering={FadeInDown.duration(320).springify().damping(24).stiffness(130).mass(0.8)}
-            exiting={FadeOutUp.duration(180)}
-            layout={LinearTransition.springify().damping(24).stiffness(130).mass(0.8)}
             sharedTransitionTag={sharedTransitionTags.ambientPlayerBar}
             sharedTransitionStyle={sharedElementStyle}
             style={styles.miniPlayerWrapper}
@@ -415,9 +258,7 @@ export function CalmScreen() {
               ]}
             >
               <View style={styles.miniPlayerInfo}>
-                <Animated.View style={notesAnimStyle}>
-                  <AppIcon name="i-musical-notes" size={16} color={colors.primary.default} />
-                </Animated.View>
+                <AppIcon name="i-musical-notes" size={16} color={colors.primary.default} />
                 <AppText
                   variant="labelSmall"
                   color={colors.primary.default}
@@ -443,12 +284,26 @@ export function CalmScreen() {
             </TactilePressable>
           </Animated.View>
         )}
-      </Animated.View>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Practice shortcut — one tap to the tool you need */}
+        <View style={styles.quickStart}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.practiceRow}
+          >
+            {PRACTICES.map((p) => (
+              <Chip key={p} label={p} selected={category === p} onPress={() => setCategory(p)} />
+            ))}
+          </ScrollView>
+          <Button title={`Start ${category.toLowerCase()}`} onPress={startPractice} fullWidth />
+        </View>
+
         {/* 0. Cute Tactile Zen Playground Card — mint pop card */}
         <PopIn index={0}>
         <Card
@@ -459,7 +314,6 @@ export function CalmScreen() {
           <CardContent style={styles.cardInner}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.cardHeaderCopyWide}>
-                <Badge label="Cute & Relaxing" tone="primary" style={styles.badge} />
                 <AppText variant="h3" color={mintTint.text}>
                   Zen Playground
                 </AppText>
@@ -487,7 +341,6 @@ export function CalmScreen() {
           <CardContent style={styles.cardInner}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.cardHeaderCopy}>
-                <Badge label="Nature Soundscapes" tone="info" style={styles.badge} />
                 <AppText variant="h3" color={skyTint.text}>
                   Ambient Sanctuary
                 </AppText>
@@ -546,86 +399,34 @@ export function CalmScreen() {
 
         {/* 2. Interactive Breathwork Studio Hub — coral pop card */}
         <PopIn index={1}>
-        <Card variant="elevated" tone="coral">
+        <Card
+          variant="elevated"
+          tone="coral"
+          onPress={() => navigation.navigate('BreathworkStudio')}
+        >
           <CardContent style={styles.cardInner}>
             <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopy}>
-                <Badge label="Breathwork Studio" tone="warning" style={styles.badge} />
+              <View style={styles.cardHeaderCopyWide}>
                 <AppText variant="h3" color={coralTint.text}>
                   Paced Breathing
                 </AppText>
-                <AppText variant="caption" color={coralTint.muted} style={styles.sectionSub}>
-                  Restore nervous system rhythm
+                <AppText variant="caption" color={coralTint.muted} numberOfLines={2} style={styles.sectionSub}>
+                  Clinical parasympathetic cadence, 4-7-8, box breathing & custom sessions
                 </AppText>
+                <View style={styles.inlineCta}>
+                  <AppText variant="label" color={coralTint.accent}>
+                    Open Breathwork Studio
+                  </AppText>
+                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={coralTint.accent} />
+                </View>
               </View>
               <Animated.View
                 sharedTransitionTag={sharedTransitionTags.calmHero('breathwork')}
                 sharedTransitionStyle={sharedElementStyle}
               >
-                <TactilePressable
-                  onPress={() => navigation.navigate('BreathworkStudio')}
-                  scaleDownTo={0.96}
-                  accessibilityRole="button"
-                  accessibilityLabel="Explore breathwork studio"
-                >
-                  <BreathworkIllustration width={96} height={76} />
-                </TactilePressable>
+                <BreathworkIllustration width={96} height={76} />
               </Animated.View>
             </View>
-
-            {/* Direct Breathwork Presets */}
-            <View style={styles.presetList}>
-              {BREATH_PRESETS.map((preset) => (
-                <View
-                  key={preset.id}
-                  style={[
-                    styles.presetRow,
-                    {
-                      backgroundColor: coralTint.plate,
-                      borderColor: coralTint.border,
-                    },
-                  ]}
-                >
-                  <View style={styles.presetCopy}>
-                    <AppText variant="label" color={coralTint.text}>
-                      {preset.title}
-                    </AppText>
-                    <AppText variant="labelSmall" color={coralTint.accent}>
-                      {preset.cadence}
-                    </AppText>
-                    <AppText variant="caption" color={coralTint.muted}>
-                      {preset.benefit}
-                    </AppText>
-                  </View>
-                  <TactilePressable
-                    onPress={() => handleStartBreathSession(preset.id, preset.duration)}
-                    scaleDownTo={0.94}
-                    hapticStyle="medium"
-                    accessibilityRole="button"
-                    accessibilityLabel={`Start ${preset.title}`}
-                    style={[styles.presetStartButton, { backgroundColor: coralTint.accent }]}
-                  >
-                    <AppIcon name="i-play" size={14} color={solidInk} />
-                    <AppText variant="label" color={solidInk}>
-                      Start
-                    </AppText>
-                  </TactilePressable>
-                </View>
-              ))}
-            </View>
-
-            <TactilePressable
-              onPress={() => navigation.navigate('BreathworkStudio')}
-              scaleDownTo={0.99}
-              accessibilityRole="button"
-              accessibilityLabel="Explore breathwork studio"
-              style={[styles.fullPageLink, { borderTopColor: coralTint.border }]}
-            >
-              <AppText variant="label" color={coralTint.accent}>
-                Explore Custom Durations & Audio in Studio
-              </AppText>
-              <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={coralTint.accent} />
-            </TactilePressable>
           </CardContent>
         </Card>
         </PopIn>
@@ -640,7 +441,6 @@ export function CalmScreen() {
           <CardContent style={styles.cardInner}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.cardHeaderCopyWide}>
-                <Badge label="5 Senses Reset" tone="warning" style={styles.badge} />
                 <AppText variant="h3" color={creamTint.text}>
                   Sensory Grounding
                 </AppText>
@@ -675,7 +475,6 @@ export function CalmScreen() {
           <CardContent style={styles.cardInner}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.cardHeaderCopyWide}>
-                <Badge label="Muscle Release" tone="primary" style={styles.badge} />
                 <AppText variant="h3" color={sageTint.text}>
                   Somatic Body Scan
                 </AppText>
@@ -710,7 +509,6 @@ export function CalmScreen() {
           <CardContent style={styles.cardInner}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.cardHeaderCopyWide}>
-                <Badge label="Emergency SOS" tone="error" style={styles.badge} />
                 <AppText variant="h3" color={blushTint.text}>
                   Acute Panic Anchor
                 </AppText>
@@ -730,6 +528,93 @@ export function CalmScreen() {
               >
                 <PanicAnchorIllustration width={96} height={76} />
               </Animated.View>
+            </View>
+          </CardContent>
+        </Card>
+        </PopIn>
+
+        {/* 6. Mindful Affirmations Card */}
+        <PopIn index={5}>
+        <Card
+          variant="elevated"
+          tone="coral"
+          onPress={() => navigation.navigate('Affirmations')}
+        >
+          <CardContent style={styles.cardInner}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardHeaderCopyWide}>
+                <AppText variant="h3" color={coralTint.text}>
+                  Mindful Affirmations
+                </AppText>
+                <AppText variant="caption" color={coralTint.muted} numberOfLines={2} style={styles.sectionSub}>
+                  Radiant self-worth and grounded positive self-dialogue
+                </AppText>
+                <View style={styles.inlineCta}>
+                  <AppText variant="label" color={coralTint.accent}>
+                    Open Affirmations
+                  </AppText>
+                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={coralTint.accent} />
+                </View>
+              </View>
+              <AffirmationsRadianceIllustration width={96} height={76} />
+            </View>
+          </CardContent>
+        </Card>
+        </PopIn>
+
+        {/* 7. Thought Reframing Card */}
+        <PopIn index={6}>
+        <Card
+          variant="elevated"
+          tone="sage"
+          onPress={() => navigation.navigate('ThoughtReframing')}
+        >
+          <CardContent style={styles.cardInner}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardHeaderCopyWide}>
+                <AppText variant="h3" color={sageTint.text}>
+                  Thought Reframing
+                </AppText>
+                <AppText variant="caption" color={sageTint.muted} numberOfLines={2} style={styles.sectionSub}>
+                  Transform storm clouds and distortions into balanced perspective
+                </AppText>
+                <View style={styles.inlineCta}>
+                  <AppText variant="label" color={sageTint.accent}>
+                    Begin Reframing
+                  </AppText>
+                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={sageTint.accent} />
+                </View>
+              </View>
+              <ThoughtReframingIllustration width={96} height={76} />
+            </View>
+          </CardContent>
+        </Card>
+        </PopIn>
+
+        {/* 8. Sphere of Control Card */}
+        <PopIn index={7}>
+        <Card
+          variant="elevated"
+          tone="sky"
+          onPress={() => navigation.navigate('WhatCanIControl')}
+        >
+          <CardContent style={styles.cardInner}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardHeaderCopyWide}>
+                <AppText variant="h3" color={skyTint.text}>
+                  Sphere of Control
+                </AppText>
+                <AppText variant="caption" color={skyTint.muted} numberOfLines={2} style={styles.sectionSub}>
+                  Focus on what you influence; peacefully surrender what you cannot
+                </AppText>
+                <View style={styles.inlineCta}>
+                  <AppText variant="label" color={skyTint.accent}>
+                    Explore Sphere
+                  </AppText>
+                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={skyTint.accent} />
+                </View>
+              </View>
+              <SphereOfControlIllustration width={96} height={76} />
             </View>
           </CardContent>
         </Card>
@@ -765,10 +650,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pulseDot: {
+  pulseDotWrapper: {
     position: 'absolute',
     top: 9,
     right: 9,
+    width: 8,
+    height: 8,
+  },
+  pulseDotInner: {
     width: 8,
     height: 8,
     borderRadius: radius.full,
@@ -800,6 +689,13 @@ const styles = StyleSheet.create({
     paddingBottom: layout.screenBottomClearance,
     gap: spacing[4],
   },
+  quickStart: {
+    gap: spacing[3],
+  },
+  practiceRow: {
+    gap: spacing[2],
+    paddingRight: spacing[5],
+  },
   cardInner: {
     padding: spacing[5],
     gap: spacing[3],
@@ -816,9 +712,6 @@ const styles = StyleSheet.create({
   cardHeaderCopyWide: {
     flex: 1,
     paddingRight: spacing[3],
-  },
-  badge: {
-    marginBottom: spacing[2],
   },
   sectionSub: {
     marginTop: spacing[1],

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { isAvailableAsync, shareAsync } from 'expo-sharing';
 import { useAppTheme } from '../../theme/ThemeContext';

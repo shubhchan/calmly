@@ -1,7 +1,9 @@
+import { differenceInCalendarDays } from 'date-fns';
 import { moodRepository } from '../database/repositories/moodRepository';
 import { journalRepository } from '../database/repositories/journalRepository';
 
-export type ReportPeriod = 'week' | 'month';
+export type ReportPeriod = 'week' | 'month' | 'custom';
+export type ReportRange = { start: number; end: number };
 export type ReportEntry = { id: string; createdAt: number; mood: string; intensity: number; stress: number; energy: string; context: string; needs: string };
 export type NoteEntry = { id: string; createdAt: number; type: string; title: string; body: string; mood: string };
 export type DailyPoint = { date: string; label: string; moods: number; notes: number; averageStress: number | null; averageIntensity: number | null; dominantMood: string | null };
@@ -55,14 +57,25 @@ export function normaliseJournal(value: any): NoteEntry {
 }
 
 /** All figures are computed from existing entries, not from fabricated sample data. */
-export function buildReflectionReport(moodValues: any[], journalValues: any[], period: ReportPeriod, now = Date.now()): ReflectionReport {
-  const days = period === 'week' ? 7 : 30;
+export function buildReflectionReport(moodValues: any[], journalValues: any[], period: ReportPeriod, now = Date.now(), range?: ReportRange): ReflectionReport {
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
-  const startDate = new Date(today);
-  startDate.setDate(today.getDate() - days + 1);
+  let startDate: Date;
+  let end: number;
+  if (period === 'custom' && range) {
+    startDate = new Date(range.start);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(range.end);
+    endDate.setHours(23, 59, 59, 999);
+    end = Math.max(startDate.getTime(), endDate.getTime());
+  } else {
+    const presetDays = period === 'month' ? 30 : 7;
+    startDate = new Date(today);
+    startDate.setDate(today.getDate() - presetDays + 1);
+    end = now;
+  }
   const start = startDate.getTime();
-  const end = now;
+  const days = Math.max(1, differenceInCalendarDays(new Date(end), startDate) + 1);
   const priorStart = new Date(startDate);
   priorStart.setDate(startDate.getDate() - days);
   const moodsAll = moodValues.map(normaliseMood).filter(x => x.createdAt > 0);
@@ -123,7 +136,7 @@ export function buildReflectionReport(moodValues: any[], journalValues: any[], p
   return { period, start, end, moodCount: moods.length, noteCount: notes.length, daysTracked: dayCount, daysInPeriod: days, averageStress: stressAverage, previousAverageStress, averageIntensity: avg(moods.map(x => x.intensity).filter(x => x > 0)), dominantMood: moodDistribution[0]?.name || null, moodDistribution, daily, recentNotes: notes.sort((a, b) => b.createdAt - a.createdAt).slice(0, 7), nodes, links, observations };
 }
 
-export async function loadReflectionReport(period: ReportPeriod): Promise<ReflectionReport> {
+export async function loadReflectionReport(period: ReportPeriod, range?: ReportRange): Promise<ReflectionReport> {
   const [moods, journals] = await Promise.all([moodRepository.getAll(), journalRepository.getAll()]);
-  return buildReflectionReport(moods || [], journals || [], period);
+  return buildReflectionReport(moods || [], journals || [], period, Date.now(), range);
 }

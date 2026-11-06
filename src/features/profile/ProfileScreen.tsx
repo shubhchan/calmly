@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { onAuthStateChanged, type User } from 'firebase/auth';
@@ -496,7 +497,7 @@ export function ProfileScreen() {
           <SheetAction
             icon="flower-outline"
             title="Pick a zen mascot"
-            subtitle="Six hand-drawn companions"
+            subtitle="Twelve hand-drawn companions"
             onPress={() => setSheet(SHEET_MASCOTS)}
           />
           {settings?.googlePhotoUrl ? (

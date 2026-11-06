@@ -4,7 +4,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ScreenHeader, TactilePressable } from '../../components';
+import {
+  Chip,
+  DateRangePicker,
+  formatDateRange,
+  ScreenHeader,
+  TactilePressable,
+  type DateRange,
+} from '../../components';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { fontFamilies } from '../../theme/typography';
 import { loadReflectionReport, MindNode, ReflectionReport, ReportPeriod } from '../../services/reflectionReport';
@@ -56,23 +63,39 @@ function MindMap({ report }: { report: ReflectionReport }) {
 export function ReflectionReportScreen({ navigation }: any) {
   const { colors } = useAppTheme();
   const [period, setPeriod] = useState<ReportPeriod>('week');
+  const [customRange, setCustomRange] = useState<DateRange | null>(null);
+  const [pickerVisible, setPickerVisible] = useState(false);
   const [report, setReport] = useState<ReflectionReport | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const refresh = useCallback(async () => {
+    if (period === 'custom' && !customRange) return;
     setBusy(true); setError('');
-    try { setReport(await loadReflectionReport(period)); }
+    try { setReport(await loadReflectionReport(period, customRange ?? undefined)); }
     catch (err) { setError(err instanceof Error ? err.message : 'Could not read your saved entries'); }
     finally { setBusy(false); }
-  }, [period]);
+  }, [period, customRange]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+
+  const applyCustomRange = (range: DateRange) => {
+    setCustomRange(range);
+    setPeriod('custom');
+    setPickerVisible(false);
+  };
 
   return <ScreenContainer scroll={false} backgroundColor={colors.background.default} animate={false}>
     <ScreenHeader title="Your reflections" subtitle="Only your saved notes and check-ins" onBack={() => navigation.goBack()} />
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <View style={[styles.switch, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-        {(['week', 'month'] as ReportPeriod[]).map(value => <TactilePressable key={value} onPress={() => setPeriod(value)} accessibilityRole="button" accessibilityState={{ selected: period === value }} style={[styles.switchButton, period === value && { backgroundColor: colors.primary.default }]}><Text style={{ color: period === value ? '#FFFFFF' : colors.text.secondary, fontWeight: '700' }}>{value === 'week' ? 'Past 7 days' : 'Past 30 days'}</Text></TactilePressable>)}
+      <View style={styles.rangeRow}>
+        <Chip label="Week" selected={period === 'week'} onPress={() => setPeriod('week')} style={styles.rangeChip} />
+        <Chip label="Month" selected={period === 'month'} onPress={() => setPeriod('month')} style={styles.rangeChip} />
+        <Chip label="Custom" selected={period === 'custom'} onPress={() => setPickerVisible(true)} style={styles.rangeChip} />
       </View>
+      {period === 'custom' && customRange ? (
+        <Text style={[styles.rangeCaption, { color: colors.text.tertiary }]}>
+          {formatDateRange(customRange)}
+        </Text>
+      ) : null}
       {busy ? <ActivityIndicator style={{ marginTop: 70 }} color={colors.primary.default} size="large" /> : error ? <View style={styles.panel}><Text style={{ color: colors.accents.rose }}>{error}</Text><TactilePressable onPress={refresh}><Text style={{ color: colors.primary.default }}>Try again</Text></TactilePressable></View> : report && <>
         <View style={styles.metricGrid}>
           <Metric name="Days recorded" value={`${report.daysTracked}/${report.daysInPeriod}`} note="Any journal or mood" color={colors.primary.default} />
@@ -80,7 +103,7 @@ export function ReflectionReportScreen({ navigation }: any) {
           <Metric name="Daily notes" value={String(report.noteCount)} note="Journal reflections" color={colors.accents.sky} />
           <Metric name="Average stress" value={report.averageStress === null ? '—' : `${report.averageStress}/10`} note="From rated check-ins" color={colors.accents.rose} />
         </View>
-        <MindMap key={period} report={report} />
+        <MindMap key={`${period}-${customRange?.start ?? ''}-${customRange?.end ?? ''}`} report={report} />
         <View style={[styles.panel, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
           <Text style={[styles.panelTitle, { color: colors.text.primary }]}>Your daily rhythm</Text>
           <Text style={[styles.caption, { color: colors.text.secondary }]}>Each mark represents a day with saved activity, not an inferred score.</Text>
@@ -107,13 +130,20 @@ export function ReflectionReportScreen({ navigation }: any) {
         </View>
       </>}
     </ScrollView>
+    <DateRangePicker
+      visible={pickerVisible}
+      onClose={() => setPickerVisible(false)}
+      onApply={applyCustomRange}
+      initialRange={customRange ?? undefined}
+    />
   </ScreenContainer>;
 }
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 120, gap: 18 },
-  switch: { borderWidth: 1, borderRadius: 16, flexDirection: 'row', padding: 4 },
-  switchButton: { flex: 1, borderRadius: 12, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  rangeRow: { flexDirection: 'row', gap: 8 },
+  rangeChip: { flex: 1 },
+  rangeCaption: { fontSize: 12, textAlign: 'center', marginTop: -8 },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metric: { width: '48%', flexGrow: 1, padding: 15, borderRadius: 18, borderWidth: 1, gap: 5 },
   metricName: { fontSize: 12, fontWeight: '600' }, metricValue: { fontSize: 26, fontWeight: '800' }, metricNote: { fontSize: 11 },

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TextInput, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressRing } from '../../components/ProgressRing';
-import { AppIcon, moodIcon, MoodAuraIllustration, ScreenHeader, TactilePressable } from '../../components';
+import { AppIcon, MoodAuraIllustration, ScreenHeader, TactilePressable } from '../../components';
 import type { AppIconName } from '../../components';
 import { RootStackParamList, MoodType } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -126,8 +126,6 @@ export function MoodCheckInScreen() {
               onPress={() => {
                 if (!mood?.id) return;
                 setSelectedMood(mood.id);
-                // Avoid the stale selectedMood closure: advance using the selected id.
-                setStep('intensity');
               }}
               scaleDownTo={0.93}
               style={[
@@ -162,14 +160,16 @@ export function MoodCheckInScreen() {
     onChange: (v: number) => void,
     min: number,
     max: number,
-    icon: AppIconName,
-    accentColor: string
+    accentColor: string,
+    icon?: AppIconName
   ) => {
     const safeValue = value ?? 5;
     const safeMin = min ?? 1;
     const safeMax = max ?? 10;
     const range = safeMax - safeMin || 1;
     const fillPct = Math.min(100, Math.max(0, ((safeValue - safeMin) / range) * 100));
+    const faceIcon: AppIconName =
+      safeValue >= 9 ? 'm-excited' : safeValue >= 7 ? 'm-happy' : safeValue >= 4 ? 'm-content' : safeValue >= 2 ? 'm-sad' : 'm-overwhelmed';
 
     return (
       <View style={styles.stepContainer}>
@@ -179,7 +179,7 @@ export function MoodCheckInScreen() {
         </Text>
 
         <View style={styles.sliderIconWrapper}>
-          <AppIcon name={icon ?? 'm-happy'} size={68} />
+          <AppIcon name={icon ?? faceIcon} size={72} />
         </View>
 
         <View style={styles.trackWrapper}>
@@ -339,7 +339,6 @@ export function MoodCheckInScreen() {
               setIntensity,
               1,
               10,
-              moodIcon(selectedMood),
               colors.primary.default
             )}
           </PopIn>
@@ -352,8 +351,8 @@ export function MoodCheckInScreen() {
               setStress,
               1,
               10,
-              'm-stressed',
-              colors.accents.rose
+              colors.accents.rose,
+              'm-stressed'
             )}
           </PopIn>
         )}
@@ -368,13 +367,27 @@ export function MoodCheckInScreen() {
         )}
       </ScrollView>
 
-      {step !== 'complete' && step !== 'mood' && (
+      {step !== 'complete' && (
         <View style={[styles.bottomBar, { borderTopColor: colors.border.default }]}>
           <View style={{ flex: 1 }}>
-            <PrimaryButton title="Back" variant="outline" size="md" onPress={goBack} fullWidth />
+            <PrimaryButton
+              title={step === 'mood' ? 'Cancel' : 'Back'}
+              variant="outline"
+              size="md"
+              onPress={goBack}
+              fullWidth
+            />
           </View>
           <View style={{ flex: 1 }}>
-            <PrimaryButton title={saving ? 'Saving...' : 'Next'} variant="primary" size="md" onPress={goNext} fullWidth loading={saving} />
+            <PrimaryButton
+              title={saving ? 'Saving...' : step === 'context' ? 'Done' : 'Next'}
+              variant="primary"
+              size="md"
+              onPress={goNext}
+              fullWidth
+              loading={saving}
+              disabled={step === 'mood' && !selectedMood}
+            />
           </View>
         </View>
       )}

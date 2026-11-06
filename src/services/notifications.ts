@@ -53,8 +53,8 @@ function assembleNotificationsModule(): NotificationsModule | null {
       channelAsync = require('expo-notifications/build/setNotificationChannelAsync');
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       channelTypes = require('expo-notifications/build/NotificationChannelManager.types');
-    } catch (error) {
-      console.warn('Notification channel support unavailable (reminders still schedule):', error);
+    } catch {
+      // Channel module unavailable in this build
     }
 
     const mod = {
@@ -83,6 +83,7 @@ function assembleNotificationsModule(): NotificationsModule | null {
 
 async function ensureAndroidChannel(mod: NotificationsModule): Promise<void> {
   if (Platform.OS !== 'android' || channelReady) return;
+  channelReady = true;
   try {
     if (!mod.setNotificationChannelAsync || !mod.AndroidImportance) return;
     await mod.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
@@ -92,9 +93,10 @@ async function ensureAndroidChannel(mod: NotificationsModule): Promise<void> {
       sound: 'default',
       vibrationPattern: [0, 250, 250, 250],
     });
-    channelReady = true;
-  } catch (error) {
-    console.warn('Failed to create notification channel (reminders still schedule):', error);
+  } catch {
+    // In Expo Go on Android, NotificationsChannelsProvider is not bound in the host client,
+    // so setNotificationChannelAsync rejects with NullPointerException.
+    // Scheduled notifications still deliver via the fallback channel.
   }
 }
 

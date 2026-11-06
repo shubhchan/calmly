@@ -1,16 +1,33 @@
-import React, { useEffect } from 'react';
-import { Platform, RefreshControlProps, StyleProp, View, ViewStyle } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
-import Animated, {
-  SharedTransitionBoundary,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import React, { useCallback, useContext, useSyncExternalStore } from 'react';
+import { Platform, RefreshControlProps, ScrollView, StyleProp, View, ViewStyle } from 'react-native';
+import { NavigationContainerRefContext, NavigationContext } from '@react-navigation/native';
+import { SharedTransitionBoundary } from 'react-native-reanimated';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { motion, useAppReducedMotion } from '../../theme/motion';
+
+function useSafeIsFocused(): boolean {
+  const root = useContext(NavigationContainerRefContext);
+  const navigation = useContext(NavigationContext);
+  const nav: any = navigation ?? root;
+
+  const subscribe = useCallback(
+    (callback: () => void) => {
+      if (!nav?.addListener) return () => { };
+      const unsubscribeFocus = nav.addListener('focus', callback);
+      const unsubscribeBlur = nav.addListener('blur', callback);
+      return () => {
+        unsubscribeFocus?.();
+        unsubscribeBlur?.();
+      };
+    },
+    [nav]
+  );
+
+  const getSnapshot = useCallback(() => {
+    return nav?.isFocused ? nav.isFocused() : true;
+  }, [nav]);
+
+  return useSyncExternalStore(subscribe, getSnapshot, () => true);
+}
 
 function WebBoundary({ children }: { isActive: boolean; children?: React.ReactNode }) {
   return <>{children}</>;
@@ -26,7 +43,7 @@ interface ScreenContainerProps {
   contentContainerStyle?: StyleProp<ViewStyle>;
   /** Override the themed surface (e.g. immersive calm modes). */
   backgroundColor?: string;
-  /** Play the uniform screen entrance (default true). */
+  /** @deprecated Entrance motion is owned by the native route transition. */
   animate?: boolean;
   /** Bottom padding for tab-bar clearance (default 110). */
   bottomPadding?: number;
@@ -38,14 +55,10 @@ interface ScreenContainerProps {
 /**
  * The one screen scaffold every route uses.
  *
- * The themed surface is painted opaque from the very first frame so native
- * route transitions (stack slide, modal sheet, tab swap) never reveal the
- * screen underneath through a half-transparent page. Only the content plays
- * the gentle rise + settle entrance; loading bodies show their shimmering
- * skeletons immediately and crossfade to real content when data resolves.
- *
- * Route exits are handled natively by the stack, and reduced motion is honored
- * from both the OS setting and the in-app toggle.
+ * Route entry and exit are the only animations a screen plays, and the native
+ * stack owns them. This container paints the themed surface opaque from the
+ * first frame and renders content statically, so nothing double-animates or
+ * jitters underneath the native transition.
  */
 export function ScreenContainer({
   children,
@@ -53,36 +66,14 @@ export function ScreenContainer({
   style,
   contentContainerStyle,
   backgroundColor,
-  animate = true,
+  animate: _animate,
   bottomPadding = 110,
   refreshControl,
   keyboardShouldPersistTaps,
   showsVerticalScrollIndicator,
 }: ScreenContainerProps) {
   const { colors } = useAppTheme();
-  const isFocused = useIsFocused();
-
-  const reducedMotion = useAppReducedMotion();
-  const progress = useSharedValue(animate ? 0 : 1);
-
-  useEffect(() => {
-    if (!animate) return;
-    if (reducedMotion) {
-      progress.value = withTiming(1, { duration: motion.duration.fast });
-    } else {
-      progress.value = withSpring(1, motion.spring.screen);
-    }
-    // Mount-only entrance by design.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [
-      { translateY: interpolate(progress.value, [0, 1], [motion.rise, 0]) },
-      { scale: interpolate(progress.value, [0, 1], [reducedMotion ? 1 : motion.settleScale, 1]) },
-    ],
-  }));
+  const isFocused = useSafeIsFocused();
 
   const surfaceStyle: StyleProp<ViewStyle> = {
     flex: 1,
@@ -93,7 +84,7 @@ export function ScreenContainer({
     return (
       <Boundary isActive={isFocused}>
         <View style={surfaceStyle}>
-          <Animated.View style={[{ flex: 1 }, style, animatedStyle]}>{children}</Animated.View>
+          <View style={[{ flex: 1 }, style]}>{children}</View>
         </View>
       </Boundary>
     );
@@ -102,15 +93,15 @@ export function ScreenContainer({
   return (
     <Boundary isActive={isFocused}>
       <View style={surfaceStyle}>
-        <Animated.ScrollView
-          style={[{ flex: 1 }, style, animatedStyle]}
+        <ScrollView
+          style={[{ flex: 1 }, style]}
           contentContainerStyle={[{ paddingBottom: bottomPadding }, contentContainerStyle]}
           showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? false}
           keyboardShouldPersistTaps={keyboardShouldPersistTaps ?? 'handled'}
           refreshControl={refreshControl}
         >
           {children}
-        </Animated.ScrollView>
+        </ScrollView>
       </View>
     </Boundary>
   );

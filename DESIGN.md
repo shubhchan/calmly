@@ -140,10 +140,10 @@ The aesthetic is Tactile Minimalist with organic material influences: stone pape
 ## Colors
 
 The palette is rooted in tranquil, earthy, and organic tones:
-- **Primary (`#3F5443` — Tranquil Matcha):** Used for focal elements, active states, serene CTAs, and completed breath intervals. Provides an anchoring, grounding presence.
-- **Secondary (`#BD6B52` — Soft Terracotta):** Used selectively for warmth, highlights, mindful progression marks, and warm accents without inducing urgency.
-- **Tertiary (`#82756A` — Raw Clay):** Bridges structural UI elements, inactive indicators, muted iconography, and secondary metadata.
-- **Neutral (`#272421` — Smoked Umber):** The primary text color, softer and more organic than pure black, ensuring deep contrast without optical harshness.
+- **Primary (`#3F5443` â€” Tranquil Matcha):** Used for focal elements, active states, serene CTAs, and completed breath intervals. Provides an anchoring, grounding presence.
+- **Secondary (`#BD6B52` â€” Soft Terracotta):** Used selectively for warmth, highlights, mindful progression marks, and warm accents without inducing urgency.
+- **Tertiary (`#82756A` â€” Raw Clay):** Bridges structural UI elements, inactive indicators, muted iconography, and secondary metadata.
+- **Neutral (`#272421` â€” Smoked Umber):** The primary text color, softer and more organic than pure black, ensuring deep contrast without optical harshness.
 
 ### Supporting Canvas & Surface Tones
 - **Canvas Base:** `#FBF9F5` (Stone Paper)
@@ -209,3 +209,12 @@ Corner radii draw inspiration from river-smoothed stones and hand-molded ceramic
 ### Specialized Mindful Components
 - **Breathwork Orb / Pacer:** Concentric harmonic circles using tranquil matcha and soft terracotta fills at low opacities (`rgba(63, 84, 67, 0.08)` to `0.25`), expanding and contracting with gentle sinus easing curves.
 - **Linen Audio Player:** Floating horizontal bar rounded to `9999px`, featuring matte terracotta playback progress sliders and tactile haptic controls.
+
+## Motion
+
+- Keep motion minimal and professional.
+- Route entry and exit is the single animation a screen plays. The native stack owns it, so screen content mounts statically.
+- Do not add entrance animations to cards, rows or lists: no fade, bounce, rise, stagger or layout animation.
+- Keep press feedback on `TactilePressable` only (spring scale-down).
+- Keep loops only for ongoing state: skeleton shimmer, recording meters, the breathing orb/pacer, and game mechanics.
+- Honor the OS reduced-motion setting and the in-app Reduce Animations toggle.

@@ -49,8 +49,8 @@ export function resolveShadow(
 /** Elevation per component family — documented intents, no ad-hoc shadows. */
 export const elevation = {
   flat: 'none',
-  card: 'sm',
-  raisedCard: 'md',
+  card: 'none',
+  raisedCard: 'none',
   dropdown: 'lg',
   floatingButton: 'md',
   dialog: 'xl',

@@ -23,6 +23,8 @@ export { Button } from './ui/Button';
 export { Checkbox } from './ui/Checkbox';
 export { Chip } from './ui/Chip';
 export { ConfirmDialog } from './ui/ConfirmDialog';
+export { DateRangePicker, formatDateRange } from './ui/DateRangePicker';
+export type { DateRange } from './ui/DateRangePicker';
 export { Divider } from './ui/Divider';
 export { EmptyState } from './ui/EmptyState';
 export { IconButton } from './ui/IconButton';

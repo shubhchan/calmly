@@ -71,14 +71,43 @@ export function SettingsScreen() {
     <ScreenContainer contentContainerStyle={styles.content} backgroundColor={colors.background.default}>
       <PageHeader title="Settings" subtitle="Personalize your mindful sanctuary" style={{ marginBottom: 4 }} />
 
+      {/* Sanctuary Profile & Mascot Identity */}
+      <PopIn index={0}>
+        <Card variant="elevated" style={styles.card}>
+          <CardContent>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Profile & Identity</Text>
+            </View>
+
+            <TactilePressable
+              onPress={() => navigation.navigate('Profile')}
+              style={[
+                styles.menuRow,
+                { borderBottomWidth: 0 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Sanctuary Profile & Zen Mascots. Choose from 12 hand-drawn companions."
+            >
+              <View style={styles.menuTextWrap}>
+                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Sanctuary Profile & Mascots</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>
+                  Choose from 12 hand-drawn zen avatars & personal identity
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+            </TactilePressable>
+          </CardContent>
+        </Card>
+      </PopIn>
+
       {/* Typography */}
       <PopIn index={0}>
         <Card variant="elevated" style={styles.card}>
           <CardContent>
             <View style={styles.sectionHeaderRow}>
-              <View style={[styles.sectionIconWrap, { backgroundColor: colors.accents.lavender + '18' }]}>
+               {/*<View style={[styles.sectionIconWrap, { backgroundColor: colors.accents.lavender + '18' }]}>
                 <Ionicons name="text-outline" size={20} color={colors.accents.lavender} />
-              </View>
+              </View>*/}
               <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Typography</Text>
             </View>
 
@@ -109,9 +138,9 @@ export function SettingsScreen() {
       <Card variant="elevated" style={styles.card}>
         <CardContent>
           <View style={styles.sectionHeaderRow}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: colors.primary.default + '18' }]}>
+             {/*<View style={[styles.sectionIconWrap, { backgroundColor: colors.primary.default + '18' }]}>
               <Ionicons name="color-palette-outline" size={20} color={colors.primary.default} />
-            </View>
+            </View>*/}
             <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Appearance</Text>
           </View>
 
@@ -188,9 +217,9 @@ export function SettingsScreen() {
       <Card variant="elevated" style={styles.card}>
         <CardContent>
           <View style={styles.sectionHeaderRow}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: colors.accents.sky + '18' }]}>
+             {/*<View style={[styles.sectionIconWrap, { backgroundColor: colors.accents.sky + '18' }]}>
               <Ionicons name="shield-checkmark-outline" size={20} color={colors.accents.sky} />
-            </View>
+            </View>*/}
             <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Security & Alerts</Text>
           </View>
 
@@ -261,9 +290,9 @@ export function SettingsScreen() {
       <Card variant="elevated" style={styles.card}>
         <CardContent>
           <View style={styles.sectionHeaderRow}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: colors.accents.lavender + '18' }]}>
+            {/* <View style={[styles.sectionIconWrap, { backgroundColor: colors.accents.lavender + '18' }]}>
               <Ionicons name="accessibility-outline" size={20} color={colors.accents.lavender} />
-            </View>
+            </View>*/}
             <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Accessibility</Text>
           </View>
 

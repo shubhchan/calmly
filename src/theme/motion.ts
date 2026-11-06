@@ -6,10 +6,12 @@ import { Storage } from '../services/storage';
  * Central motion design system for Calmly.
  *
  * Every route, card, list and loading state animates with these tokens so the
- * app feels like one continuous, choreographed experience:
- * - One spring family for entrances (gentle rise + settle, no overshoot chaos).
- * - One ease family for tints / crossfades.
- * - One stagger step so lists dance in the same rhythm everywhere.
+ * app feels calm and consistent:
+ * - Route entry/exit is the single animation a screen plays, owned by the
+ *   native stack. Content mounts statically, with no rise, scale, or stagger.
+ * - Loops are reserved for state that is genuinely ongoing (recording,
+ *   breathing, loading shimmer).
+ * - Pressable feedback stays tactile through TactilePressable.
  *
  * "Reduce motion" is respected from two sources:
  * 1. The OS accessibility setting (via Reanimated's `useReducedMotion`).
@@ -23,13 +25,11 @@ export const motion = {
     slow: 480,
   },
   spring: {
-    /** Cards, rows, list items settling into place. */
+    /** Legacy token — entrances are now fade-only. Keep for API compatibility. */
     gentle: { mass: 0.6, damping: 18, stiffness: 180 },
-    /** Screen + modal content entrances. */
     screen: { mass: 0.7, damping: 20, stiffness: 160 },
-    /** Playful "pop" for colorful cards. */
     pop: { mass: 0.62, damping: 13, stiffness: 220 },
-    /** Pressable interactions. */
+    /** Pressable interactions (TactilePressable only). */
     snappy: { mass: 0.45, damping: 14, stiffness: 280 },
   },
   ease: {
@@ -42,10 +42,10 @@ export const motion = {
   rise: 14,
   /** Initial scale for screen content entrances. */
   settleScale: 0.985,
-  /** Initial scale for playful card pops. */
-  popScale: 0.92,
-  /** Delay between staggered siblings (ms). */
-  stagger: 36,
+  /** Pop scale — deprecated: PopIn is now fade-only. */
+  popScale: 1,
+  /** Stagger step — deprecated: entrances no longer stagger. */
+  stagger: 0,
 };
 
 const REDUCE_MOTION_KEY = 'app_reduce_motion';

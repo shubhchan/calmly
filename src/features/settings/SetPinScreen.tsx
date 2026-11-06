@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, BackHandler } from 'react-native';
+import { Alert } from '../../services/appAlert';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';

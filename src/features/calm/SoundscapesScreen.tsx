@@ -8,8 +8,9 @@ import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
+import { useTabBarOffset } from '../../utils/useTabBarOffset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeOutDown, LinearTransition } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 interface TrackConfig {
@@ -55,6 +56,7 @@ export function SoundscapesScreen() {
   const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
   const skyTint = resolveTint(!!isDark, 'sky');
+  const tabBarOffset = useTabBarOffset();
 
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [selectedTimer, setSelectedTimer] = useState<string>('Off');
@@ -119,190 +121,187 @@ export function SoundscapesScreen() {
 
         {/* Header Cue */}
         <PopIn index={1}>
-        <View style={{ marginBottom: 4 }}>
-          <Text style={[styles.headline, { color: colors.text.primary }]}>
-            Organic Ambient Audio
-          </Text>
-          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
-            Select an acoustic landscape for focus, calm, or restful sleep.
-          </Text>
-        </View>
+          <View style={{ marginBottom: 4 }}>
+            <Text style={[styles.headline, { color: colors.text.primary }]}>
+              Organic Ambient Audio
+            </Text>
+            <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
+              Select an acoustic landscape for focus, calm, or restful sleep.
+            </Text>
+          </View>
         </PopIn>
 
         {/* Soundscape Tiles */}
         <PopIn index={2}>
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Nature Soundscape Library
-          </Text>
-          <View style={styles.tracksList}>
-            {TRACKS.map((track) => {
-              const isPlaying = activeSound === track.id;
-              return (
-                <TactilePressable
-                  key={track.id}
-                  onPress={() => handleToggleSound(track.id)}
-                  scaleDownTo={0.98}
-                  style={[
-                    styles.trackCard,
-                    {
-                      backgroundColor: isPlaying
-                        ? (isDark ? 'rgba(94, 190, 123, 0.16)' : '#EEF6F0')
-                        : colors.surface.default,
-                      borderColor: isPlaying ? colors.primary.default : colors.border.default,
-                    },
-                  ]}
-                >
-                  <View style={styles.trackCardRow}>
-                    <View
-                      style={[
-                        styles.trackIconOrb,
-                        {
-                          backgroundColor: isPlaying
-                            ? colors.primary.default
-                            : (isDark ? 'rgba(255,255,255,0.08)' : colors.background.secondary),
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={track.icon as any}
-                        size={22}
-                        color={isPlaying ? '#FFFFFF' : colors.primary.default}
-                      />
-                    </View>
-                    <View style={styles.trackInfo}>
-                      <Text
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              Nature Soundscape Library
+            </Text>
+            <View style={styles.tracksList}>
+              {TRACKS.map((track) => {
+                const isPlaying = activeSound === track.id;
+                return (
+                  <TactilePressable
+                    key={track.id}
+                    onPress={() => handleToggleSound(track.id)}
+                    scaleDownTo={0.98}
+                    style={[
+                      styles.trackCard,
+                      {
+                        backgroundColor: isPlaying
+                          ? (isDark ? 'rgba(94, 190, 123, 0.16)' : '#EEF6F0')
+                          : colors.surface.default,
+                        borderColor: isPlaying ? colors.primary.default : colors.border.default,
+                      },
+                    ]}
+                  >
+                    <View style={styles.trackCardRow}>
+                      <View
                         style={[
-                          styles.trackTitle,
-                          { color: isPlaying ? colors.primary.default : colors.text.primary },
+                          styles.trackIconOrb,
+                          {
+                            backgroundColor: isPlaying
+                              ? colors.primary.default
+                              : (isDark ? 'rgba(255,255,255,0.08)' : colors.background.secondary),
+                          },
                         ]}
-                        numberOfLines={1}
                       >
-                        {track.title}
-                      </Text>
-                      <Text style={[styles.trackSub, { color: colors.text.tertiary }]} numberOfLines={2}>
-                        {track.subtitle}
-                      </Text>
-                      <View style={[styles.atmosphereBadge, { backgroundColor: colors.primary.subtle }]}>
-                        <Text style={[styles.atmosphereText, { color: colors.primary.default }]} numberOfLines={1}>
-                          {track.atmosphere}
+                        <Ionicons
+                          name={track.icon as any}
+                          size={22}
+                          color={isPlaying ? '#FFFFFF' : colors.primary.default}
+                        />
+                      </View>
+                      <View style={styles.trackInfo}>
+                        <Text
+                          style={[
+                            styles.trackTitle,
+                            { color: isPlaying ? colors.primary.default : colors.text.primary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {track.title}
                         </Text>
+                        <Text style={[styles.trackSub, { color: colors.text.tertiary }]} numberOfLines={2}>
+                          {track.subtitle}
+                        </Text>
+                        <View style={[styles.atmosphereBadge, { backgroundColor: colors.primary.subtle }]}>
+                          <Text style={[styles.atmosphereText, { color: colors.primary.default }]} numberOfLines={1}>
+                            {track.atmosphere}
+                          </Text>
+                        </View>
+                      </View>
+                      <View
+                        style={[
+                          styles.playToggleBtn,
+                          {
+                            backgroundColor: isPlaying ? colors.primary.default : 'transparent',
+                            borderColor: isPlaying ? colors.primary.default : colors.border.default,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={isPlaying ? 'pause' : 'play'}
+                          size={16}
+                          color={isPlaying ? '#FFFFFF' : colors.text.primary}
+                        />
                       </View>
                     </View>
-                    <View
-                      style={[
-                        styles.playToggleBtn,
-                        {
-                          backgroundColor: isPlaying ? colors.primary.default : 'transparent',
-                          borderColor: isPlaying ? colors.primary.default : colors.border.default,
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={isPlaying ? 'pause' : 'play'}
-                        size={16}
-                        color={isPlaying ? '#FFFFFF' : colors.text.primary}
-                      />
-                    </View>
-                  </View>
-                </TactilePressable>
-              );
-            })}
+                  </TactilePressable>
+                );
+              })}
+            </View>
           </View>
-        </View>
         </PopIn>
 
         {/* Sleep Timer & Volume Controls */}
         <PopIn index={3}>
-        <Card variant="outlined" tone="sky" style={styles.controlsCard}>
-          <CardContent style={styles.controlsContent}>
-            {/* Sleep Timer */}
-            <View style={styles.controlRow}>
-              <View style={styles.controlLabelGroup}>
-                <Ionicons name="timer-outline" size={18} color={skyTint.accent} />
-                <Text style={[styles.controlHeading, { color: skyTint.text }]}>Sleep Auto-Timer</Text>
-              </View>
-              <View style={styles.timerPillsRow}>
-                {['Off', '15m', '30m', '60m', '90m'].map((timer) => {
-                  const isTimerActive = selectedTimer === timer;
-                  return (
-                    <TactilePressable
-                      key={timer}
-                      onPress={() => handleSelectTimer(timer)}
-                      scaleDownTo={0.93}
-                      style={[
-                        styles.timerPill,
-                        {
-                          backgroundColor: isTimerActive ? skyTint.accent : skyTint.plate,
-                          borderColor: isTimerActive ? skyTint.accent : skyTint.border,
-                        },
-                      ]}
-                    >
-                      <Text
+          <Card variant="outlined" tone="sky" style={styles.controlsCard}>
+            <CardContent style={styles.controlsContent}>
+              {/* Sleep Timer */}
+              <View style={styles.controlRow}>
+                <View style={styles.controlLabelGroup}>
+                  <Ionicons name="timer-outline" size={18} color={skyTint.accent} />
+                  <Text style={[styles.controlHeading, { color: skyTint.text }]}>Sleep Auto-Timer</Text>
+                </View>
+                <View style={styles.timerPillsRow}>
+                  {['Off', '15m', '30m', '60m', '90m'].map((timer) => {
+                    const isTimerActive = selectedTimer === timer;
+                    return (
+                      <TactilePressable
+                        key={timer}
+                        onPress={() => handleSelectTimer(timer)}
+                        scaleDownTo={0.93}
                         style={[
-                          styles.timerPillText,
-                          { color: isTimerActive ? '#FFFFFF' : skyTint.text },
+                          styles.timerPill,
+                          {
+                            backgroundColor: isTimerActive ? skyTint.accent : skyTint.plate,
+                            borderColor: isTimerActive ? skyTint.accent : skyTint.border,
+                          },
                         ]}
                       >
-                        {timer}
-                      </Text>
-                    </TactilePressable>
-                  );
-                })}
+                        <Text
+                          style={[
+                            styles.timerPillText,
+                            { color: isTimerActive ? '#FFFFFF' : skyTint.text },
+                          ]}
+                        >
+                          {timer}
+                        </Text>
+                      </TactilePressable>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
 
-            {/* Volume Presets */}
-            <View style={[styles.controlRow, { marginTop: 12 }]}>
-              <View style={styles.controlLabelGroup}>
-                <Ionicons name="volume-medium-outline" size={18} color={skyTint.accent} />
-                <Text style={[styles.controlHeading, { color: skyTint.text }]}>Soundscape Volume</Text>
-              </View>
-              <View style={styles.volumePillsRow}>
-                {[
-                  { label: 'Soft (25%)', val: 0.25 },
-                  { label: 'Balanced (50%)', val: 0.5 },
-                  { label: 'Immersive (80%)', val: 0.8 },
-                  { label: 'Full (100%)', val: 1.0 },
-                ].map((vol) => {
-                  const isVolActive = Math.abs(volumeLevel - vol.val) < 0.05;
-                  return (
-                    <TactilePressable
-                      key={vol.label}
-                      onPress={() => handleSetVolume(vol.val)}
-                      scaleDownTo={0.93}
-                      style={[
-                        styles.volumePill,
-                        {
-                          backgroundColor: isVolActive ? skyTint.accent : skyTint.plate,
-                          borderColor: isVolActive ? skyTint.accent : skyTint.border,
-                        },
-                      ]}
-                    >
-                      <Text
+              {/* Volume Presets */}
+              <View style={[styles.controlRow, { marginTop: 12 }]}>
+                <View style={styles.controlLabelGroup}>
+                  <Ionicons name="volume-medium-outline" size={18} color={skyTint.accent} />
+                  <Text style={[styles.controlHeading, { color: skyTint.text }]}>Soundscape Volume</Text>
+                </View>
+                <View style={styles.volumePillsRow}>
+                  {[
+                    { label: 'Soft (25%)', val: 0.25 },
+                    { label: 'Balanced (50%)', val: 0.5 },
+                    { label: 'Immersive (80%)', val: 0.8 },
+                    { label: 'Full (100%)', val: 1.0 },
+                  ].map((vol) => {
+                    const isVolActive = Math.abs(volumeLevel - vol.val) < 0.05;
+                    return (
+                      <TactilePressable
+                        key={vol.label}
+                        onPress={() => handleSetVolume(vol.val)}
+                        scaleDownTo={0.93}
                         style={[
-                          styles.volumePillText,
-                          { color: isVolActive ? '#FFFFFF' : skyTint.text },
+                          styles.volumePill,
+                          {
+                            backgroundColor: isVolActive ? skyTint.accent : skyTint.plate,
+                            borderColor: isVolActive ? skyTint.accent : skyTint.border,
+                          },
                         ]}
                       >
-                        {vol.label}
-                      </Text>
-                    </TactilePressable>
-                  );
-                })}
+                        <Text
+                          style={[
+                            styles.volumePillText,
+                            { color: isVolActive ? '#FFFFFF' : skyTint.text },
+                          ]}
+                        >
+                          {vol.label}
+                        </Text>
+                      </TactilePressable>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
         </PopIn>
       </ScrollView>
 
       {/* Floating Bottom Bar */}
       {activeSound && (
         <Animated.View
-          entering={FadeInDown.springify().damping(18).stiffness(200).mass(0.8)}
-          exiting={FadeOutDown.duration(160)}
-          layout={LinearTransition.springify().damping(18).stiffness(200)}
           sharedTransitionTag={sharedTransitionTags.ambientPlayerBar}
           sharedTransitionStyle={sharedElementStyle}
           style={[

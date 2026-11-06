@@ -200,6 +200,8 @@ export function MoodCalendarScreen() {
 
   const selectedDayData = selectedDay != null ? ((moodData ?? {})?.[selectedDay] ?? null) : null;
 
+  const DISCLAIMER = 'Trends show your own logged reflections only. They are not medical advice. For diagnosis and treatment, consult a trained professional.';
+
   if (initialLoading) {
     return (
       <ScreenContainer
@@ -325,6 +327,11 @@ export function MoodCalendarScreen() {
           </Card>
           </PopIn>
         )}
+        <Card variant="outlined">
+          <CardContent style={{ padding: 16 }}>
+            <Text style={{ fontSize: 12, lineHeight: 18, color: colors.text.tertiary }}>{DISCLAIMER}</Text>
+          </CardContent>
+        </Card>
       </ScrollView>
     </ScreenContainer>
   );
@@ -356,11 +363,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     padding: 14,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
   },
   weekdays: {
     flexDirection: 'row',

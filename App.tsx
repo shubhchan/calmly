@@ -25,6 +25,7 @@ import { getBundledFontAssets } from './src/theme/fontRegistry';
 import { hydrateMotionPrefs } from './src/theme/motion';
 import { restoreSavedFont } from './src/services/googleFonts';
 import { BrandedLoader } from './src/components/interactive/LoadingState';
+import { AppAlertHost } from './src/components/feedback/AppAlertHost';
 
 const NAV_READY_TIMEOUT_MS = 12000;
 
@@ -351,6 +352,7 @@ function AppShell({
         />
       )}
       <AppLockGate />
+      <AppAlertHost />
     </View>
   );
 }

@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 import { View, ViewStyle, StyleProp } from 'react-native';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { borderWidths, radius, resolveShadow, spacing } from '../../theme/tokens';
+import { borderWidths, radius, spacing } from '../../theme/tokens';
 import { resolveTint, type TintName } from '../../theme/tints';
 import { TactilePressable } from '../interactive/TactilePressable';
 
@@ -32,12 +32,7 @@ export const Card = forwardRef<View, CardProps>(
       borderColor: tint ? tint.border : c.border.default,
     };
 
-    const shadow =
-      variant === 'outlined'
-        ? undefined
-        : resolveShadow(variant === 'elevated' ? 'md' : 'sm', theme.isDark, c.text.primary);
-
-    const flatCombinedStyle = [baseCardStyle, shadow, style];
+    const flatCombinedStyle = [baseCardStyle, style];
 
     if (onPress) {
       return (

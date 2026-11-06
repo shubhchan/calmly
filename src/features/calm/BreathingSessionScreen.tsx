@@ -367,6 +367,11 @@ export function BreathingSessionScreen() {
   return (
     <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title={presetLabels[safePreset] ?? 'Breathing'} />
+      <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text.secondary }}>
+          {presetLabels[safePreset] ?? 'Breathing'} · {safeDuration} min · Tap Start to begin
+        </Text>
+      </View>
 
       {/* Somatic Multi-Layer Breathing Orb */}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>

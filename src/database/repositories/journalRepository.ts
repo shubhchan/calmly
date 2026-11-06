@@ -100,20 +100,20 @@ export const journalRepository = {
 
     return watermelonRecord
       ? {
-          ...watermelonRecord,
-          id: watermelonRecord.id,
-          type: watermelonRecord.type,
-          title: watermelonRecord.title,
-          body: watermelonRecord.body,
-          mood: watermelonRecord.mood,
-          tags: watermelonRecord.tags,
-          favorite: watermelonRecord.favorite,
-          imageUri: watermelonRecord.imageUri,
-          audioUri: watermelonRecord.audioUri,
-          createdAt: watermelonRecord.createdAt,
-          updatedAt: watermelonRecord.updatedAt,
-          attachments: parseAttachments(watermelonRecord),
-        }
+        ...watermelonRecord,
+        id: watermelonRecord.id,
+        type: watermelonRecord.type,
+        title: watermelonRecord.title,
+        body: watermelonRecord.body,
+        mood: watermelonRecord.mood,
+        tags: watermelonRecord.tags,
+        favorite: watermelonRecord.favorite,
+        imageUri: watermelonRecord.imageUri,
+        audioUri: watermelonRecord.audioUri,
+        createdAt: watermelonRecord.createdAt,
+        updatedAt: watermelonRecord.updatedAt,
+        attachments: parseAttachments(watermelonRecord),
+      }
       : fallbackItem;
   },
 
@@ -188,7 +188,7 @@ export const journalRepository = {
       const mergedList = Array.from(mergedMap.values())
         .map((item) => ({ ...item, attachments: parseAttachments(item) }))
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      saveStoredEntries(mergedList).catch(() => {});
+      saveStoredEntries(mergedList).catch(() => { });
       return mergedList;
     }
 

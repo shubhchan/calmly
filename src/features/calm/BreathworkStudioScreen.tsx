@@ -10,6 +10,7 @@ import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { resolveTint } from '../../theme/tints';
+import { useTabBarOffset } from '../../utils/useTabBarOffset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
@@ -89,6 +90,7 @@ export function BreathworkStudioScreen() {
 
   const coralTint = resolveTint(!!isDark, 'coral');
   const sageTint = resolveTint(!!isDark, 'sage');
+  const tabBarOffset = useTabBarOffset();
 
   return (
     <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
@@ -121,21 +123,20 @@ export function BreathworkStudioScreen() {
 
         {/* Cadence Selection Header */}
         <PopIn index={1}>
-        <View style={{ marginBottom: 4 }}>
-          <Text style={[styles.headline, { color: colors.text.primary }]}>
-            Restore Calm in 90 Seconds
-          </Text>
-          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
-            Select your rhythm below to lower resting pulse and ease tension.
-          </Text>
-        </View>
+          <View style={{ marginBottom: 4 }}>
+            <Text style={[styles.headline, { color: colors.text.primary }]}>
+              Restore Calm in 90 Seconds
+            </Text>
+            <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
+              Select your rhythm below to lower resting pulse and ease tension.
+            </Text>
+          </View>
         </PopIn>
 
-        {/* Technique Selector Pills */}
+        {/* Technique Selector */}
         <PopIn index={2}>
-        <Card variant="outlined" tone="coral" style={styles.tintedSectionCard}>
-          <CardContent style={styles.tintedSectionContent}>
-            <Text style={[styles.sectionTitle, { color: coralTint.text }]}>
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
               Select Cadence Technique
             </Text>
             <View style={styles.techniqueList}>
@@ -149,39 +150,38 @@ export function BreathworkStudioScreen() {
                     style={[
                       styles.techniqueCard,
                       {
-                        backgroundColor: coralTint.plate,
-                        borderColor: isSelected ? coralTint.accent : coralTint.border,
+                        backgroundColor: isSelected ? coralTint.plate : colors.surface.default,
+                        borderColor: isSelected ? coralTint.accent : colors.border.default,
                       },
                     ]}
                   >
                     <View style={styles.techniqueHeader}>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.techniqueTitle, { color: coralTint.text }]}>
+                        <Text style={[styles.techniqueTitle, { color: colors.text.primary }]}>
                           {tech.title}
                         </Text>
-                        <Text style={[styles.techniqueCadence, { color: coralTint.accent }]}>
+                        <Text style={[styles.techniqueCadence, { color: isSelected ? coralTint.accent : colors.text.tertiary }]}>
                           {tech.cadence}
                         </Text>
                       </View>
                       <View
                         style={[
                           styles.radioCircle,
-                          { borderColor: isSelected ? coralTint.accent : coralTint.border },
+                          { borderColor: isSelected ? coralTint.accent : colors.border.default },
                           isSelected && { backgroundColor: coralTint.accent },
                         ]}
                       >
                         {isSelected && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
                       </View>
                     </View>
-                    <Text style={[styles.techniqueDesc, { color: coralTint.text }]}>
+                    <Text style={[styles.techniqueDesc, { color: colors.text.secondary }]}>
                       {tech.description}
                     </Text>
                   </TactilePressable>
                 );
               })}
             </View>
-          </CardContent>
-        </Card>
+          </View>
         </PopIn>
 
         {/* Live Cadence Blueprint Visualizer */}
@@ -211,9 +211,8 @@ export function BreathworkStudioScreen() {
 
         {/* Duration Selector */}
         <PopIn index={3}>
-        <Card variant="outlined" tone="sage" style={styles.tintedSectionCard}>
-          <CardContent style={styles.tintedSectionContent}>
-            <Text style={[styles.sectionTitle, { color: sageTint.text }]}>
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
               Practice Duration
             </Text>
             <View style={styles.durationPillsRow}>
@@ -231,15 +230,15 @@ export function BreathworkStudioScreen() {
                     style={[
                       styles.durationPill,
                       {
-                        backgroundColor: isSelected ? sageTint.accent : sageTint.plate,
-                        borderColor: isSelected ? sageTint.accent : sageTint.border,
+                        backgroundColor: isSelected ? sageTint.accent : colors.surface.default,
+                        borderColor: isSelected ? sageTint.accent : colors.border.default,
                       },
                     ]}
                   >
                     <Text
                       style={[
                         styles.durationVal,
-                        { color: isSelected ? '#FFFFFF' : sageTint.text },
+                        { color: isSelected ? '#FFFFFF' : colors.text.primary },
                       ]}
                     >
                       {dur.label}
@@ -247,7 +246,7 @@ export function BreathworkStudioScreen() {
                     <Text
                       style={[
                         styles.durationSub,
-                        { color: isSelected ? 'rgba(255,255,255,0.8)' : sageTint.muted },
+                        { color: isSelected ? 'rgba(255,255,255,0.85)' : colors.text.tertiary },
                       ]}
                     >
                       {dur.sub}
@@ -256,55 +255,54 @@ export function BreathworkStudioScreen() {
                 );
               })}
             </View>
-          </CardContent>
-        </Card>
+          </View>
         </PopIn>
 
         {/* Ambient Acoustics Selector */}
         <PopIn index={4}>
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Background Nature Acoustic
-          </Text>
-          <View style={styles.ambientPillRow}>
-            {[
-              { id: 'rain', label: 'Rainfall', icon: 'rainy-outline' },
-              { id: 'ocean', label: 'Ocean Tide', icon: 'water-outline' },
-              { id: 'birds', label: 'Forest Birds', icon: 'leaf-outline' },
-              { id: 'off', label: 'Silent', icon: 'volume-mute-outline' },
-            ].map((snd) => {
-              const isSelected = ambientSound === snd.id;
-              return (
-                <TactilePressable
-                  key={snd.id}
-                  onPress={() => handleToggleAmbient(snd.id as any)}
-                  scaleDownTo={0.94}
-                  style={[
-                    styles.ambientPill,
-                    {
-                      backgroundColor: isSelected ? colors.primary.subtle : colors.surface.default,
-                      borderColor: isSelected ? colors.primary.default : colors.border.default,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={snd.icon as any}
-                    size={14}
-                    color={isSelected ? colors.primary.default : colors.text.tertiary}
-                  />
-                  <Text
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+              Background Nature Acoustic
+            </Text>
+            <View style={styles.ambientPillRow}>
+              {[
+                { id: 'rain', label: 'Rainfall', icon: 'rainy-outline' },
+                { id: 'ocean', label: 'Ocean Tide', icon: 'water-outline' },
+                { id: 'birds', label: 'Forest Birds', icon: 'leaf-outline' },
+                { id: 'off', label: 'Silent', icon: 'volume-mute-outline' },
+              ].map((snd) => {
+                const isSelected = ambientSound === snd.id;
+                return (
+                  <TactilePressable
+                    key={snd.id}
+                    onPress={() => handleToggleAmbient(snd.id as any)}
+                    scaleDownTo={0.94}
                     style={[
-                      styles.ambientPillText,
-                      { color: isSelected ? colors.primary.default : colors.text.secondary },
+                      styles.ambientPill,
+                      {
+                        backgroundColor: isSelected ? colors.primary.subtle : colors.surface.default,
+                        borderColor: isSelected ? colors.primary.default : colors.border.default,
+                      },
                     ]}
                   >
-                    {snd.label}
-                  </Text>
-                </TactilePressable>
-              );
-            })}
+                    <Ionicons
+                      name={snd.icon as any}
+                      size={14}
+                      color={isSelected ? colors.primary.default : colors.text.tertiary}
+                    />
+                    <Text
+                      style={[
+                        styles.ambientPillText,
+                        { color: isSelected ? colors.primary.default : colors.text.secondary },
+                      ]}
+                    >
+                      {snd.label}
+                    </Text>
+                  </TactilePressable>
+                );
+              })}
+            </View>
           </View>
-        </View>
         </PopIn>
       </ScrollView>
 
