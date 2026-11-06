@@ -59,7 +59,8 @@
           "cameraPermission": "Calmly uses your camera so you can take a profile picture and capture moments for your reflections."
         }
       ],
-      "expo-video"
+      "expo-video",
+      "./plugins/withAppOptimization.js"
     ]
   }
 }
