@@ -3,63 +3,70 @@
 // is what actually drives colors on iOS/Android via NativeWind's `vars()` (see
 // ThemeContext.tsx) and via the `useThemeColors()` hook for non-style-prop APIs
 // (Ionicons `color`, react-native-svg `stroke`/`fill`, etc).
+//
+// Visual direction: "Still Water" — a foggy pine lake at first light.
+// Contrast rules:
+// - ink on ground >= 12:1
+// - ink-2 on ground >= 7:1
+// - ink-3 is the lightest text allowed at 12–13px (>= 4.5:1)
+// - accent gold is decoration only, under 5% of a screen.
 
 export type ThemeMode = 'light' | 'dark';
 export type AccentColor = 'sage' | 'lavender' | 'sky' | 'peach' | 'rose' | 'ocean';
 
 const base = {
   light: {
-    bgPrimary: '#FAF8F5',
-    bgSecondary: '#F3ECE2',
-    bgTertiary: '#E9DFC4',
+    bgPrimary: '#F4F5F1',
+    bgSecondary: '#EAEDE7',
+    bgTertiary: '#E3ECE7',
     bgCard: '#FFFFFF',
-    bgCardHover: '#F7F2E9',
-    textPrimary: '#1F242E',
-    textSecondary: '#475467',
-    textTertiary: '#667085',
-    textInverse: '#FAF8F5',
-    borderLight: '#EBE3D5',
-    borderMedium: '#D8CEBD',
-    success: '#447C54',
-    warning: '#D76949',
-    error: '#D44766',
-    info: '#3478D8',
+    bgCardHover: '#F0F2EE',
+    textPrimary: '#1A2420',
+    textSecondary: '#46524C',
+    textTertiary: '#6C7873',
+    textInverse: '#F7F9F6',
+    borderLight: '#DEE3DC',
+    borderMedium: '#C7D0C8',
+    success: '#3F6E58',
+    warning: '#9A7434',
+    error: '#A9503C',
+    info: '#3F6B78',
   },
   dark: {
-    bgPrimary: '#111722',
-    bgSecondary: '#17202E',
-    bgTertiary: '#1E2A3C',
-    bgCard: '#192332',
-    bgCardHover: '#212E42',
-    textPrimary: '#F8FAFC',
-    textSecondary: '#CBD5E1',
-    textTertiary: '#94A3B8',
-    textInverse: '#111722',
-    borderLight: '#243245',
-    borderMedium: '#33445C',
-    success: '#62C27F',
-    warning: '#FBA04B',
-    error: '#F87192',
-    info: '#60A5FA',
+    bgPrimary: '#0F1513',
+    bgSecondary: '#161E1B',
+    bgTertiary: '#1C2A25',
+    bgCard: '#161E1B',
+    bgCardHover: '#1D2622',
+    textPrimary: '#ECF1EE',
+    textSecondary: '#B3C0BA',
+    textTertiary: '#8B9993',
+    textInverse: '#0F1513',
+    borderLight: '#26312C',
+    borderMedium: '#38463F',
+    success: '#8FC2A8',
+    warning: '#D2B078',
+    error: '#E08B72',
+    info: '#93BFCB',
   },
 };
 
 const accents = {
   light: {
-    sage: { primary: '#447C54', hover: '#346142', bg: '#EDF5EF', border: '#C4DECA' },
-    lavender: { primary: '#705FCF', hover: '#5849B3', bg: '#F3F1FD', border: '#D4CEFC' },
-    sky: { primary: '#3478D8', hover: '#2563EB', bg: '#EEF5FF', border: '#BFD8FE' },
-    peach: { primary: '#D76949', hover: '#B85032', bg: '#FDF3EE', border: '#F8D0C2' },
-    rose: { primary: '#D44766', hover: '#B3304E', bg: '#FDF1F4', border: '#F8C3CE' },
-    ocean: { primary: '#177B8D', hover: '#105E6D', bg: '#EDF7F9', border: '#BAE3EB' },
+    sage: { primary: '#2C4F45', hover: '#223E36', bg: '#E3ECE7', border: '#C9DCD3' },
+    lavender: { primary: '#5F5A6B', hover: '#4B4756', bg: '#EAE8ED', border: '#D3CFD9' },
+    sky: { primary: '#41626E', hover: '#344F59', bg: '#E5EBEC', border: '#C9D6D8' },
+    peach: { primary: '#8E5F42', hover: '#755036', bg: '#EFE8E1', border: '#DDCFC2' },
+    rose: { primary: '#7F5257', hover: '#6A4449', bg: '#EDE6E6', border: '#D9CBCB' },
+    ocean: { primary: '#356B6D', hover: '#2A5759', bg: '#E2ECEC', border: '#C3D8D8' },
   },
   dark: {
-    sage: { primary: '#62C27F', hover: '#81D89B', bg: '#172E1E', border: '#254E31' },
-    lavender: { primary: '#A78BFA', hover: '#C4B5FD', bg: '#29204A', border: '#433475' },
-    sky: { primary: '#60A5FA', hover: '#93C5FD', bg: '#172847', border: '#254073' },
-    peach: { primary: '#FB923C', hover: '#FDBA74', bg: '#3B2113', border: '#5C341E' },
-    rose: { primary: '#F47293', hover: '#F9A8D4', bg: '#3B1825', border: '#5C263A' },
-    ocean: { primary: '#38BDF8', hover: '#7DD3FC', bg: '#132838', border: '#1F425C' },
+    sage: { primary: '#9AC6B4', hover: '#B5D7C8', bg: '#1C2A25', border: '#2F4A40' },
+    lavender: { primary: '#B7B1C4', hover: '#CBC6D6', bg: '#221F2A', border: '#37333F' },
+    sky: { primary: '#9DBFCB', hover: '#B6D2DB', bg: '#1B2528', border: '#2C3B3F' },
+    peach: { primary: '#C9A084', hover: '#DAB6A0', bg: '#261F1A', border: '#3E3228' },
+    rose: { primary: '#C2A0A6', hover: '#D6B7BC', bg: '#251E20', border: '#3B3032' },
+    ocean: { primary: '#9AC0C2', hover: '#B3D2D4', bg: '#1A2526', border: '#2A3B3C' },
   },
 };
 

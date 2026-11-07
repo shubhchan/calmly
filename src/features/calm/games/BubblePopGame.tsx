@@ -17,16 +17,16 @@ import { useAppTheme } from '../../../theme/ThemeContext';
 import { fontFamilies } from '../../../theme/typography';
 
 const AFFIRMATIONS = [
-  'Inhale peace, exhale tension ✨',
-  'You are doing wonderfully 🌿',
-  'Soft shoulders, unclenched jaw 🌸',
-  'One breath at a time 💫',
-  'You are safe and sound 🤍',
-  'Let go of what you cannot control 🍃',
-  'Peace begins from within 🌼',
-  'Give yourself grace today 🕊️',
-  'Your mind is clearing 🫧',
-  'A moment just for you 🍵',
+  'Inhale peace, exhale tension',
+  'You are doing wonderfully',
+  'Soft shoulders, unclenched jaw',
+  'One breath at a time',
+  'You are safe and sound',
+  'Let go of what you cannot control',
+  'Peace begins from within',
+  'Give yourself grace today',
+  'Your mind is clearing',
+  'A moment just for you',
 ];
 
 const BUBBLE_PALETTES = [
@@ -185,7 +185,7 @@ export function BubblePopGame() {
     hapticFeedback.light();
     setPoppedMap({});
     setBubbles(generateBubbles());
-    showAffirmation('Fresh calm bubbles drifted in 🍃');
+    showAffirmation('Fresh calm bubbles drifted in ');
   };
 
   const affirmationStyle = useAnimatedStyle(() => ({

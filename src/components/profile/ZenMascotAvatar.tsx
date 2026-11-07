@@ -326,11 +326,35 @@ function Tea() {
   );
 }
 
-export function ZenMascotAvatar({ id, size = 88 }: { id: AvatarMascotId | undefined; size?: number }) {
+export interface ZenMascotAvatarProps {
+  id: AvatarMascotId | undefined;
+  size?: number;
+  shape?: 'square' | 'circle';
+  borderRadius?: number;
+}
+
+export function ZenMascotAvatar({
+  id,
+  size = 88,
+  shape = 'square',
+  borderRadius = 0,
+}: ZenMascotAvatarProps) {
   const mascot = mascotById(id);
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100">
-      <Circle cx={50} cy={50} r={50} fill={mascot.background} />
+      {shape === 'circle' ? (
+        <Circle cx={50} cy={50} r={50} fill={mascot.background} />
+      ) : (
+        <Rect
+          x={0}
+          y={0}
+          width={100}
+          height={100}
+          rx={borderRadius}
+          ry={borderRadius}
+          fill={mascot.background}
+        />
+      )}
       {mascot.id === 'panda' ? <Panda /> : null}
       {mascot.id === 'lotus' ? <Lotus /> : null}
       {mascot.id === 'sun' ? <Sun /> : null}

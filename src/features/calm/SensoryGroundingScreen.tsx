@@ -1,19 +1,25 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, SensoryGroundingIllustration, AppIcon, ScreenHeader } from '../../components';
+import { AppText, Button, SensoryGroundingIllustration, ScreenHeader } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { useTabBarOffset } from '../../utils/useTabBarOffset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
-import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+const SENSES = [
+  { count: '5', label: 'Things you can see', desc: 'Light, a leaf, a color.' },
+  { count: '4', label: 'Things you can feel', desc: 'Cloth, the floor, cool air.' },
+  { count: '3', label: 'Things you can hear', desc: 'Traffic, birds, your breath.' },
+  { count: '2', label: 'Things you can smell', desc: 'Linen, coffee, rain.' },
+  { count: '1', label: 'Thing you can taste', desc: 'Water, mint, nothing at all.' },
+];
+
+/** Sensory grounding — the 5-4-3-2-1 sequence, read once. */
 export function SensoryGroundingScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useAppTheme();
@@ -25,88 +31,84 @@ export function SensoryGroundingScreen() {
 
   return (
     <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
-      <ScreenHeader title="5-4-3-2-1 Grounding" subtitle="Sensory Presence Anchor" bordered />
+      <ScreenHeader title="Grounding" subtitle="Five senses" />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]} showsVerticalScrollIndicator={false}>
-        {/* Full-Page Hero Illustration Card */}
-        <Card variant="elevated" style={styles.heroCard}>
-          <CardContent style={styles.heroCardContent}>
-            <View style={[styles.heroAuraGlow, { backgroundColor: colors.primary.subtle }]}>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.calmHero('sensory')}
-                sharedTransitionStyle={sharedElementStyle}
-              >
-                <SensoryGroundingIllustration width={190} height={155} />
-              </Animated.View>
-            </View>
-            <View style={styles.heroBadgeRow}>
-              <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
-                <Ionicons name="eye" size={12} color={colors.primary.default} />
-                <Text style={[styles.heroBadgeText, { color: colors.primary.default }]}>Somatic Sensory Deck</Text>
-              </View>
-              <Text style={[styles.heroEstText, { color: colors.text.tertiary }]}>3–5 min exercise</Text>
-            </View>
-          </CardContent>
-        </Card>
-
-        {/* Header Cue */}
-        <View style={{ marginBottom: 4 }}>
-          <Text style={[styles.headline, { color: colors.text.primary }]}>
-            Reconnect With Your Senses
-          </Text>
-          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
-            Engage your physical surroundings to gently quiet racing thoughts.
-          </Text>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View
+          style={{
+            width: '100%',
+            paddingVertical: 18,
+            borderRadius: 20,
+            backgroundColor: colors.primary.subtle,
+            alignItems: 'center',
+          }}
+        >
+          <SensoryGroundingIllustration width={180} height={140} />
         </View>
 
-        {/* 5-Step Senses Blueprint */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            The 5 Sensory Gateways
-          </Text>
-          <View style={styles.stepsList}>
-            {[
-              { count: '5', label: 'Things you can see', desc: 'Look for subtle light reflections, a leaf, colors, textures in your room', icon: 'l-eye' },
-              { count: '4', label: 'Things you can feel', desc: 'Notice the cloth on your lap, feet touching the floor, ambient air on hands', icon: 'l-hands' },
-              { count: '3', label: 'Things you can hear', desc: 'Listen for distant traffic hum, birds outside, a ticking clock, your exhale', icon: 'l-sound' },
-              { count: '2', label: 'Things you can smell', desc: 'Notice clean linen, coffee aroma, fresh rain, or a familiar scent', icon: 'l-calm' },
-              { count: '1', label: 'Thing you can taste', desc: 'Take a cool sip of water, notice a lingering mint, or focus on gratitude', icon: 'l-heart' },
-            ].map((step) => (
+        <View style={{ marginTop: 24 }}>
+          <AppText variant="h3">Come back to the room</AppText>
+          <AppText variant="body" tone="secondary" style={{ marginTop: 8 }}>
+            Name what your senses already know. Go slowly and leave room between each step.
+          </AppText>
+        </View>
+
+        <View style={{ marginTop: 28 }}>
+          {SENSES.map((step, index) => (
+            <View
+              key={step.count}
+              style={{
+                flexDirection: 'row',
+                gap: 14,
+                paddingVertical: 16,
+                borderTopWidth: index === 0 ? 0 : 1,
+                borderTopColor: colors.border.default,
+              }}
+            >
               <View
-                key={step.count}
-                style={[styles.stepCard, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface.muted,
+                }}
               >
-                <View style={[styles.stepNumBadge, { backgroundColor: colors.primary.default }]}>
-                  <Text style={styles.stepNumText}>{step.count}</Text>
-                </View>
-                <View style={styles.stepInfo}>
-                  <Text style={[styles.stepTitle, { color: colors.text.primary }]}>{step.label}</Text>
-                  <Text style={[styles.stepDesc, { color: colors.text.tertiary }]}>{step.desc}</Text>
-                </View>
-                <AppIcon name={step.icon as any} size={24} loop />
+                <AppText variant="label" tone="secondary">
+                  {step.count}
+                </AppText>
               </View>
-            ))}
-          </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="bodyLarge">{step.label}</AppText>
+                <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                  {step.desc}
+                </AppText>
+              </View>
+            </View>
+          ))}
         </View>
       </ScrollView>
 
-      {/* Floating Bottom Action */}
       <View
         style={[
           styles.bottomBar,
           {
-            paddingBottom: Math.max(insets.bottom + 14, 24),
+            paddingBottom: Math.max(insets.bottom + 12, 24),
             backgroundColor: colors.background.default,
             borderTopColor: colors.border.default,
           },
         ]}
       >
-        <PrimaryButton
-          title="Start Guided 5-4-3-2-1 Guide"
+        <Button
+          title="Start the guided sequence"
           variant="primary"
           size="lg"
           onPress={handleStartExercise}
-          leftIcon={<Ionicons name="compass" size={20} color="#FFFFFF" />}
+          leftIcon={(color) => <Ionicons name="compass-outline" size={18} color={color} />}
         />
       </View>
     </ScreenContainer>
@@ -114,99 +116,18 @@ export function SensoryGroundingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: 24,
+    paddingTop: 10,
     paddingBottom: 110,
-    gap: 20,
   },
-  heroCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-  },
-  heroCardContent: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  heroAuraGlow: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 14,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
-  heroBadgeText: { fontSize: 12, fontWeight: '700' },
-  heroEstText: { fontSize: 13, fontWeight: '600' },
-  section: { gap: 10 },
-  headline: {
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    lineHeight: 30,
-  },
-  subheadline: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  metricRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  metricChip: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 2,
-  },
-  metricVal: { fontSize: 14, fontWeight: '800' },
-  metricDesc: { fontSize: 11, fontWeight: '500' },
-  sectionTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  stepsList: { gap: 10 },
-  stepCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 14,
-  },
-  stepNumBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  stepNumText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  stepInfo: { flex: 1, gap: 3 },
-  stepTitle: { fontSize: 15, fontWeight: '700' },
-  stepDesc: { fontSize: 12, lineHeight: 17 },
   bottomBar: {
     position: 'absolute',
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1,
+    bottom: 0,
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

@@ -10,108 +10,93 @@ interface BottomNavProps {
 }
 
 const tabs = [
-  { name: 'Home', icon: HomeIcon, focusedIcon: HomeIconFocused, route: 'Home' },
-  { name: 'Journal', icon: JournalIcon, focusedIcon: JournalIconFocused, route: 'Journal' },
+  { name: 'Today', icon: HomeIcon, focusedIcon: HomeIconFocused, route: 'Home' },
   { name: 'Calm', icon: CalmIcon, focusedIcon: CalmIconFocused, route: 'Calm' },
+  { name: 'Journal', icon: JournalIcon, focusedIcon: JournalIconFocused, route: 'Journal' },
   { name: 'Insights', icon: InsightsIcon, focusedIcon: InsightsIconFocused, route: 'Insights' },
-  { name: 'Habits', icon: HabitsIcon, focusedIcon: HabitsIconFocused, route: 'Habits' },
   { name: 'Me', icon: MeIcon, focusedIcon: MeIconFocused, route: 'Settings' },
 ] as const;
 
 function HomeIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <Path d="M9 22V12h6v10" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
     </Svg>
   );
 }
 
 function HomeIconFocused({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <Path d="M9 22V12h6v10" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
     </Svg>
   );
 }
 
 function JournalIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <Path d="M14 2v6h6" />
-      <Path d="M16 13H8" />
-      <Path d="M16 17H8" />
-      <Path d="M10 9H8" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M5 4h11l4 4v12H5z" />
+      <Path d="M8 9h6M8 13h8M8 17h5" />
     </Svg>
   );
 }
 
 function JournalIconFocused({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <Path d="M14 2v6h6" />
-      <Path d="M16 13H8" />
-      <Path d="M16 17H8" />
-      <Path d="M10 9H8" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M5 4h11l4 4v12H5z" />
+      <Path d="M8 9h6M8 13h8M8 17h5" />
     </Svg>
   );
 }
 
 function CalmIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M12 2a10 10 0 1 0 10 10" />
-      <Path d="M12 6v6l4 2" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M12 3c3.5 3 6 6 6 9a6 6 0 0 1-12 0c0-3 2.5-6 6-9z" />
     </Svg>
   );
 }
 
 function CalmIconFocused({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <Path d="M12 2a10 10 0 1 0 10 10" />
-      <Path d="M12 6v6l4 2" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M12 3c3.5 3 6 6 6 9a6 6 0 0 1-12 0c0-3 2.5-6 6-9z" />
     </Svg>
   );
 }
 
 function InsightsIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M18 20V10" />
-      <Path d="M12 20V4" />
-      <Path d="M6 20v-6" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
     </Svg>
   );
 }
 
 function InsightsIconFocused({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <Path d="M18 20V10" />
-      <Path d="M12 20V4" />
-      <Path d="M6 20v-6" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
     </Svg>
   );
 }
 
 function MeIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <Circle cx="12" cy="7" r="4" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <Circle cx="12" cy="8" r="3.6" />
+      <Path d="M4.5 20c.8-4 3.9-6 7.5-6s6.7 2 7.5 6" />
     </Svg>
   );
 }
 
 function MeIconFocused({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <Circle cx="12" cy="7" r="4" />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <Circle cx="12" cy="8" r="3.6" />
+      <Path d="M4.5 20c.8-4 3.9-6 7.5-6s6.7 2 7.5 6" />
     </Svg>
   );
 }

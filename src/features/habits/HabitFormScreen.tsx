@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Keyboard } from 'react-native';
+import { View, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Alert } from '../../services/appAlert';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,16 +7,12 @@ import { RootStackParamList } from '../../types/navigation';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { notificationService } from '../../services/notifications';
 import { getIconName } from '../../utils/iconMap';
-import { Card } from '../../components/Card';
-import { PrimaryButton } from '../../components/PrimaryButton';
-import { HabitPlantingIllustration, ScreenHeader, TactilePressable } from '../../components';
+import { AppText, Button, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { FormSkeleton } from '../../components/interactive/LoadingState';
-import Animated from 'react-native-reanimated';
-import { sharedElementStyle, sharedHeroStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'HabitForm'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'HabitForm'>['route'];
@@ -43,11 +39,20 @@ const ICONS = [
   'brush', 'pill', 'flash', 'diamond', 'star', 'flower', 'tree', 'cloud', 'flame',
 ];
 
+/** Muted identity colors that sit inside the Still Water palette. */
 const COLORS = [
-  '#5A955A', '#877FC5', '#6B9BCD', '#EB876D', '#EB697F', '#4EA5A5',
-  '#B19CD9', '#A8D0E6', '#F5C6A5', '#74AC74', '#9FD8A8', '#E8A8D8',
+  '#2C4F45', '#5F5A6B', '#41626E', '#8E5F42',
+  '#7F5257', '#356B6D', '#3F6E58', '#9A7434',
 ];
 
+const REMINDER_TIMES = ['06:00', '07:00', '08:00', '09:00', '12:00', '17:00', '18:00', '20:00', '21:00', '22:00'];
+
+/**
+ * Habit form — one page, read top to bottom.
+ *
+ * Each question is an overline and its control, separated by hairlines.
+ * Pickers open as calm sheets over the page.
+ */
 export function HabitFormScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
@@ -166,22 +171,18 @@ export function HabitFormScreen() {
 
   const handleDelete = async () => {
     if (!id) return;
-    Alert.alert(
-      'Delete habit?',
-      'This will remove the habit and all its completion history.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await habitRepository.delete(id!);
-            await notificationService?.syncHabitReminders?.();
-            navigation.goBack();
-          },
+    Alert.alert('Delete habit?', 'This will remove the habit and all its completion history.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await habitRepository.delete(id!);
+          await notificationService?.syncHabitReminders?.();
+          navigation.goBack();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const toggleDay = (day: string) => {
@@ -192,9 +193,11 @@ export function HabitFormScreen() {
   };
 
   const renderIconPicker = () => (
-    <View style={[styles.pickerContainer, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-      <Text style={[styles.pickerTitle, { color: colors.text.primary }]}>Choose Icon</Text>
-      <ScrollView horizontal style={styles.iconScroll} showsHorizontalScrollIndicator={false}>
+    <View style={[styles.sheet, { backgroundColor: colors.surface.default }]}>
+      <AppText variant="h3" center>
+        Choose an icon
+      </AppText>
+      <ScrollView horizontal style={{ marginTop: 18 }} showsHorizontalScrollIndicator={false}>
         {(ICONS ?? []).map((i) => (
           <TactilePressable
             key={i}
@@ -204,13 +207,23 @@ export function HabitFormScreen() {
             }}
             scaleDownTo={0.94}
             hapticStyle="selection"
-            style={[
-              styles.iconOption,
-              { backgroundColor: colors.background.default, borderColor: colors.border.default },
-              icon === i && { backgroundColor: color, borderColor: color },
-            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Choose ${i} icon`}
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 16,
+              marginRight: 10,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: icon === i ? colors.primary.default : colors.surface.muted,
+            }}
           >
-            <Ionicons name={getIconName(i) as any} size={26} color={icon === i ? '#FFFFFF' : colors.text.primary} />
+            <Ionicons
+              name={getIconName(i) as any}
+              size={24}
+              color={icon === i ? colors.primary.foreground : colors.text.secondary}
+            />
           </TactilePressable>
         ))}
       </ScrollView>
@@ -218,9 +231,11 @@ export function HabitFormScreen() {
   );
 
   const renderColorPicker = () => (
-    <View style={[styles.pickerContainer, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-      <Text style={[styles.pickerTitle, { color: colors.text.primary }]}>Choose Color</Text>
-      <View style={styles.colorGrid}>
+    <View style={[styles.sheet, { backgroundColor: colors.surface.default }]}>
+      <AppText variant="h3" center>
+        Choose a color
+      </AppText>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, justifyContent: 'center', marginTop: 18 }}>
         {(COLORS ?? []).map((c) => (
           <TactilePressable
             key={c}
@@ -230,12 +245,19 @@ export function HabitFormScreen() {
             }}
             scaleDownTo={0.94}
             hapticStyle="selection"
-            style={[
-              styles.colorOption,
-              color === c && { borderColor: colors.primary.default },
-            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Choose color ${c}`}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 2,
+              borderColor: color === c ? colors.text.primary : 'transparent',
+            }}
           >
-            <View style={[styles.colorCircle, { backgroundColor: c }]} />
+            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c }} />
           </TactilePressable>
         ))}
       </View>
@@ -252,7 +274,7 @@ export function HabitFormScreen() {
 
   return (
     <ScreenContainer scroll={false} animate={false} backgroundColor={colors.background.default}>
-      <ScreenHeader title={isEditing ? 'Edit Habit' : 'New Habit'} />
+      <ScreenHeader title={isEditing ? 'Edit habit' : 'New habit'} />
 
       <ScrollView
         style={styles.scrollView}
@@ -261,225 +283,311 @@ export function HabitFormScreen() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginBottom: 4 }}>
-          <Animated.View
-            sharedTransitionTag={sharedTransitionTags.habitPlantingHero}
-            sharedTransitionStyle={sharedHeroStyle}
-          >
-            <HabitPlantingIllustration width={140} height={110} />
-          </Animated.View>
-          <Text style={{ fontSize: 13, color: colors.text.tertiary, marginTop: 8 }}>
-            {isEditing ? 'Adjust your daily practice' : 'Plant a tiny mindful habit for daily growth'}
-          </Text>
-        </View>
+        <AppText variant="body" tone="secondary" style={{ maxWidth: 300 }}>
+          {isEditing ? 'Adjust the details of this practice.' : 'One small action, repeated. Keep it easy enough to do on a hard day.'}
+        </AppText>
 
         <PopIn index={1}>
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Habit Name</Text>
-          <TextInput
-            style={[styles.input, { color: colors.text.primary, borderBottomColor: colors.border.default }]}
-            placeholder="e.g. Mindful Morning Walk"
-            value={name}
-            onChangeText={setName}
-            placeholderTextColor={colors.text.tertiary}
-            autoCapitalize="words"
-            maxLength={50}
-          />
-        </Card>
+          <View style={{ marginTop: 32 }}>
+            <AppText variant="overline" tone="tertiary" style={{ marginBottom: 8 }}>
+              Name
+            </AppText>
+            <TextInput
+              style={[
+                styles.input,
+                { color: colors.text.primary, backgroundColor: colors.surface.default, borderColor: colors.border.default },
+              ]}
+              placeholder="e.g. Mindful morning walk"
+              value={name}
+              onChangeText={setName}
+              placeholderTextColor={colors.text.tertiary}
+              autoCapitalize="words"
+              maxLength={50}
+              accessibilityLabel="Habit name"
+            />
+          </View>
         </PopIn>
 
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Icon & Color Identity</Text>
-          <View style={styles.iconColorRow}>
-            <TactilePressable onPress={() => setShowIconPicker(true)} style={styles.iconPreview}>
-              <Animated.View
-                sharedTransitionTag={id ? sharedTransitionTags.habitIcon(id) : undefined}
-                sharedTransitionStyle={sharedElementStyle}
-                style={[styles.iconPreviewCircle, { backgroundColor: color }]}
+        <PopIn index={2}>
+          <View style={{ marginTop: 32, flexDirection: 'row', gap: 12 }}>
+            <TactilePressable
+              onPress={() => setShowIconPicker(true)}
+              scaleDownTo={0.97}
+              hapticStyle="light"
+              accessibilityRole="button"
+              accessibilityLabel="Select icon"
+              style={{ flex: 1, alignItems: 'center', gap: 8 }}
+            >
+              <View
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: 18,
+                  backgroundColor: color,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                <Ionicons name={getIconName(icon) as any} size={28} color="#FFFFFF" />
-              </Animated.View>
-              <Text style={[styles.iconPreviewLabel, { color: colors.text.secondary }]}>Select Icon</Text>
+                <Ionicons name={getIconName(icon) as any} size={26} color={colors.primary.foreground} />
+              </View>
+              <AppText variant="caption" tone="secondary">
+                Icon
+              </AppText>
             </TactilePressable>
-            <TactilePressable onPress={() => setShowColorPicker(true)} style={styles.colorPreview}>
-              <View style={[styles.colorPreviewCircle, { backgroundColor: color }]} />
-              <Text style={[styles.iconPreviewLabel, { color: colors.text.secondary }]}>Select Color</Text>
+
+            <TactilePressable
+              onPress={() => setShowColorPicker(true)}
+              scaleDownTo={0.97}
+              hapticStyle="light"
+              accessibilityRole="button"
+              accessibilityLabel="Select color"
+              style={{ flex: 1, alignItems: 'center', gap: 8 }}
+            >
+              <View
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: 18,
+                  backgroundColor: colors.surface.muted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: color }} />
+              </View>
+              <AppText variant="caption" tone="secondary">
+                Color
+              </AppText>
             </TactilePressable>
           </View>
-        </Card>
+        </PopIn>
 
         <PopIn index={3}>
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Frequency</Text>
-          {(FREQUENCY_OPTIONS ?? []).map((opt, index) => {
-            const isSelected = frequency === opt?.value;
-            return (
-              <TactilePressable
-                key={opt?.value ?? 'ph-' + index}
-                onPress={() => opt?.value && setFrequency(opt.value as 'daily' | 'weekdays' | 'custom')}
-                hapticStyle="selection"
-                style={[
-                  styles.frequencyOption,
-                  { backgroundColor: colors.background.secondary, borderColor: isSelected ? colors.primary.default : colors.border.default },
-                  isSelected && { backgroundColor: colors.primary.default + '14', borderWidth: 2 },
-                ]}
-              >
-                <View style={styles.frequencyOptionContent}>
-                  <Text style={[styles.frequencyLabel, { color: colors.text.primary }, isSelected && { fontWeight: '700' }]}>
-                    {opt?.label ?? ''}
-                  </Text>
-                  <Text style={[styles.frequencyDesc, { color: colors.text.tertiary }]}>{opt?.description ?? ''}</Text>
-                </View>
-                <Ionicons
-                  name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={22}
-                  color={isSelected ? colors.primary.default : colors.text.tertiary}
-                  style={{ marginTop: 2 }}
-                />
-              </TactilePressable>
-            );
-          })}
-
-          {frequency === 'custom' && (
-            <View style={styles.dayPicker}>
-              <Text style={[styles.dayPickerLabel, { color: colors.text.secondary }]}>Active Days</Text>
-              <View style={styles.dayButtons}>
-                {(DAYS ?? []).map((day, index) => {
-                  const isDaySelected = (customDays ?? []).includes(day?.value);
-                  return (
+          <View style={{ marginTop: 36 }}>
+            <AppText variant="overline" tone="tertiary">
+              How often
+            </AppText>
+            <View style={{ marginTop: 4 }}>
+              {(FREQUENCY_OPTIONS ?? []).map((opt, index) => {
+                const isSelected = frequency === opt?.value;
+                return (
+                  <View key={opt?.value ?? 'ph-' + index}>
                     <TactilePressable
-                      key={day?.value ?? 'ph-' + index}
-                      onPress={() => day?.value && toggleDay(day.value)}
-                      scaleDownTo={0.92}
+                      onPress={() => opt?.value && setFrequency(opt.value as 'daily' | 'weekdays' | 'custom')}
+                      scaleDownTo={0.99}
                       hapticStyle="selection"
-                      style={[
-                        styles.dayButton,
-                        { backgroundColor: colors.surface.default, borderColor: colors.border.default },
-                        isDaySelected && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
-                      ]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isSelected }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        paddingVertical: 14,
+                        borderTopWidth: index === 0 ? 0 : 1,
+                        borderTopColor: colors.border.default,
+                      }}
                     >
-                      <Text
-                        style={[
-                          styles.dayButtonText,
-                          { color: colors.text.primary },
-                          isDaySelected && { color: '#FFFFFF', fontWeight: '700' },
-                        ]}
-                      >
-                        {day?.short ?? ''}
-                      </Text>
+                      <View style={{ flex: 1 }}>
+                        <AppText variant="body" tone={isSelected ? 'primary' : 'secondary'}>
+                          {opt?.label ?? ''}
+                        </AppText>
+                        <AppText variant="caption" tone="tertiary" style={{ marginTop: 1 }}>
+                          {opt?.description ?? ''}
+                        </AppText>
+                      </View>
+                      <Ionicons
+                        name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={21}
+                        color={isSelected ? colors.primary.default : colors.text.tertiary}
+                      />
                     </TactilePressable>
-                  );
-                })}
-              </View>
+                  </View>
+                );
+              })}
             </View>
-          )}
-        </Card>
+
+            {frequency === 'custom' ? (
+              <View style={{ marginTop: 14 }}>
+                <AppText variant="caption" tone="tertiary" style={{ marginBottom: 8 }}>
+                  Active days
+                </AppText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  {(DAYS ?? []).map((day, index) => {
+                    const isDaySelected = (customDays ?? []).includes(day?.value);
+                    return (
+                      <TactilePressable
+                        key={day?.value ?? 'ph-' + index}
+                        onPress={() => day?.value && toggleDay(day.value)}
+                        scaleDownTo={0.92}
+                        hapticStyle="selection"
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isDaySelected }}
+                        accessibilityLabel={day?.label ?? ''}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: isDaySelected ? colors.primary.default : colors.surface.muted,
+                        }}
+                      >
+                        <AppText
+                          variant="label"
+                          tone={isDaySelected ? 'onPrimary' : 'secondary'}
+                        >
+                          {day?.short ?? ''}
+                        </AppText>
+                      </TactilePressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
+          </View>
         </PopIn>
 
         <PopIn index={4}>
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Daily Reminder</Text>
-          <TactilePressable
-            onPress={() => setShowTimePicker(true)}
-            style={[styles.reminderButton, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}
-          >
-            <Ionicons name="alarm-outline" size={22} color={colors.primary.default} style={{ marginTop: 2 }} />
-            <View style={styles.reminderButtonContent}>
-              <Text style={[styles.reminderButtonLabel, { color: colors.text.primary }]}>Scheduled Time</Text>
-              <Text style={[styles.reminderButtonValue, { color: reminderTime ? colors.primary.default : colors.text.tertiary }]}>
-                {reminderTime || 'None set'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} style={{ marginTop: 2 }} />
-          </TactilePressable>
-        </Card>
+          <View style={{ marginTop: 36 }}>
+            <AppText variant="overline" tone="tertiary">
+              Reminder
+            </AppText>
+            <TactilePressable
+              onPress={() => setShowTimePicker(true)}
+              scaleDownTo={0.99}
+              hapticStyle="light"
+              accessibilityRole="button"
+              accessibilityLabel="Set reminder time"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                paddingVertical: 14,
+              }}
+            >
+              <Ionicons name="alarm-outline" size={19} color={colors.text.secondary} />
+              <AppText variant="body" style={{ flex: 1 }}>
+                {reminderTime || 'No reminder'}
+              </AppText>
+              <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+            </TactilePressable>
+          </View>
         </PopIn>
 
         <PopIn index={5}>
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Daily Repetitions</Text>
-          <View style={styles.goalRow}>
-            <TactilePressable
-              onPress={() => setGoal(Math.max(1, (goal ?? 1) - 1))}
-              style={[styles.goalButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
-            >
-              <Ionicons name="remove" size={20} color={colors.text.primary} />
-            </TactilePressable>
-            <Text style={[styles.goalValue, { color: colors.text.primary }]}>{goal ?? 1}</Text>
-            <TactilePressable
-              onPress={() => setGoal((goal ?? 1) + 1)}
-              style={[styles.goalButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
-            >
-              <Ionicons name="add" size={20} color={colors.text.primary} />
-            </TactilePressable>
-            <Text style={[styles.goalLabel, { color: colors.text.secondary }]}>
-              time{(goal ?? 1) !== 1 ? 's' : ''} per day
-            </Text>
+          <View style={{ marginTop: 32 }}>
+            <AppText variant="overline" tone="tertiary">
+              Daily repetitions
+            </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 }}>
+              <TactilePressable
+                onPress={() => setGoal(Math.max(1, (goal ?? 1) - 1))}
+                scaleDownTo={0.9}
+                hapticStyle="light"
+                accessibilityRole="button"
+                accessibilityLabel="Decrease repetitions"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface.muted,
+                }}
+              >
+                <Ionicons name="remove" size={18} color={colors.text.primary} />
+              </TactilePressable>
+              <AppText variant="h3" style={{ minWidth: 28, textAlign: 'center' }}>
+                {goal ?? 1}
+              </AppText>
+              <TactilePressable
+                onPress={() => setGoal((goal ?? 1) + 1)}
+                scaleDownTo={0.9}
+                hapticStyle="light"
+                accessibilityRole="button"
+                accessibilityLabel="Increase repetitions"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface.muted,
+                }}
+              >
+                <Ionicons name="add" size={18} color={colors.text.primary} />
+              </TactilePressable>
+              <AppText variant="bodySmall" tone="secondary">
+                time{(goal ?? 1) !== 1 ? 's' : ''} per day
+              </AppText>
+            </View>
           </View>
-        </Card>
         </PopIn>
 
         <PopIn index={6}>
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Intention & Notes</Text>
-          <TextInput
-            style={[styles.textArea, { color: colors.text.primary, borderColor: colors.border.default, backgroundColor: colors.surface.default }]}
-            placeholder="Why is this habit meaningful to you?..."
-            value={notes}
-            onChangeText={setNotes}
-            placeholderTextColor={colors.text.tertiary}
-            multiline
-            numberOfLines={3}
-            maxLength={500}
-          />
-        </Card>
+          <View style={{ marginTop: 32 }}>
+            <AppText variant="overline" tone="tertiary" style={{ marginBottom: 8 }}>
+              Intention
+            </AppText>
+            <TextInput
+              style={[
+                styles.textArea,
+                { color: colors.text.primary, borderColor: colors.border.default, backgroundColor: colors.surface.default },
+              ]}
+              placeholder="Why does this matter to you?"
+              value={notes}
+              onChangeText={setNotes}
+              placeholderTextColor={colors.text.tertiary}
+              multiline
+              maxLength={500}
+              accessibilityLabel="Habit intention"
+            />
+          </View>
         </PopIn>
 
         <PopIn index={7}>
-        <View style={styles.buttonRow}>
-          <View style={{ flex: 1 }}>
-            <PrimaryButton
+          <View style={{ marginTop: 40, gap: 12 }}>
+            <Button
               onPress={handleSave}
               loading={loading}
-              title={isEditing ? 'Save Changes' : 'Create Habit'}
+              title={isEditing ? 'Save changes' : 'Create habit'}
               fullWidth
             />
+            {isEditing ? (
+              <Button onPress={handleDelete} variant="ghost" title="Delete habit" fullWidth />
+            ) : null}
           </View>
-          {isEditing && (
-            <TactilePressable
-              onPress={handleDelete}
-              style={[styles.deleteButton, { borderColor: colors.accents.rose }]}
-            >
-              <Text style={[styles.deleteButtonText, { color: colors.accents.rose }]}>Delete</Text>
-            </TactilePressable>
-          )}
-        </View>
         </PopIn>
       </ScrollView>
 
-      {showIconPicker && (
-        <View style={styles.modalOverlay}>
+      {showIconPicker ? (
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay.scrim }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowIconPicker(false)} />
           {renderIconPicker()}
         </View>
-      )}
+      ) : null}
 
-      {showColorPicker && (
-        <View style={styles.modalOverlay}>
+      {showColorPicker ? (
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay.scrim }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowColorPicker(false)} />
           {renderColorPicker()}
         </View>
-      )}
+      ) : null}
 
-      {showTimePicker && (
-        <View style={styles.modalOverlay}>
+      {showTimePicker ? (
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay.scrim }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowTimePicker(false)} />
-          <View style={[styles.timePickerContainer, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-            <Text style={[styles.pickerTitle, { color: colors.text.primary }]}>Set Reminder Time</Text>
-            <View style={styles.timePicker}>
-              <Text style={[styles.timeDisplay, { color: colors.primary.default }]}>{reminderTime || '--:--'}</Text>
-              <View style={styles.timeButtons}>
-                {['06:00', '07:00', '08:00', '09:00', '12:00', '17:00', '18:00', '20:00', '21:00', '22:00'].map((t) => (
+          <View style={[styles.sheet, { backgroundColor: colors.surface.default }]}>
+            <AppText variant="h3" center>
+              Reminder time
+            </AppText>
+            <AppText variant="h2" center style={{ marginTop: 10 }}>
+              {reminderTime || '--:--'}
+            </AppText>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 18 }}>
+              {REMINDER_TIMES.map((t) => {
+                const selected = reminderTime === t;
+                return (
                   <TactilePressable
                     key={t}
                     onPress={() => {
@@ -487,211 +595,73 @@ export function HabitFormScreen() {
                       setShowTimePicker(false);
                     }}
                     hapticStyle="selection"
-                    style={[
-                      styles.timeButton,
-                      { backgroundColor: colors.background.default, borderColor: colors.border.default },
-                      reminderTime === t && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
-                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remind at ${t}`}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      backgroundColor: selected ? colors.primary.default : colors.surface.muted,
+                    }}
                   >
-                    <Text
-                      style={[
-                        styles.timeButtonText,
-                        { color: colors.text.primary },
-                        reminderTime === t && { color: '#FFFFFF', fontWeight: '700' },
-                      ]}
-                    >
+                    <AppText variant="label" tone={selected ? 'onPrimary' : 'secondary'}>
                       {t}
-                    </Text>
+                    </AppText>
                   </TactilePressable>
-                ))}
-              </View>
-              <TactilePressable
-                onPress={() => {
-                  setReminderTime('');
-                  setShowTimePicker(false);
-                }}
-                style={[styles.clearTimeButton, { borderColor: colors.border.default }]}
-              >
-                <Text style={[styles.clearTimeButtonText, { color: colors.text.secondary }]}>Clear</Text>
-              </TactilePressable>
+                );
+              })}
             </View>
+            <Button
+              title="Clear reminder"
+              variant="ghost"
+              size="sm"
+              onPress={() => {
+                setReminderTime('');
+                setShowTimePicker(false);
+              }}
+              style={{ marginTop: 16, alignSelf: 'center' }}
+            />
           </View>
         </View>
-      )}
+      ) : null}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110, gap: 16 },
-  section: {
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    gap: 14,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 56 },
   input: {
     fontSize: 17,
-    fontWeight: '500',
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-  },
-  iconColorRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
-  iconPreview: { flex: 1, alignItems: 'center', gap: 6 },
-  colorPreview: { flex: 1, alignItems: 'center', gap: 6 },
-  iconPreviewCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  colorPreviewCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-  },
-  iconPreviewLabel: { fontSize: 13, fontWeight: '500' },
-  frequencyOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginTop: 6,
-    gap: 12,
-  },
-  frequencyOptionContent: { gap: 3, flex: 1 },
-  frequencyLabel: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
-  frequencyDesc: { fontSize: 12, lineHeight: 16 },
-  dayPicker: { marginTop: 10, gap: 8 },
-  dayPickerLabel: { fontSize: 12, fontWeight: '500' },
-  dayButtons: { flexDirection: 'row', justifyContent: 'space-between' },
-  dayButton: {
-    width: 40,
-    height: 40,
+    lineHeight: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  dayButtonText: { fontSize: 14, fontWeight: '600' },
-  reminderButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
-  },
-  reminderButtonContent: { flex: 1, gap: 2 },
-  reminderButtonLabel: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
-  reminderButtonValue: { fontSize: 13, lineHeight: 18 },
-  goalRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  goalButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  goalValue: { fontSize: 20, fontWeight: '700' },
-  goalLabel: { fontSize: 14 },
   textArea: {
     fontSize: 15,
     lineHeight: 22,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    minHeight: 90,
+    minHeight: 96,
     textAlignVertical: 'top',
   },
-  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  deleteButton: {
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButtonText: { fontSize: 15, fontWeight: '600' },
   modalOverlay: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  pickerContainer: {
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 20,
+  sheet: {
+    borderRadius: 28,
+    padding: 22,
     width: '100%',
     maxHeight: '80%',
-    gap: 16,
   },
-  pickerTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  iconScroll: { gap: 12, paddingVertical: 4 },
-  iconOption: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },
-  colorOption: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 3,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  colorCircle: { width: 32, height: 32, borderRadius: 16 },
-  timePickerContainer: {
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 20,
-    width: '100%',
-    gap: 16,
-  },
-  timePicker: { gap: 14 },
-  timeDisplay: { fontSize: 36, fontWeight: '700', textAlign: 'center' },
-  timeButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  timeButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  timeButtonText: { fontSize: 14, fontWeight: '600' },
-  clearTimeButton: {
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 6,
-  },
-  clearTimeButtonText: { fontSize: 14, fontWeight: '600' },
 });

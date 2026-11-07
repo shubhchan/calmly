@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, BackHandler } from 'react-native';
+import { View, StyleSheet, BackHandler } from 'react-native';
 import { Alert } from '../../services/appAlert';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,19 +9,50 @@ import { settingsRepository } from '../../database/repositories/settingsReposito
 import { appLockService } from '../../services/appLock';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ScreenHeader, TactilePressable } from '../../components';
+import { AppText, ScreenHeader, TactilePressable } from '../../components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'SetPin'>['navigation'];
 
+const KEYPAD = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['', '0', 'backspace'],
+];
+
+/**
+ * Set PIN — a calm six-digit keypad.
+ *
+ * The page has one job: enter six digits, then confirm them. Dots carry the
+ * progress; the keypad is a quiet grid of plates.
+ */
 export function SetPinScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [stage, setStage] = useState<'enter' | 'confirm'>('enter');
   const [error, setError] = useState(false);
   const [originalPin, setOriginalPin] = useState('');
+
+  const submitVerification = async (enteredConfirm: string) => {
+    if (enteredConfirm !== originalPin) {
+      setError(true);
+      setConfirmPin('');
+      return;
+    }
+    try {
+      await settingsRepository?.setPin?.(enteredConfirm);
+      appLockService?.lock?.();
+      (navigation as any)?.goBack?.();
+    } catch (err) {
+      console.error('Failed to set PIN:', err);
+      Alert.alert('Error', 'Failed to save security PIN. Please try again.');
+    }
+  };
 
   const handlePinPress = useCallback(
     (digit: string) => {
@@ -42,29 +73,13 @@ export function SetPinScreen() {
           setConfirmPin(nextConfirm);
           setError(false);
           if (nextConfirm.length === 6) {
-            submitVerification(nextConfirm);
+            void submitVerification(nextConfirm);
           }
         }
       }
     },
     [stage, pin, confirmPin, originalPin]
   );
-
-  const submitVerification = async (enteredConfirm: string) => {
-    if (enteredConfirm !== originalPin) {
-      setError(true);
-      setConfirmPin('');
-      return;
-    }
-    try {
-      await settingsRepository?.setPin?.(enteredConfirm);
-      appLockService?.lock?.();
-      (navigation as any)?.goBack?.();
-    } catch (err) {
-      console.error('Failed to set PIN:', err);
-      Alert.alert('Error', 'Failed to save security PIN. Please try again.');
-    }
-  };
 
   const handleDelete = useCallback(() => {
     if (stage === 'enter') {
@@ -88,8 +103,10 @@ export function SetPinScreen() {
     return () => subscription?.remove?.();
   }, [stage]);
 
+  const value = stage === 'enter' ? pin : confirmPin;
+
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default} style={styles.container}>
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader
         onBack={() => {
           if (stage === 'confirm') {
@@ -102,86 +119,91 @@ export function SetPinScreen() {
         }}
       />
 
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.primary.default + '18' }]}>
+      <View style={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+        <View style={{ alignItems: 'center', gap: 12 }}>
+          <View style={[styles.iconPlate, { backgroundColor: colors.primary.subtle }]}>
             <Ionicons
               name={stage === 'enter' ? 'lock-closed-outline' : 'shield-checkmark-outline'}
-              size={36}
+              size={26}
               color={colors.primary.default}
             />
           </View>
-          <Text style={[styles.title, { color: colors.text.primary }]}>
-            {stage === 'enter' ? 'Create Security PIN' : 'Confirm Security PIN'}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-            {stage === 'enter' ? 'Enter a memorable 6-digit passcode' : 'Re-enter your 6 digits to verify'}
-          </Text>
+          <AppText variant="h2" center>
+            {stage === 'enter' ? 'Create a PIN' : 'Confirm your PIN'}
+          </AppText>
+          <AppText variant="body" tone="secondary" center style={{ maxWidth: 280 }}>
+            {stage === 'enter'
+              ? 'Six digits that only you know.'
+              : 'Enter the same six digits once more.'}
+          </AppText>
         </View>
 
         <View style={styles.pinDots}>
-          {[...Array(6)].map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.pinDot,
-                { borderColor: colors.border.default, backgroundColor: 'transparent' },
-                (stage === 'enter' ? i < (pin ?? '').length : i < (confirmPin ?? '').length) && {
-                  backgroundColor: colors.primary.default,
-                  borderColor: colors.primary.default,
-                },
-                error && {
-                  borderColor: colors.accents.rose,
-                  backgroundColor: colors.accents.rose,
-                },
-              ]}
-            />
-          ))}
+          {[...Array(6)].map((_, i) => {
+            const filled = i < (value ?? '').length;
+            const tone = error ? colors.status.error.default : colors.primary.default;
+            return (
+              <View
+                key={i}
+                style={[
+                  styles.pinDot,
+                  {
+                    borderColor: error ? tone : filled ? tone : colors.border.strong,
+                    backgroundColor: filled ? tone : 'transparent',
+                  },
+                ]}
+              />
+            );
+          })}
         </View>
 
-        {error ? (
-          <Text style={[styles.errorText, { color: colors.accents.rose }]}>
-            {stage === 'confirm' ? 'PINs do not match. Please try again.' : 'Enter 6 digits'}
-          </Text>
-        ) : null}
+        <View style={{ minHeight: 24, justifyContent: 'center' }}>
+          {error ? (
+            <AppText variant="bodySmall" tone="error" center>
+              {stage === 'confirm' ? 'The PINs do not match. Try again.' : 'Enter six digits.'}
+            </AppText>
+          ) : (
+            <AppText variant="caption" tone="tertiary" center>
+              {stage === 'enter'
+                ? `${pin.length} of 6 digits`
+                : `${confirmPin.length} of 6 digits`}
+            </AppText>
+          )}
+        </View>
 
         <View style={styles.keypad}>
-          {[
-            ['1', '2', '3'],
-            ['4', '5', '6'],
-            ['7', '8', '9'],
-            ['', '0', '⌫'],
-          ].map((row, rowIndex) => (
+          {KEYPAD.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.keypadRow}>
-              {(row ?? []).map((key, keyIndex) => (
-                <TactilePressable
-                  key={keyIndex}
-                  onPress={() => (key === '⌫' ? handleDelete() : key && handlePinPress(key))}
-                  scaleDownTo={0.9}
-                  disabled={key === ''}
-                  style={[
-                    styles.keypadButton,
-                    { backgroundColor: colors.surface.default, borderColor: colors.border.default },
-                    key === '' && styles.keypadButtonEmpty,
-                    key === '⌫' && styles.keypadButtonDelete,
-                  ]}
-                  accessibilityLabel={key === '⌫' ? 'Delete' : key}
-                >
-                  {key === '⌫' ? (
-                    <Ionicons name="backspace-outline" size={26} color={colors.text.primary} />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.keypadButtonText,
-                        { color: colors.text.primary },
-                        key === '' && styles.keypadButtonTextEmpty,
-                      ]}
-                    >
-                      {key}
-                    </Text>
-                  )}
-                </TactilePressable>
-              ))}
+              {(row ?? []).map((key, keyIndex) => {
+                if (key === '') return <View key={keyIndex} style={styles.keypadButton} />;
+                const isDelete = key === 'backspace';
+                return (
+                  <TactilePressable
+                    key={keyIndex}
+                    onPress={() => (isDelete ? handleDelete() : handlePinPress(key))}
+                    scaleDownTo={0.94}
+                    hapticStyle="light"
+                    accessibilityRole="button"
+                    accessibilityLabel={isDelete ? 'Delete' : key}
+                    style={[
+                      styles.keypadButton,
+                      {
+                        backgroundColor: isDelete
+                          ? 'transparent'
+                          : colors.surface.default,
+                      },
+                    ]}
+                  >
+                    {isDelete ? (
+                      <Ionicons name="backspace-outline" size={24} color={colors.text.secondary} />
+                    ) : (
+                      <AppText variant="h2" center>
+                        {key}
+                      </AppText>
+                    )}
+                  </TactilePressable>
+                );
+              })}
             </View>
           ))}
         </View>
@@ -191,39 +213,23 @@ export function SetPinScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: 32, justifyContent: 'center', gap: 20 },
-  header: { alignItems: 'center', gap: 10 },
-  iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  content: { flex: 1, paddingHorizontal: 32, justifyContent: 'center', gap: 24 },
+  iconPlate: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
   },
-  title: { fontSize: 24, fontWeight: '700', letterSpacing: -0.3 },
-  subtitle: { fontSize: 14, textAlign: 'center' },
-  pinDots: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginVertical: 8 },
-  pinDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2 },
-  errorText: { textAlign: 'center', fontSize: 14, fontWeight: '500', marginTop: -6 },
-  keypad: { marginTop: 8, gap: 14 },
+  pinDots: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
+  pinDot: { width: 15, height: 15, borderRadius: 8, borderWidth: 1.5 },
+  keypad: { gap: 10 },
   keypadRow: { flexDirection: 'row', justifyContent: 'space-around' },
   keypadButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  keypadButtonEmpty: { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 },
-  keypadButtonDelete: { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 },
-  keypadButtonText: { fontSize: 26, fontWeight: '600' },
-  keypadButtonTextEmpty: { color: 'transparent' },
 });

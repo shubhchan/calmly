@@ -1,24 +1,17 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TextInput, Pressable } from 'react-native';
-import { Alert } from '../../services/appAlert';
+import { ScrollView, TextInput, View } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../types/navigation';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
-import { getHabitEncouragement } from '../../utils/encouragement';
-import { PrimaryButton } from '../../components/PrimaryButton';
-import { Card } from '../../components/Card';
-import { HabitPlantingIllustration, StaggeredEntry, CelebratoryCheckbox, TactilePressable, ScreenHeader } from '../../components';
-import { Ionicons } from '@expo/vector-icons';
+import { getIconName } from '../../utils/iconMap';
+import { AppText, Button, TactilePressable } from '../../components';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { resolveTint } from '../../theme/tints';
-import Animated from 'react-native-reanimated';
-import { sharedElementStyle, sharedHeroStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
+import { hapticFeedback } from '../../utils/haptics';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Habits'>['navigation'];
 
@@ -28,49 +21,33 @@ const FREQUENCY_LABELS: Record<string, string> = {
   custom: 'Custom',
 };
 
-const COLORS = [
-  '#8FBC8F', '#B19CD9', '#A8D0E6', '#F5C6A5', '#F5A9A9', '#9FD8A8',
-  '#D8A8E8', '#A8D8E8', '#F5D8A8', '#E8A8D8', '#A8E8D8', '#E8D8A8',
-];
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function getIconName(icon?: string | null): any {
-  const iconMap: Record<string, string> = {
-    water: 'water-outline',
-    fitness: 'fitness-outline',
-    book: 'book-outline',
-    meditation: 'flower-outline',
-    sunny: 'sunny-outline',
-    moon: 'moon-outline',
-    leaf: 'leaf-outline',
-    heart: 'heart-outline',
-    'musical-notes': 'musical-notes-outline',
-    camera: 'camera-outline',
-    bicycle: 'bicycle-outline',
-    walk: 'walk-outline',
-    sleep: 'bed-outline',
-    nutrition: 'nutrition-outline',
-    code: 'code-slash-outline',
-    brush: 'brush-outline',
-    pill: 'medical-outline',
-    flash: 'flash-outline',
-    diamond: 'diamond-outline',
-    star: 'star-outline',
-    flower: 'flower-outline',
-    tree: 'leaf-outline',
-    cloud: 'cloud-outline',
-    flame: 'flame-outline',
-  };
-  return iconMap[icon ?? ''] || 'checkbox-outline';
+type Slot = 'Morning' | 'Afternoon' | 'Evening' | 'Anytime';
+const SLOT_ORDER: Slot[] = ['Morning', 'Afternoon', 'Evening', 'Anytime'];
+
+function slotFor(habit: Habit): Slot {
+  const reminder = habit?.reminderTime;
+  if (!reminder) return 'Anytime';
+  const hour = parseInt(reminder.split(':')[0] ?? '', 10);
+  if (!Number.isFinite(hour)) return 'Anytime';
+  if (hour < 12) return 'Morning';
+  if (hour < 17) return 'Afternoon';
+  return 'Evening';
 }
 
+/**
+ * Habits — direction A.
+ *
+ * Grouped by the time of day they belong to. One progress line, then rows.
+ * A check is a plain square, not a celebration.
+ */
 export function HabitListScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors, isDark } = useAppTheme();
-  const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
-  const [showEmptyState, setShowEmptyState] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const hasLoadedRef = useRef(false);
 
@@ -81,10 +58,8 @@ export function HabitListScreen() {
         habitRepository.getAll(false),
         habitRepository.getTodayCompletions(),
       ]);
-      const safeHabits = allHabits ?? [];
-      setHabits(safeHabits);
+      setHabits(allHabits ?? []);
       setTodayCompletions(completions ?? {});
-      setShowEmptyState((safeHabits ?? []).length === 0);
     } catch (error) {
       console.error('Failed to load habits:', error);
       setHabits((prev) => prev ?? []);
@@ -109,25 +84,15 @@ export function HabitListScreen() {
         await habitRepository.uncomplete(habit.id, today);
       } else {
         await habitRepository.complete(habit.id, today);
+        hapticFeedback.light();
       }
       setTodayCompletions((prev) => ({ ...prev, [habit.id]: !completed }));
-
-      if (!completed) {
-        const streak = await habitRepository.getStreak(habit.id);
-        if ((streak?.current ?? 0) > 1) {
-          Alert.alert('Streak!', getHabitEncouragement('streak', streak?.current ?? 0));
-        } else {
-          Alert.alert('Done!', getHabitEncouragement('complete'));
-        }
-      }
     } catch (error) {
       console.error('Failed to toggle habit:', error);
     }
   };
 
-  const handleAddHabit = () => {
-    navigation.navigate('HabitForm');
-  };
+  const handleAddHabit = () => navigation.navigate('HabitForm');
 
   const handleHabitPress = (habit: Habit) => {
     if (!habit?.id) return;
@@ -145,8 +110,7 @@ export function HabitListScreen() {
 
   const isDueToday = (habit: Habit): boolean => {
     if (!habit) return true;
-    const today = new Date();
-    const dayOfWeek = today.getDay();
+    const dayOfWeek = new Date().getDay();
     const frequency = habit?.frequency;
     let customDays: string[] = [];
     try {
@@ -164,462 +128,334 @@ export function HabitListScreen() {
 
   if (loading) {
     return (
-      <ScreenContainer animate={false} contentContainerStyle={styles.content}>
+      <ScreenContainer animate={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16 }}>
         <ListSkeleton rows={4} />
       </ScreenContainer>
     );
   }
 
   const dueHabits = (habits ?? []).filter(isDueToday);
-  const safeCompletions = todayCompletions ?? {};
-  const completedCount = (dueHabits ?? []).filter((h) => h?.id && safeCompletions[h.id]).length;
-  const totalDue = (dueHabits ?? []).length;
-  const mintTint = resolveTint(!!isDark, 'mint');
+  const completedCount = dueHabits.filter((h) => h?.id && todayCompletions[h.id]).length;
+  const totalDue = dueHabits.length;
+  const progress = totalDue > 0 ? Math.round((completedCount / totalDue) * 100) : 0;
 
-  const filteredHabits = (() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return dueHabits ?? [];
-    return (dueHabits ?? []).filter((h) => {
-      const name = (h.name ?? '').toLowerCase();
-      const notes = (h.notes ?? '').toLowerCase();
-      const freq = (FREQUENCY_LABELS[h.frequency] ?? h.frequency ?? '').toLowerCase();
-      return name.includes(q) || notes.includes(q) || freq.includes(q);
-    });
-  })();
+  const query = searchQuery.trim().toLowerCase();
+  const filteredHabits = query
+    ? dueHabits.filter((h) => {
+        const name = (h.name ?? '').toLowerCase();
+        const notes = (h.notes ?? '').toLowerCase();
+        const freq = (FREQUENCY_LABELS[h.frequency] ?? h.frequency ?? '').toLowerCase();
+        return name.includes(query) || notes.includes(query) || freq.includes(query);
+      })
+    : dueHabits;
+
+  const grouped = SLOT_ORDER.map((slot) => ({
+    slot,
+    habits: filteredHabits.filter((habit) => slotFor(habit) === slot),
+  })).filter((group) => group.habits.length > 0);
+
+  const habitMeta = (habit: Habit): string => {
+    const frequency = FREQUENCY_LABELS[habit.frequency] || habit.frequency || '';
+    if (habit.frequency === 'custom') {
+      try {
+        const parsed = JSON.parse(habit.customDays || '[]');
+        const days = Array.isArray(parsed)
+          ? parsed.map((d: string) => DAY_LABELS[parseInt(d, 10)] ?? '').filter(Boolean)
+          : [];
+        return days.length ? `Custom · ${days.join(', ')}` : frequency;
+      } catch {
+        return frequency;
+      }
+    }
+    return frequency;
+  };
+
+  const encouragement =
+    totalDue === 0
+      ? 'Nothing scheduled today'
+      : completedCount === totalDue
+        ? 'All done'
+        : completedCount > 0
+          ? 'A good day'
+          : 'One is enough';
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
-      <ScreenHeader
-        title="Habits"
-        subtitle="Nurture your daily rhythm"
-        right={
-          <TactilePressable
-            onPress={handleAddHabit}
-            scaleDownTo={0.9}
-            hapticStyle="medium"
-            style={[styles.addButton, { backgroundColor: colors.primary.default }]}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Add habit"
-          >
-            <Ionicons name="add" size={24} color="#FFFFFF" />
-          </TactilePressable>
-        }
-      />
-
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-        {totalDue > 0 && (
-          <PopIn index={1}>
-            <Card tone="mint" style={styles.progressCard}>
-              <View style={styles.progressCardTop}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.progressNumber, { color: mintTint.text }]}>
-                    {completedCount} of {totalDue} Completed
-                  </Text>
-                  <Text style={[styles.encouragementText, { color: mintTint.muted }]}>
-                    {completedCount === totalDue && totalDue > 0
-                      ? getHabitEncouragement('complete')
-                      : getHabitEncouragement('empty')}
-                  </Text>
-                </View>
-                <View style={[styles.percentageBadge, { backgroundColor: mintTint.plate }]}>
-                  <Text style={[styles.percentageText, { color: mintTint.accent }]}>
-                    {totalDue > 0 ? Math.round((completedCount / totalDue) * 100) : 0}%
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[styles.progressTrack, { backgroundColor: mintTint.border }]}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${totalDue > 0 ? Math.min(Math.round((completedCount / totalDue) * 100), 100) : 0}%`,
-                      backgroundColor: mintTint.accent,
-                    },
-                  ]}
-                />
-              </View>
-            </Card>
-          </PopIn>
-        )}
-
-        {!showEmptyState && (
-          <View style={[styles.searchBar, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-            <Ionicons name="search" size={17} color={colors.text.tertiary} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search habits by name or frequency…"
-              placeholderTextColor={colors.text.tertiary}
-              style={[styles.searchInput, { color: colors.text.primary }]}
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery('')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear search">
-                <Ionicons name="close-circle" size={17} color={colors.text.tertiary} />
-              </Pressable>
-            )}
-          </View>
-        )}
-
-        {showEmptyState ? (
-          <PopIn index={2}>
-            <View style={styles.emptyState}>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.habitPlantingHero}
-                sharedTransitionStyle={sharedHeroStyle}
-              >
-                <HabitPlantingIllustration width={160} height={135} style={{ marginBottom: 6 }} />
-              </Animated.View>
-              <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>No habits yet</Text>
-              <Text style={[styles.emptyText, { color: colors.text.secondary }]}>{getHabitEncouragement('empty')}</Text>
-              <PrimaryButton onPress={handleAddHabit} title="Create Your First Habit" style={styles.emptyButton} />
-            </View>
-          </PopIn>
-        ) : (
-          <PopIn index={2}>
-            {filteredHabits.length === 0 && searchQuery.length > 0 ? (
-              <View style={styles.emptySearchContainer}>
-                <Ionicons name="search-outline" size={36} color={colors.text.tertiary} style={{ marginBottom: 6 }} />
-                <Text style={[styles.emptySearchTitle, { color: colors.text.primary }]}>
-                  No habits found
-                </Text>
-                <Text style={[styles.emptySearchSubtitle, { color: colors.text.secondary }]}>
-                  No habits match “{searchQuery.trim()}”.
-                </Text>
-                <TactilePressable
-                  onPress={() => setSearchQuery('')}
-                  style={[styles.clearSearchBtn, { borderColor: colors.border.default }]}
-                >
-                  <Text style={[styles.clearSearchText, { color: colors.primary.default }]}>Clear Search</Text>
-                </TactilePressable>
-              </View>
-            ) : (
-              <View style={styles.list}>
-                {(filteredHabits ?? []).map((habit, index) => {
-                  let dayLabels: string[] = [];
-                  try {
-                    const parsed = JSON.parse(habit?.customDays || '[]');
-                    const arr = Array.isArray(parsed) ? parsed : [];
-                    dayLabels = arr.map((d: string) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d ?? '', 10)] ?? '');
-                  } catch {
-                    dayLabels = [];
-                  }
-                  const isCompleted = !!(habit?.id && safeCompletions[habit.id]);
-                  const habitColor = habit?.color || COLORS[0];
-
-                  return (
-                    <StaggeredEntry key={habit?.id ?? 'ph-' + index} index={Math.min(index, 7)}>
-                      <View
-                        style={[
-                          styles.habitCard,
-                          {
-                            backgroundColor: colors.surface.default,
-                            borderColor: isDark ? '#2E3D52' : colors.border.default,
-                          },
-                          isCompleted && { borderColor: habitColor + '55' },
-                        ]}
-                      >
-                        <TactilePressable
-                          onPress={() => handleHabitPress(habit)}
-                          scaleDownTo={0.98}
-                          hapticStyle="none"
-                          accessibilityRole="button"
-                          accessibilityLabel={`${habit?.name ?? 'Habit'}${isCompleted ? ', completed' : ''}`}
-                          style={styles.habitLeft}
-                        >
-                          <Animated.View
-                            sharedTransitionTag={habit?.id ? sharedTransitionTags.habitIcon(habit.id) : undefined}
-                            sharedTransitionStyle={sharedElementStyle}
-                            style={[styles.habitIcon, { backgroundColor: habitColor }]}
-                          >
-                            <Ionicons name={getIconName(habit?.icon)} size={22} color="#FFFFFF" />
-                          </Animated.View>
-                          <View style={styles.habitInfo}>
-                            <Text
-                              style={[
-                                styles.habitName,
-                                { color: colors.text.primary },
-                                isCompleted && { opacity: 0.75, textDecorationLine: 'line-through' },
-                              ]}
-                            >
-                              {habit?.name ?? ''}
-                            </Text>
-                            <Text style={[styles.habitFrequency, { color: colors.text.tertiary }]}>
-                              {FREQUENCY_LABELS[habit?.frequency ?? ''] || habit?.frequency || ''}
-                              {habit?.frequency === 'custom' && dayLabels.length > 0 && ` • ${dayLabels.join(', ')}`}
-                            </Text>
-                          </View>
-                        </TactilePressable>
-
-                        <View style={styles.habitRight}>
-                          <CelebratoryCheckbox
-                            checked={isCompleted}
-                            onToggle={() => toggleHabit(habit, isCompleted)}
-                            size={26}
-                            activeColor={habitColor}
-                            borderColor={habitColor}
-                            particleColors={COLORS}
-                          />
-                        </View>
-                      </View>
-                    </StaggeredEntry>
-                  );
-                })}
-
-                {(habits ?? []).length > (dueHabits ?? []).length && (
-                  <Text style={[styles.notDueText, { color: colors.text.tertiary }]}>
-                    {(habits ?? []).length - (dueHabits ?? []).length} habit{(habits ?? []).length - (dueHabits ?? []).length > 1 ? 's' : ''} scheduled for other days
-                  </Text>
-                )}
-              </View>
-            )}
-          </PopIn>
-        )}
-      </ScrollView>
-
-      <PopIn index={3}>
-        <View
-          style={[
-            styles.bottomActions,
-            {
-              borderTopColor: colors.border.default,
-              backgroundColor: colors.background.default,
-              paddingBottom: insets.bottom + 16,
-            },
-          ]}
-        >
-          <TactilePressable
-            onPress={() => navigation.navigate('Routines')}
-            scaleDownTo={0.98}
-            hapticStyle="light"
-            accessibilityRole="button"
-            accessibilityLabel="Mindful Routines"
-            style={[
-              styles.routineButton,
-              {
-                borderColor: colors.primary.default,
-                backgroundColor: colors.surface.default,
-              },
-            ]}
-          >
-            <Ionicons name="list-outline" size={20} color={colors.primary.default} />
-            <Text style={[styles.routineButtonText, { color: colors.primary.default }]}>Mindful Routines</Text>
-          </TactilePressable>
+    <ScreenContainer
+      contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 40 }}
+      backgroundColor={colors.background.default}
+    >
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <View style={{ flex: 1 }}>
+          <AppText variant="overline" tone="tertiary">
+            Habits
+          </AppText>
+          <AppText variant="h2" style={{ marginTop: 6 }}>
+            Your rhythm
+          </AppText>
         </View>
-      </PopIn>
+        <TactilePressable
+          onPress={handleAddHabit}
+          scaleDownTo={0.92}
+          hapticStyle="medium"
+          accessibilityRole="button"
+          accessibilityLabel="Add habit"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 15,
+            backgroundColor: colors.primary.default,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="add" size={20} color={colors.primary.foreground} />
+        </TactilePressable>
+      </View>
+
+      {/* Progress */}
+      {totalDue > 0 ? (
+        <View
+          style={{
+            marginTop: 22,
+            backgroundColor: colors.surface.selected,
+            borderRadius: 18,
+            paddingVertical: 16,
+            paddingHorizontal: 18,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <AppText variant="label" tone="link">
+              {completedCount} of {totalDue} done today
+            </AppText>
+            <AppText variant="caption" tone="tertiary">
+              {encouragement}
+            </AppText>
+          </View>
+          <View
+            style={{
+              height: 5,
+              borderRadius: 3,
+              backgroundColor: colors.border.default,
+              marginTop: 12,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              style={{
+                width: `${Math.min(progress, 100)}%`,
+                height: '100%',
+                borderRadius: 3,
+                backgroundColor: colors.primary.default,
+              }}
+            />
+          </View>
+        </View>
+      ) : null}
+
+      {/* Search appears only when the list is long enough to need it. */}
+      {dueHabits.length > 5 ? (
+        <View
+          style={{
+            marginTop: 20,
+            height: 42,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingHorizontal: 14,
+            borderRadius: 12,
+            backgroundColor: colors.surface.muted,
+          }}
+        >
+          <Ionicons name="search-outline" size={17} color={colors.text.tertiary} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Find a habit"
+            placeholderTextColor={colors.text.tertiary}
+            style={{ flex: 1, fontSize: 15, color: colors.text.primary, padding: 0 }}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            accessibilityLabel="Search habits"
+          />
+          {searchQuery.length > 0 ? (
+            <TactilePressable
+              onPress={() => setSearchQuery('')}
+              scaleDownTo={0.88}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+              style={{ padding: 4 }}
+            >
+              <Ionicons name="close-circle" size={17} color={colors.text.tertiary} />
+            </TactilePressable>
+          ) : null}
+        </View>
+      ) : null}
+
+      {totalDue === 0 ? (
+        <View style={{ alignItems: 'center', paddingVertical: 48, paddingHorizontal: 16 }}>
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 18,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.surface.selected,
+            }}
+          >
+            <Ionicons name="leaf-outline" size={24} color={colors.primary.default} />
+          </View>
+          <AppText variant="h3" center style={{ marginTop: 16 }}>
+            Nothing scheduled today
+          </AppText>
+          <AppText variant="bodySmall" tone="tertiary" center style={{ marginTop: 6, maxWidth: 260 }}>
+            Start with one small habit. You can always add more.
+          </AppText>
+          <Button
+            title="Create a habit"
+            variant="secondary"
+            size="sm"
+            onPress={handleAddHabit}
+            style={{ marginTop: 18 }}
+          />
+        </View>
+      ) : grouped.length === 0 ? (
+        <View style={{ alignItems: 'center', paddingVertical: 36 }}>
+          <AppText variant="title" center>
+            Nothing matches “{searchQuery.trim()}”
+          </AppText>
+          <AppText variant="bodySmall" tone="tertiary" center style={{ marginTop: 4 }}>
+            Try a different word.
+          </AppText>
+        </View>
+      ) : (
+        grouped.map((group) => (
+          <View key={group.slot} style={{ marginTop: 22 }}>
+            <AppText variant="overline" tone="tertiary" style={{ marginBottom: 2 }}>
+              {group.slot}
+            </AppText>
+            {group.habits.map((habit) => {
+              const isCompleted = !!(habit?.id && todayCompletions[habit.id]);
+              return (
+                <View
+                  key={habit.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 14,
+                    paddingVertical: 13,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.border.default,
+                  }}
+                >
+                  <TactilePressable
+                    onPress={() => handleHabitPress(habit)}
+                    scaleDownTo={0.98}
+                    hapticStyle="none"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${habit.name}`}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 14,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 12,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isCompleted ? colors.surface.selected : colors.surface.muted,
+                      }}
+                    >
+                      <Ionicons
+                        name={getIconName(habit.icon) as any}
+                        size={17}
+                        color={isCompleted ? colors.primary.default : colors.text.secondary}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppText
+                        variant="bodyLarge"
+                        tone={isCompleted ? 'tertiary' : 'primary'}
+                        numberOfLines={1}
+                        style={isCompleted ? { textDecorationLine: 'line-through' } : undefined}
+                      >
+                        {habit.name}
+                      </AppText>
+                      <AppText variant="caption" tone="tertiary" style={{ marginTop: 1 }}>
+                        {habitMeta(habit)}
+                        {habit.reminderTime ? ` · ${habit.reminderTime}` : ''}
+                      </AppText>
+                    </View>
+                  </TactilePressable>
+
+                  <TactilePressable
+                    onPress={() => toggleHabit(habit, isCompleted)}
+                    scaleDownTo={0.86}
+                    hapticStyle="light"
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isCompleted }}
+                    accessibilityLabel={`${habit.name}, ${isCompleted ? 'done' : 'not done'}`}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 8,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isCompleted ? colors.primary.default : 'transparent',
+                      borderWidth: isCompleted ? 0 : 1.5,
+                      borderColor: colors.border.strong,
+                    }}
+                  >
+                    {isCompleted ? (
+                      <Ionicons name="checkmark" size={13} color={colors.primary.foreground} />
+                    ) : null}
+                  </TactilePressable>
+                </View>
+              );
+            })}
+          </View>
+        ))
+      )}
+
+      {habits.length > dueHabits.length ? (
+        <AppText variant="caption" tone="tertiary" center style={{ marginTop: 20 }}>
+          {habits.length - dueHabits.length} more scheduled for other days
+        </AppText>
+      ) : null}
+
+      {/* Routines */}
+      <TactilePressable
+        onPress={() => navigation.navigate('Routines')}
+        scaleDownTo={0.99}
+        hapticStyle="light"
+        accessibilityRole="button"
+        accessibilityLabel="Open mindful routines"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          marginTop: 32,
+          paddingTop: 18,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.default,
+        }}
+      >
+        <Ionicons name="list-outline" size={19} color={colors.text.secondary} />
+        <View style={{ flex: 1 }}>
+          <AppText variant="title">Mindful routines</AppText>
+          <AppText variant="caption" tone="tertiary" style={{ marginTop: 1 }}>
+            Morning and evening sequences
+          </AppText>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+      </TactilePressable>
     </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24, gap: 16 },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 4,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13.5,
-    paddingVertical: 0,
-  },
-  emptySearchContainer: {
-    alignItems: 'center',
-    paddingVertical: 36,
-    paddingHorizontal: 20,
-    gap: 6,
-  },
-  emptySearchTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  emptySearchSubtitle: {
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  clearSearchBtn: {
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  clearSearchText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  progressCard: {
-    padding: 18,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginBottom: 20,
-    gap: 12,
-  },
-  progressCardTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  progressNumber: {
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  encouragementText: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 3,
-  },
-  percentageBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 9999,
-  },
-  percentageText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  progressTrack: {
-    height: 7,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    gap: 12,
-  },
-  emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  emptyText: {
-    fontSize: 15,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    lineHeight: 22,
-  },
-  emptyButton: {
-    marginTop: 12,
-    minWidth: 220,
-  },
-  list: {
-    gap: 12,
-  },
-  habitCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 15,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 12,
-  },
-  habitLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    flex: 1,
-  },
-  habitIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  habitInfo: {
-    flex: 1,
-    gap: 3,
-  },
-  habitName: {
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 22,
-  },
-  habitFrequency: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  habitRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  checkButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  notDueText: {
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 8,
-    paddingVertical: 8,
-  },
-  bottomActions: {
-    paddingTop: 20,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    marginTop: 16,
-  },
-  routineButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  routineButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  loadingText: {
-    fontSize: 15,
-  },
-});

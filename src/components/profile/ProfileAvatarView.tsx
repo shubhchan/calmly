@@ -3,12 +3,13 @@ import { Image, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import type { ProfileAvatar } from '../../types/profile';
-import { ZenMascotAvatar } from './ZenMascotAvatar';
+import { mascotById, ZenMascotAvatar } from './ZenMascotAvatar';
 
 export interface ProfileAvatarViewProps {
   avatar?: ProfileAvatar | null;
   googlePhotoUrl?: string | null;
   size?: number;
+  borderRadius?: number;
   showGuestBadge?: boolean;
   style?: StyleProp<ViewStyle>;
 }
@@ -17,14 +18,17 @@ export function ProfileAvatarView({
   avatar,
   googlePhotoUrl,
   size = 44,
+  borderRadius,
   showGuestBadge = false,
   style,
 }: ProfileAvatarViewProps) {
   const { colors } = useAppTheme();
+  const radius = borderRadius ?? Math.round(size * 0.33);
   const customUri = avatar?.kind === 'custom' ? avatar.uri : undefined;
   const googleUri = avatar?.kind === 'google' ? googlePhotoUrl : undefined;
   const photoUri = customUri || googleUri;
   const mascotId = avatar?.kind === 'mascot' ? avatar.mascotId : 'lotus';
+  const mascot = mascotById(mascotId);
 
   return (
     <View style={[{ width: size, height: size }, style]}>
@@ -34,21 +38,21 @@ export function ProfileAvatarView({
           {
             width: size,
             height: size,
-            borderRadius: size / 2,
+            borderRadius: radius,
             borderColor: colors.border.default,
-            backgroundColor: colors.primary.subtle,
+            backgroundColor: photoUri ? colors.primary.subtle : mascot.background,
           },
         ]}
       >
         {photoUri ? (
           <Image
             source={{ uri: photoUri }}
-            style={styles.image}
+            style={[styles.image, { borderRadius: radius }]}
             accessibilityRole="image"
             accessibilityLabel="Profile photo"
           />
         ) : (
-          <ZenMascotAvatar id={mascotId} size={size} />
+          <ZenMascotAvatar id={mascotId} size={size} shape="square" borderRadius={radius} />
         )}
       </View>
       {showGuestBadge ? (
@@ -74,7 +78,6 @@ export function ProfileAvatarView({
 const styles = StyleSheet.create({
   frame: {
     overflow: 'hidden',
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },

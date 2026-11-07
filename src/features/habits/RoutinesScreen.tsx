@@ -1,34 +1,33 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { Alert } from '../../services/appAlert';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ScrollView, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../types/navigation';
 import { routineRepository, TimeOfDay } from '../../database/repositories/routineRepository';
-import { Card } from '../../components/Card';
-import { PrimaryButton } from '../../components/PrimaryButton';
-import { ScreenHeader } from '../../components';
-import { TactilePressable } from '../../components/interactive/TactilePressable';
-import { StaggeredEntry } from '../../components/interactive/StaggeredEntry';
-import { Ionicons } from '@expo/vector-icons';
+import { AppText, Button, ScreenHeader, TactilePressable } from '../../components';
+import { Alert } from '../../services/appAlert';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
-import { resolveTint, tintForIndex } from '../../theme/tints';
-import Animated from 'react-native-reanimated';
-import { sharedSpringStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Routines'>['navigation'];
 
-const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; icon: any; color: string }> = {
-  morning: { label: 'Morning', icon: 'sunny-outline', color: '#EB876D' },
-  afternoon: { label: 'Afternoon', icon: 'sunny', color: '#5A955A' },
-  evening: { label: 'Evening', icon: 'moon-outline', color: '#877FC5' },
-};
+const SECTIONS: { key: TimeOfDay; label: string; hint: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'morning', label: 'Morning', hint: 'Begin before the day begins', icon: 'sunny-outline' },
+  { key: 'afternoon', label: 'Afternoon', hint: 'A pause in the middle', icon: 'partly-sunny-outline' },
+  { key: 'evening', label: 'Evening', hint: 'Set the day down', icon: 'moon-outline' },
+];
 
+/**
+ * Routines — a quiet list of morning, afternoon and evening sequences.
+ *
+ * Each section is a heading and hairline rows, not a boxed card. Adding a
+ * routine is a small inline action, not a floating button.
+ */
 export function RoutinesScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const [routines, setRoutines] = useState<Record<TimeOfDay, any[]>>({
     morning: [],
     afternoon: [],
@@ -72,238 +71,141 @@ export function RoutinesScreen() {
 
   const handleDeleteRoutine = async (routine: any) => {
     if (!routine?.id) return;
-    Alert.alert(
-      'Delete routine?',
-      `This will remove "${routine?.name ?? ''}" routine.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (!routine?.id) return;
-            await routineRepository.delete(routine.id);
-            loadData();
-          },
+    Alert.alert('Delete routine?', `This will remove "${routine?.name ?? ''}".`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          if (!routine?.id) return;
+          await routineRepository.delete(routine.id);
+          loadData();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (loading) {
     return (
-      <ScreenContainer animate={false} contentContainerStyle={styles.content}>
+      <ScreenContainer animate={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16 }}>
         <ListSkeleton rows={3} />
       </ScreenContainer>
     );
   }
 
   const safeRoutines = routines ?? { morning: [], afternoon: [], evening: [] };
-  const hasRoutines =
-    (safeRoutines?.morning ?? []).length > 0 ||
-    (safeRoutines?.afternoon ?? []).length > 0 ||
-    (safeRoutines?.evening ?? []).length > 0;
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
-      <ScreenHeader title="Mindful Routines" />
+    <ScreenContainer
+      scroll={false}
+      backgroundColor={colors.background.default}
+      contentContainerStyle={{ flex: 1 }}
+    >
+      <ScreenHeader title="Mindful routines" />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {(['morning', 'afternoon', 'evening'] as TimeOfDay[]).map((timeOfDay, sectionIndex) => {
-        const config = TIME_OF_DAY_CONFIG[timeOfDay];
-        const list = safeRoutines[timeOfDay] ?? [];
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 48 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <AppText variant="body" tone="secondary" style={{ maxWidth: 300 }}>
+          Short sequences that hold the shape of a day. Add a routine, then attach habits to it.
+        </AppText>
 
-        return (
-          <StaggeredEntry key={timeOfDay} index={sectionIndex}>
-            <Card style={styles.sectionCard}>
-              <View style={styles.timeOfDayHeader}>
-                <Animated.View
-                  sharedTransitionTag={sharedTransitionTags.routineIcon(timeOfDay)}
-                  sharedTransitionStyle={sharedSpringStyle}
-                  style={[styles.timeOfDayIcon, { backgroundColor: config.color + '20' }]}
-                >
-                  <Ionicons name={config.icon} size={22} color={config.color} />
-                </Animated.View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.timeOfDayLabel, { color: colors.text.primary }]}>{config.label}</Text>
-                  <Text style={{ fontSize: 12, color: colors.text.tertiary }}>
-                    {list.length} {list.length === 1 ? 'routine' : 'routines'}
-                  </Text>
-                </View>
+        {SECTIONS.map((section) => {
+          const list = safeRoutines[section.key] ?? [];
+
+          return (
+            <View key={section.key} style={{ marginTop: 32 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Ionicons name={section.icon} size={17} color={colors.text.tertiary} />
+                <AppText variant="overline" tone="tertiary" style={{ flex: 1 }}>
+                  {section.label}
+                </AppText>
                 <TactilePressable
-                  onPress={() => handleCreateRoutine(timeOfDay)}
+                  onPress={() => handleCreateRoutine(section.key)}
                   scaleDownTo={0.9}
                   hapticStyle="light"
-                  style={[
-                    styles.addRoutineButton,
-                    {
-                      backgroundColor: colors.surface.default,
-                      borderColor: colors.border.default,
-                    },
-                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add ${section.label.toLowerCase()} routine`}
                   hitSlop={8}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4 }}
                 >
-                  <Ionicons name="add" size={20} color={colors.primary.default} />
+                  <Ionicons name="add" size={15} color={colors.primary.default} />
+                  <AppText variant="caption" tone="link">
+                    Add
+                  </AppText>
                 </TactilePressable>
               </View>
 
               {list.length === 0 ? (
-                <View style={styles.emptyRoutine}>
-                  <Text style={[styles.emptyRoutineText, { color: colors.text.tertiary }]}>
-                    No {config.label.toLowerCase()} routine defined
-                  </Text>
-                  <TactilePressable
-                    onPress={() => handleCreateRoutine(timeOfDay)}
-                    scaleDownTo={0.96}
-                    hapticStyle="light"
-                    style={[
-                      styles.createFirstButton,
-                      {
-                        borderColor: config.color,
-                        backgroundColor: config.color + '12',
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.createFirstButtonText, { color: config.color }]}>Add {config.label} Routine</Text>
-                  </TactilePressable>
-                </View>
+                <AppText variant="bodySmall" tone="tertiary" style={{ marginTop: 10 }}>
+                  {section.hint}. No routine yet.
+                </AppText>
               ) : (
-                <View style={styles.routineList}>
-                  {list.map((routine, routineIdx) => {
-                    const routineTint = resolveTint(!!isDark, tintForIndex(routineIdx));
-                    return (
-                    <StaggeredEntry key={routine.id} index={routineIdx}>
+                <View style={{ marginTop: 6 }}>
+                  {list.map((routine, index) => (
+                    <View
+                      key={routine?.id ?? `${section.key}-${index}`}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderTopWidth: index === 0 ? 0 : 1,
+                        borderTopColor: colors.border.default,
+                      }}
+                    >
                       <TactilePressable
                         onPress={() => handleEditRoutine(routine)}
-                        scaleDownTo={0.98}
+                        scaleDownTo={0.99}
                         hapticStyle="light"
-                        style={[
-                          styles.routineCard,
-                          {
-                            backgroundColor: routineTint.bg,
-                            borderColor: routineTint.border,
-                          },
-                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open ${routine?.name ?? 'routine'}`}
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 12,
+                          paddingVertical: 14,
+                        }}
                       >
-                        <View style={styles.routineCardLeft}>
-                          <Text style={[styles.routineName, { color: routineTint.text }]}>{routine.name}</Text>
-                          <Text style={[styles.routineHabitCount, { color: routineTint.muted }]}>
-                            {routine.items?.length ?? 0} {routine.items?.length === 1 ? 'habit' : 'habits'} linked
-                          </Text>
+                        <View style={{ flex: 1 }}>
+                          <AppText variant="bodyLarge" numberOfLines={1}>
+                            {routine?.name ?? 'Untitled routine'}
+                          </AppText>
+                          <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                            {routine?.items?.length ?? 0}{' '}
+                            {(routine?.items?.length ?? 0) === 1 ? 'habit' : 'habits'} linked
+                          </AppText>
                         </View>
-                        <View style={styles.routineCardRight}>
-                          <TactilePressable
-                            onPress={() => handleDeleteRoutine(routine)}
-                            scaleDownTo={0.88}
-                            hapticStyle="medium"
-                            style={styles.deleteIcon}
-                            hitSlop={8}
-                          >
-                            <Ionicons name="trash-outline" size={18} color={colors.accents.rose} />
-                          </TactilePressable>
-                          <Ionicons name="chevron-forward" size={18} color={routineTint.muted} />
-                        </View>
+                        <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
                       </TactilePressable>
-                    </StaggeredEntry>
-                    );
-                  })}
+
+                      <TactilePressable
+                        onPress={() => handleDeleteRoutine(routine)}
+                        scaleDownTo={0.88}
+                        hapticStyle="medium"
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete ${routine?.name ?? 'routine'}`}
+                        hitSlop={10}
+                        style={{ padding: 8, marginLeft: 4 }}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={colors.text.tertiary} />
+                      </TactilePressable>
+                    </View>
+                  ))}
                 </View>
               )}
-            </Card>
-          </StaggeredEntry>
-        );
-      })}
+            </View>
+          );
+        })}
+
+        <Button
+          title="New routine"
+          variant="secondary"
+          size="sm"
+          onPress={() => handleCreateRoutine('morning')}
+          style={{ marginTop: 36, alignSelf: 'flex-start' }}
+        />
       </ScrollView>
     </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
-  sectionCard: {
-    padding: 16,
-    borderRadius: 20,
-    gap: 14,
-  },
-  timeOfDayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  timeOfDayIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timeOfDayLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  addRoutineButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyRoutine: {
-    alignItems: 'center',
-    paddingVertical: 18,
-    gap: 10,
-  },
-  emptyRoutineText: {
-    fontSize: 14,
-  },
-  createFirstButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  createFirstButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  routineList: {
-    gap: 10,
-  },
-  routineCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
-  },
-  routineCardLeft: {
-    flex: 1,
-    gap: 3,
-  },
-  routineName: {
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 22,
-  },
-  routineHabitCount: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  routineCardRight: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginTop: 2,
-  },
-  deleteIcon: {
-    padding: 4,
-  },
-  loadingText: {
-    fontSize: 15,
-  },
-});

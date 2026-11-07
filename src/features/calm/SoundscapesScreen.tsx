@@ -1,486 +1,398 @@
-import React, { useState, useEffect } from 'react';
-
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { useAppTheme } from '../../theme/ThemeContext';
-import { Card, CardContent, NatureSoundscapeIllustration, ScreenHeader, TactilePressable } from '../../components';
+import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { AppText, Button, TactilePressable } from '../../components';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { PopIn } from '../../components/interactive/PopIn';
-import { resolveTint } from '../../theme/tints';
-import { useTabBarOffset } from '../../utils/useTabBarOffset';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
-import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
+import { RootStackParamList } from '../../types/navigation';
+import { hapticFeedback } from '../../utils/haptics';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface TrackConfig {
   id: 'rain' | 'ocean' | 'birds' | 'night';
   title: string;
   subtitle: string;
-  icon: string;
-  atmosphere: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
 }
 
 const TRACKS: TrackConfig[] = [
-  {
-    id: 'rain',
-    title: 'Warm Summer Rain',
-    subtitle: 'Rhythmic soft droplets against linen canvas',
-    icon: 'rainy-outline',
-    atmosphere: 'Alpha Brainwave Pacing',
-  },
-  {
-    id: 'ocean',
-    title: 'Pacific Ocean Waves',
-    subtitle: 'Deep steady shore tides easing body tension',
-    icon: 'water-outline',
-    atmosphere: 'Vagus Nerve Regulation',
-  },
-  {
-    id: 'birds',
-    title: 'Morning Forest Canopy',
-    subtitle: 'Gentle woodland warblers and rustling leaves',
-    icon: 'leaf-outline',
-    atmosphere: 'Attention Restoration',
-  },
-  {
-    id: 'night',
-    title: 'Nocturnal Crickets & Stream',
-    subtitle: 'Quiet meadow evening breeze for deep sleep',
-    icon: 'moon-outline',
-    atmosphere: 'Deep Delta Sleep Aid',
-  },
+  { id: 'rain', title: 'Rain on leaves', subtitle: 'Steady, close, warm', icon: 'rainy-outline' },
+  { id: 'ocean', title: 'Ocean waves', subtitle: 'Slow tide, long breath', icon: 'water-outline' },
+  { id: 'birds', title: 'Forest breeze', subtitle: 'Leaves and distant birds', icon: 'leaf-outline' },
+  { id: 'night', title: 'Deep night', subtitle: 'Low hum for sleep', icon: 'moon-outline' },
 ];
 
+const TIMERS = ['Off', '15m', '30m', '60m', '90m'];
+
+const BAR_HEIGHTS = [7, 14, 24, 32, 22, 38, 26, 44, 30, 20, 34, 26, 16, 28, 38, 22, 12, 18];
+
+/**
+ * Soundscapes — direction A, "Mixer".
+ *
+ * One dark now-playing card, then a short list of single sounds, one volume
+ * line, and a sleep timer. Nothing plays until you choose it.
+ */
 export function SoundscapesScreen() {
-  const { colors, isDark } = useAppTheme();
-  const insets = useSafeAreaInsets();
-  const skyTint = resolveTint(!!isDark, 'sky');
-  const tabBarOffset = useTabBarOffset();
+  const navigation = useNavigation<NavigationProp>();
+  const { colors } = useAppTheme();
 
   const [activeSound, setActiveSound] = useState<string | null>(null);
-  const [selectedTimer, setSelectedTimer] = useState<string>('Off');
-  const [volumeLevel, setVolumeLevel] = useState<number>(0.8);
+  const [selectedTimer, setSelectedTimer] = useState('Off');
+  const [volume, setVolume] = useState(0.8);
 
   useEffect(() => {
-    const unsub = soundService.addListener((state) => {
-      setActiveSound(state.activeTrack);
-    });
-    return unsub;
+    const unsubscribe = soundService.addListener((state) => setActiveSound(state.activeTrack));
+    return unsubscribe;
   }, []);
 
-  const handleToggleSound = async (soundId: 'rain' | 'ocean' | 'birds' | 'night') => {
-    if (activeSound === soundId) {
+  const toggleSound = async (id: TrackConfig['id']) => {
+    hapticFeedback.selection();
+    if (activeSound === id) {
       await soundService.stop();
     } else {
-      await soundService.play(soundId);
+      await soundService.play(id);
     }
   };
 
-  const handleSelectTimer = (timer: string) => {
+  const changeTimer = (timer: string) => {
+    hapticFeedback.selection();
     setSelectedTimer(timer);
-    const minutes = timer === 'Off' ? 0 : parseInt(timer, 10);
-    soundService.setTimer(minutes);
+    soundService.setTimer(timer === 'Off' ? 0 : parseInt(timer, 10));
   };
 
-  const handleSetVolume = async (vol: number) => {
-    setVolumeLevel(vol);
-    await soundService.setVolume(vol);
+  const changeVolume = async (next: number) => {
+    setVolume(next);
+    await soundService.setVolume(next);
   };
+
+  const activeTrack = TRACKS.find((track) => track.id === activeSound) ?? null;
 
   return (
-    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
-      <ScreenHeader title="Soundscapes Sanctuary" subtitle="Acoustic Rest & Masking" bordered />
-
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, activeSound ? styles.scrollContentPlaying : null]}
-        showsVerticalScrollIndicator={false}
+    <ScreenContainer
+      contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 40 }}
+      backgroundColor={colors.background.default}
+    >
+      {/* Header */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 52,
+        }}
       >
-        {/* Full-Page Hero Illustration Card */}
-        <Card variant="elevated" style={styles.heroCard}>
-          <CardContent style={styles.heroCardContent}>
-            <View style={[styles.heroAuraGlow, { backgroundColor: (colors.accents.sky) + '15' }]}>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.calmHero('soundscapes')}
-                sharedTransitionStyle={sharedElementStyle}
-              >
-                <NatureSoundscapeIllustration width={190} height={155} />
-              </Animated.View>
-            </View>
-            <View style={styles.heroBadgeRow}>
-              <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
-                <Ionicons name="infinite" size={13} color={colors.primary.default} />
-                <Text style={[styles.heroBadgeText, { color: colors.primary.default }]}>Continuous Bio-Acoustics</Text>
-              </View>
-              <Text style={[styles.heroStatusText, { color: activeSound ? colors.primary.default : colors.text.tertiary }]}>
-                {activeSound ? 'Streaming now' : 'Ready to play'}
-              </Text>
-            </View>
-          </CardContent>
-        </Card>
-
-        {/* Header Cue */}
-        <PopIn index={1}>
-          <View style={{ marginBottom: 4 }}>
-            <Text style={[styles.headline, { color: colors.text.primary }]}>
-              Organic Ambient Audio
-            </Text>
-            <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
-              Select an acoustic landscape for focus, calm, or restful sleep.
-            </Text>
-          </View>
-        </PopIn>
-
-        {/* Soundscape Tiles */}
-        <PopIn index={2}>
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-              Nature Soundscape Library
-            </Text>
-            <View style={styles.tracksList}>
-              {TRACKS.map((track) => {
-                const isPlaying = activeSound === track.id;
-                return (
-                  <TactilePressable
-                    key={track.id}
-                    onPress={() => handleToggleSound(track.id)}
-                    scaleDownTo={0.98}
-                    style={[
-                      styles.trackCard,
-                      {
-                        backgroundColor: isPlaying
-                          ? (isDark ? 'rgba(94, 190, 123, 0.16)' : '#EEF6F0')
-                          : colors.surface.default,
-                        borderColor: isPlaying ? colors.primary.default : colors.border.default,
-                      },
-                    ]}
-                  >
-                    <View style={styles.trackCardRow}>
-                      <View
-                        style={[
-                          styles.trackIconOrb,
-                          {
-                            backgroundColor: isPlaying
-                              ? colors.primary.default
-                              : (isDark ? 'rgba(255,255,255,0.08)' : colors.background.secondary),
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name={track.icon as any}
-                          size={22}
-                          color={isPlaying ? '#FFFFFF' : colors.primary.default}
-                        />
-                      </View>
-                      <View style={styles.trackInfo}>
-                        <Text
-                          style={[
-                            styles.trackTitle,
-                            { color: isPlaying ? colors.primary.default : colors.text.primary },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {track.title}
-                        </Text>
-                        <Text style={[styles.trackSub, { color: colors.text.tertiary }]} numberOfLines={2}>
-                          {track.subtitle}
-                        </Text>
-                        <View style={[styles.atmosphereBadge, { backgroundColor: colors.primary.subtle }]}>
-                          <Text style={[styles.atmosphereText, { color: colors.primary.default }]} numberOfLines={1}>
-                            {track.atmosphere}
-                          </Text>
-                        </View>
-                      </View>
-                      <View
-                        style={[
-                          styles.playToggleBtn,
-                          {
-                            backgroundColor: isPlaying ? colors.primary.default : 'transparent',
-                            borderColor: isPlaying ? colors.primary.default : colors.border.default,
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name={isPlaying ? 'pause' : 'play'}
-                          size={16}
-                          color={isPlaying ? '#FFFFFF' : colors.text.primary}
-                        />
-                      </View>
-                    </View>
-                  </TactilePressable>
-                );
-              })}
-            </View>
-          </View>
-        </PopIn>
-
-        {/* Sleep Timer & Volume Controls */}
-        <PopIn index={3}>
-          <Card variant="outlined" tone="sky" style={styles.controlsCard}>
-            <CardContent style={styles.controlsContent}>
-              {/* Sleep Timer */}
-              <View style={styles.controlRow}>
-                <View style={styles.controlLabelGroup}>
-                  <Ionicons name="timer-outline" size={18} color={skyTint.accent} />
-                  <Text style={[styles.controlHeading, { color: skyTint.text }]}>Sleep Auto-Timer</Text>
-                </View>
-                <View style={styles.timerPillsRow}>
-                  {['Off', '15m', '30m', '60m', '90m'].map((timer) => {
-                    const isTimerActive = selectedTimer === timer;
-                    return (
-                      <TactilePressable
-                        key={timer}
-                        onPress={() => handleSelectTimer(timer)}
-                        scaleDownTo={0.93}
-                        style={[
-                          styles.timerPill,
-                          {
-                            backgroundColor: isTimerActive ? skyTint.accent : skyTint.plate,
-                            borderColor: isTimerActive ? skyTint.accent : skyTint.border,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.timerPillText,
-                            { color: isTimerActive ? '#FFFFFF' : skyTint.text },
-                          ]}
-                        >
-                          {timer}
-                        </Text>
-                      </TactilePressable>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Volume Presets */}
-              <View style={[styles.controlRow, { marginTop: 12 }]}>
-                <View style={styles.controlLabelGroup}>
-                  <Ionicons name="volume-medium-outline" size={18} color={skyTint.accent} />
-                  <Text style={[styles.controlHeading, { color: skyTint.text }]}>Soundscape Volume</Text>
-                </View>
-                <View style={styles.volumePillsRow}>
-                  {[
-                    { label: 'Soft (25%)', val: 0.25 },
-                    { label: 'Balanced (50%)', val: 0.5 },
-                    { label: 'Immersive (80%)', val: 0.8 },
-                    { label: 'Full (100%)', val: 1.0 },
-                  ].map((vol) => {
-                    const isVolActive = Math.abs(volumeLevel - vol.val) < 0.05;
-                    return (
-                      <TactilePressable
-                        key={vol.label}
-                        onPress={() => handleSetVolume(vol.val)}
-                        scaleDownTo={0.93}
-                        style={[
-                          styles.volumePill,
-                          {
-                            backgroundColor: isVolActive ? skyTint.accent : skyTint.plate,
-                            borderColor: isVolActive ? skyTint.accent : skyTint.border,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.volumePillText,
-                            { color: isVolActive ? '#FFFFFF' : skyTint.text },
-                          ]}
-                        >
-                          {vol.label}
-                        </Text>
-                      </TactilePressable>
-                    );
-                  })}
-                </View>
-              </View>
-            </CardContent>
-          </Card>
-        </PopIn>
-      </ScrollView>
-
-      {/* Floating Bottom Bar */}
-      {activeSound && (
-        <Animated.View
-          sharedTransitionTag={sharedTransitionTags.ambientPlayerBar}
-          sharedTransitionStyle={sharedElementStyle}
-          style={[
-            styles.bottomBar,
-            {
-              paddingBottom: Math.max(insets.bottom + 14, 24),
-              backgroundColor: colors.surface.default,
-              borderTopColor: colors.border.default,
-            },
-          ]}
+        <TactilePressable
+          onPress={() => navigation.goBack()}
+          scaleDownTo={0.9}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: -8,
+          }}
         >
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.bottomBarTitle, { color: colors.text.primary }]}>
-              Playing: {TRACKS.find((t) => t.id === activeSound)?.title}
-            </Text>
-            <Text style={[styles.bottomBarSub, { color: colors.text.tertiary }]}>
-              {selectedTimer !== 'Off' ? `Timer active: ${selectedTimer}` : 'Continuous loop'}
-            </Text>
+          <Ionicons name="chevron-back" size={22} color={colors.text.secondary} />
+        </TactilePressable>
+        <AppText variant="caption" tone="tertiary" style={{ paddingBottom: 2 }}>
+          Soundscapes
+        </AppText>
+        <TactilePressable
+          onPress={() => changeTimer(selectedTimer === 'Off' ? '30m' : 'Off')}
+          scaleDownTo={0.9}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={selectedTimer === 'Off' ? 'Start a 30 minute timer' : 'Turn off timer'}
+          style={{ width: 36, alignItems: 'flex-end' }}
+        >
+          <Ionicons
+            name={selectedTimer === 'Off' ? 'timer-outline' : 'timer'}
+            size={19}
+            color={selectedTimer === 'Off' ? colors.text.secondary : colors.primary.default}
+          />
+        </TactilePressable>
+      </View>
+
+      {/* Now playing */}
+      <View
+        style={{
+          marginTop: 16,
+          backgroundColor: colors.primary.default,
+          borderRadius: 24,
+          padding: 22,
+        }}
+      >
+        <AppText variant="overline" color={colors.primary.foreground} style={{ opacity: 0.7 }}>
+          {activeTrack ? 'Now playing' : 'Quiet right now'}
+        </AppText>
+        <AppText
+          variant="h2"
+          color={colors.primary.foreground}
+          style={{ marginTop: 8, maxWidth: 240 }}
+        >
+          {activeTrack ? activeTrack.title : 'Choose a sound'}
+        </AppText>
+        <AppText
+          variant="caption"
+          color={colors.primary.foreground}
+          style={{ marginTop: 6, opacity: 0.7 }}
+        >
+          {activeTrack
+            ? selectedTimer === 'Off'
+              ? 'Looping · no timer'
+              : `Looping · ${selectedTimer} left`
+            : `${TRACKS.length} sounds, one at a time`}
+        </AppText>
+
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 18,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 46 }}>
+            {BAR_HEIGHTS.map((height, index) => (
+              <View
+                key={index}
+                style={{
+                  width: 3,
+                  height,
+                  borderRadius: 2,
+                  backgroundColor: colors.primary.foreground,
+                  opacity: activeTrack ? (index > 12 ? 0.35 : 0.8) : 0.18,
+                }}
+              />
+            ))}
           </View>
           <TactilePressable
-            onPress={() => soundService.stop()}
-            scaleDownTo={0.94}
-            style={[
-              styles.stopBtn,
-              {
-                backgroundColor: colors.primary.subtle,
-                borderColor: colors.primary.subtleBorder,
-              },
-            ]}
+            onPress={() => {
+              if (activeTrack) {
+                hapticFeedback.light();
+                soundService.stop();
+              } else {
+                toggleSound('rain');
+              }
+            }}
+            scaleDownTo={0.92}
+            accessibilityRole="button"
+            accessibilityLabel={activeTrack ? 'Pause sound' : 'Play rain'}
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: 29,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.primary.foreground,
+            }}
           >
-            <Ionicons name="stop" size={16} color={colors.primary.default} />
-            <Text style={[styles.stopBtnText, { color: colors.primary.default }]}>Stop</Text>
+            <Ionicons
+              name={activeTrack ? 'pause' : 'play'}
+              size={20}
+              color={colors.primary.default}
+            />
           </TactilePressable>
-        </Animated.View>
-      )}
+        </View>
+      </View>
+
+      {/* Sounds */}
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          marginTop: 24,
+          marginBottom: 4,
+        }}
+      >
+        <AppText variant="bodySmall" tone="secondary" style={{ fontWeight: '600' }}>
+          Sounds
+        </AppText>
+        <AppText variant="caption" tone="tertiary">
+          one at a time
+        </AppText>
+      </View>
+
+      <View
+        style={{
+          backgroundColor: colors.surface.default,
+          borderRadius: 18,
+          paddingHorizontal: 16,
+          paddingVertical: 4,
+        }}
+      >
+        {TRACKS.map((track, index) => {
+          const isPlaying = activeSound === track.id;
+          return (
+            <TactilePressable
+              key={track.id}
+              onPress={() => toggleSound(track.id)}
+              scaleDownTo={0.99}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isPlaying }}
+              accessibilityLabel={`${isPlaying ? 'Pause' : 'Play'} ${track.title}`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 13,
+                paddingVertical: 12,
+                borderBottomWidth: index === TRACKS.length - 1 ? 0 : 1,
+                borderBottomColor: colors.border.subtle,
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isPlaying ? colors.primary.subtle : colors.surface.muted,
+                }}
+              >
+                <Ionicons
+                  name={track.icon}
+                  size={17}
+                  color={isPlaying ? colors.primary.default : colors.text.secondary}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="title" numberOfLines={1}>
+                  {track.title}
+                </AppText>
+                <AppText variant="caption" tone="tertiary" style={{ marginTop: 1 }}>
+                  {track.subtitle}
+                </AppText>
+              </View>
+              <Ionicons
+                name={isPlaying ? 'pause' : 'play'}
+                size={16}
+                color={isPlaying ? colors.primary.default : colors.text.tertiary}
+              />
+            </TactilePressable>
+          );
+        })}
+      </View>
+
+      {/* Volume */}
+      <View style={{ marginTop: 26 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            marginBottom: 12,
+          }}
+        >
+          <AppText variant="bodySmall" tone="secondary" style={{ fontWeight: '600' }}>
+            Volume
+          </AppText>
+          <AppText variant="caption" tone="tertiary">
+            {Math.round(volume * 100)}%
+          </AppText>
+        </View>
+        <VolumeSlider value={volume} onChange={changeVolume} />
+      </View>
+
+      {/* Sleep timer */}
+      <View style={{ marginTop: 28 }}>
+        <AppText variant="bodySmall" tone="secondary" style={{ fontWeight: '600', marginBottom: 10 }}>
+          Sleep timer
+        </AppText>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {TIMERS.map((timer) => {
+            const selected = selectedTimer === timer;
+            return (
+              <TactilePressable
+                key={timer}
+                onPress={() => changeTimer(timer)}
+                scaleDownTo={0.94}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={timer === 'Off' ? 'No timer' : `Stop after ${timer}`}
+                style={{
+                  flex: 1,
+                  height: 38,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: selected ? colors.primary.default : colors.surface.muted,
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  color={selected ? colors.primary.foreground : colors.text.secondary}
+                >
+                  {timer}
+                </AppText>
+              </TactilePressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {activeTrack ? (
+        <Button
+          title="Stop sound"
+          variant="ghost"
+          size="sm"
+          onPress={() => soundService.stop()}
+          style={{ marginTop: 26 }}
+        />
+      ) : null}
     </ScreenContainer>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 120,
-    gap: 20,
-  },
-  scrollContentPlaying: {
-    paddingBottom: 200,
-  },
-  heroCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-  },
-  heroCardContent: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  heroAuraGlow: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 14,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
-  heroBadgeText: { fontSize: 12, fontWeight: '700' },
-  heroStatusText: { fontSize: 13, fontWeight: '600' },
-  section: { gap: 10 },
-  headline: {
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    lineHeight: 30,
-  },
-  subheadline: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  sectionTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  tracksList: { gap: 12 },
-  trackCard: {
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  trackCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  trackIconOrb: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  trackInfo: { flex: 1, gap: 4 },
-  trackTitle: { fontSize: 16, fontWeight: '700' },
-  atmosphereBadge: {
-    alignSelf: 'flex-start',
-    marginTop: 2,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  atmosphereText: { fontSize: 10, fontWeight: '700' },
-  trackSub: { fontSize: 12, lineHeight: 16 },
-  playToggleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  controlsCard: { borderRadius: 20 },
-  controlsContent: { padding: 16, gap: 10 },
-  controlRow: { gap: 10 },
-  controlLabelGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  controlHeading: { fontSize: 14, fontWeight: '700' },
-  timerPillsRow: { flexDirection: 'row', gap: 8 },
-  timerPill: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  timerPillText: { fontSize: 12, fontWeight: '700' },
-  volumePillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  volumePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  volumePillText: { fontSize: 12, fontWeight: '600' },
-  bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  bottomBarTitle: { fontSize: 14, fontWeight: '700' },
-  bottomBarSub: { fontSize: 12 },
-  stopBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
-  stopBtnText: { fontSize: 13, fontWeight: '700' },
-});
+/** Ten quiet zones on one line, same rhythm as the check-in strength slider. */
+function VolumeSlider({ value, onChange }: { value: number; onChange: (next: number) => void }) {
+  const { colors } = useAppTheme();
+  const percent = `${Math.round(value * 100)}%` as const;
+
+  return (
+    <View style={{ height: 22, justifyContent: 'center' }}>
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.surface.muted }}>
+        <View style={{ width: percent, height: 4, borderRadius: 2, backgroundColor: colors.primary.default }} />
+      </View>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          left: percent,
+          marginLeft: -8,
+          width: 16,
+          height: 16,
+          borderRadius: 8,
+          backgroundColor: colors.surface.default,
+          borderWidth: 2,
+          borderColor: colors.primary.default,
+        }}
+      />
+      <View style={{ position: 'absolute', left: 0, right: 0, flexDirection: 'row' }}>
+        {Array.from({ length: 10 }, (_, index) => index + 1).map((step) => (
+          <TactilePressable
+            key={step}
+            onPress={() => {
+              hapticFeedback.selection();
+              onChange(step / 10);
+            }}
+            hapticStyle="none"
+            scaleDownTo={1}
+            accessibilityRole="adjustable"
+            accessibilityLabel={`Volume ${step * 10} percent`}
+            style={{ flex: 1, height: 22 }}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}

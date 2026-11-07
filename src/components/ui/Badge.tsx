@@ -48,7 +48,7 @@ export function Badge({ label, tone = 'neutral', size = 'md', iconName, style }:
           paddingHorizontal: size === 'sm' ? spacing[2] : spacing[3],
           backgroundColor: background,
           borderColor,
-          borderWidth: tone === 'neutral' ? borderWidths.none : borderWidths.thin,
+          borderWidth: borderWidths.none,
         },
         style,
       ]}

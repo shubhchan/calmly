@@ -1,60 +1,56 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { ScrollView, TextInput, View } from 'react-native';
 import { Alert } from '../../services/appAlert';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import { PrimaryButton } from '../../components/PrimaryButton';
-import { AppIcon } from '../../components/AppIcon';
-import {
-  MeditationHeroIllustration,
-  BreathworkIllustration,
-  SensoryGroundingIllustration,
-  HabitPlantingIllustration,
-  MoodAuraIllustration,
-  PrivacySanctuaryIllustration,
-} from '../../components/illustrations';
-import type { AppIconName } from '../../components/AppIcon';
+import { AppText, Button, TactilePressable } from '../../components';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { TactilePressable } from '../../components';
-import { useTabBarOffset } from '../../utils/useTabBarOffset';
 import { loginWithGoogle, getCalmlyAuth } from '../../services/calmlyAuth';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'Onboarding'>['navigation'];
 
 const GOALS = [
-  { id: 'reduce_stress', label: 'Reduce stress & anxiety', icon: 'leaf-outline', color: '#5A955A' },
-  { id: 'better_sleep', label: 'Improve restful sleep', icon: 'moon-outline', color: '#6B9BCD' },
-  { id: 'build_habits', label: 'Build positive daily habits', icon: 'checkbox-outline', color: '#877FC5' },
-  { id: 'self_awareness', label: 'Increase self-awareness', icon: 'sparkles-outline', color: '#EB876D' },
-  { id: 'gratitude', label: 'Practice everyday gratitude', icon: 'heart-outline', color: '#EB697F' },
-  { id: 'emotional_regulation', label: 'Calm & emotional balance', icon: 'flower-outline', color: '#4EA5A5' },
+  { id: 'reduce_stress', label: 'Calm in hard moments', note: 'Breathing and grounding' },
+  { id: 'better_sleep', label: 'A little more sleep', note: 'Wind-down and body scans' },
+  { id: 'build_habits', label: 'A steadier habit', note: 'Short daily practice' },
+  { id: 'self_awareness', label: 'Know myself better', note: 'Reflection and patterns' },
+  { id: 'gratitude', label: 'Notice the good', note: 'Small daily gratitude' },
+  { id: 'emotional_regulation', label: 'A softer inner voice', note: 'Self-compassion' },
 ];
 
-const TIME_OPTIONS: { id: string; label: string; icon: AppIconName; description: string }[] = [
-  { id: 'morning', label: 'Morning presence', icon: 'i-sun', description: 'Begin the day centered' },
-  { id: 'afternoon', label: 'Afternoon pause', icon: 'i-flash', description: 'Midday grounding reset' },
-  { id: 'evening', label: 'Evening unwind', icon: 'i-moon', description: 'Wind down with reflection' },
+const TIME_OPTIONS: { id: string; label: string; description: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { id: 'morning', label: 'Morning presence', description: 'Begin the day centered', icon: 'sunny-outline' },
+  { id: 'afternoon', label: 'Afternoon pause', description: 'A midday reset', icon: 'partly-sunny-outline' },
+  { id: 'evening', label: 'Evening unwind', description: 'Wind down with reflection', icon: 'moon-outline' },
 ];
 
 const STARTER_HABITS = [
-  { id: 'water', name: 'Hydrate with intention', icon: 'water-outline', color: '#6B9BCD', frequency: 'daily', goal: 8, reminder: '09:00' },
-  { id: 'breathing', name: '2-min mindful breath', icon: 'flower-outline', color: '#877FC5', frequency: 'daily', goal: 1, reminder: '08:30' },
-  { id: 'walk', name: 'Gentle walk outdoors', icon: 'walk-outline', color: '#5A955A', frequency: 'daily', goal: 1, reminder: '12:00' },
-  { id: 'gratitude', name: 'Note 3 gratitudes', icon: 'heart-outline', color: '#EB697F', frequency: 'daily', goal: 1, reminder: '20:00' },
-  { id: 'stretch', name: 'Mindful body stretch', icon: 'body-outline', color: '#EB876D', frequency: 'daily', goal: 1, reminder: '07:00' },
-  { id: 'journal', name: 'Evening reflection', icon: 'book-outline', color: '#4EA5A5', frequency: 'daily', goal: 1, reminder: '21:00' },
+  { id: 'water', name: 'Hydrate with intention', icon: 'water-outline', frequency: 'daily', goal: 8, reminder: '09:00' },
+  { id: 'breathing', name: 'Two mindful minutes', icon: 'leaf-outline', frequency: 'daily', goal: 1, reminder: '08:30' },
+  { id: 'walk', name: 'Gentle walk outdoors', icon: 'walk-outline', frequency: 'daily', goal: 1, reminder: '12:00' },
+  { id: 'gratitude', name: 'Note three good things', icon: 'heart-outline', frequency: 'daily', goal: 1, reminder: '20:00' },
+  { id: 'stretch', name: 'Mindful body stretch', icon: 'body-outline', frequency: 'daily', goal: 1, reminder: '07:00' },
+  { id: 'journal', name: 'Evening reflection', icon: 'book-outline', frequency: 'daily', goal: 1, reminder: '21:00' },
+];
+
+const STEPS = [
+  { title: 'Welcome to Calmly', hint: 'A private place for a quieter mind.' },
+  { title: 'What do you need most?', hint: 'This only shapes what you see first.' },
+  { title: 'When do you check in?', hint: 'Gentle reminders, at your rhythm.' },
+  { title: 'Start with tiny habits', hint: 'Pick one to three. Small is enough.' },
+  { title: 'What should we call you?', hint: 'Only used for your greeting.' },
+  { title: 'Yours alone', hint: 'Your words stay on this device.' },
 ];
 
 export function OnboardingScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useAppTheme();
-  const tabBarOffset = useTabBarOffset();
   const [step, setStep] = useState(0);
   const [goals, setGoals] = useState<string[]>([]);
   const [timeOfDay, setTimeOfDay] = useState<string>('');
@@ -85,58 +81,54 @@ export function OnboardingScreen() {
         setName(firstName);
       }
       Alert.alert(
-        'Google Connected',
-        `Welcome, ${u.displayName || u.email}! You can now sync encrypted backups to your Google Drive.`
+        'Google connected',
+        `Welcome, ${u.displayName || u.email}. You can now keep encrypted backups in your own Drive.`
       );
     } catch (error: any) {
-      Alert.alert('Sign-In Note', error?.message || 'Google sign-in was not completed.');
+      Alert.alert('Sign-in note', error?.message || 'Google sign-in was not completed.');
     } finally {
       setIsLoggingIn(false);
     }
   };
 
-  const STEPS = [
-    { title: 'Welcome to Calmly', subtitle: 'A private offline sanctuary for mental peace and mindfulness' },
-    { title: 'What brings you here?', subtitle: 'Select what matters most to you right now' },
-    { title: 'When do you prefer to check in?', subtitle: 'Helps tailor gentle, non-intrusive reminders' },
-    { title: 'Start with tiny habits', subtitle: 'Choose 1-3 to begin nurturing your rhythm' },
-    { title: 'What shall we call you?', subtitle: 'Used for gentle greeting on your home screen' },
-    { title: '100% Privacy by Design', subtitle: 'Your thoughts never leave this device' },
-  ];
-
-  const completeOnboarding = async () => {
+  const completeOnboarding = async (skip = false) => {
     try {
-      await settingsRepository.updateSettings({ onboardingComplete: true, userName: name ?? '' });
+      await settingsRepository.updateSettings({
+        onboardingComplete: true,
+        userName: skip ? '' : name ?? '',
+      });
 
-      const starterHabits = (STARTER_HABITS ?? []).filter((h) => (selectedHabits ?? []).includes(h?.id));
-      for (const habit of starterHabits ?? []) {
-        await habitRepository.create({
-          name: habit?.name ?? '',
-          icon: habit?.icon ?? 'checkbox',
-          color: habit?.color ?? '#5A955A',
-          frequency: (habit?.frequency ?? 'daily') as any,
-          goal: habit?.goal ?? 1,
-          reminderTime: habit?.reminder,
-        });
+      if (!skip) {
+        const starterHabits = STARTER_HABITS.filter((h) => selectedHabits.includes(h.id));
+        for (const habit of starterHabits) {
+          await habitRepository.create({
+            name: habit.name,
+            icon: habit.icon,
+            color: colors.primary.default,
+            frequency: habit.frequency as any,
+            goal: habit.goal,
+            reminderTime: habit.reminder,
+          });
+        }
       }
       (navigation as any)?.replace?.('App');
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
-      Alert.alert('Error', 'Failed to save onboarding setup.');
+      Alert.alert('Not saved', 'Your setup could not be saved. Please try again.');
     }
   };
 
   const handleNext = useCallback(async () => {
-    if (step === 1 && (goals ?? []).length === 0) {
-      Alert.alert('Select at least one focus', 'Choose an intention to personalize your journey');
+    if (step === 1 && goals.length === 0) {
+      Alert.alert('Choose one focus', 'Pick the intention that fits today. You can change it later.');
       return;
     }
     if (step === 2 && !timeOfDay) {
-      Alert.alert('Select your check-in time', 'Choose your preferred rhythm');
+      Alert.alert('Choose a time', 'Pick the moment you would like a quiet reminder.');
       return;
     }
-    if (step === 3 && (selectedHabits ?? []).length === 0) {
-      Alert.alert('Pick at least one habit', 'Start small — consistency builds peace');
+    if (step === 3 && selectedHabits.length === 0) {
+      Alert.alert('Pick one habit', 'One small habit is enough to begin.');
       return;
     }
     if (step === 5) {
@@ -144,7 +136,7 @@ export function OnboardingScreen() {
       return;
     }
     setStep(step + 1);
-  }, [step, goals, timeOfDay, selectedHabits, name]);
+  }, [step, goals, timeOfDay, selectedHabits, name, colors.primary.default]);
 
   const handleBack = () => {
     if (step > 0) {
@@ -155,86 +147,80 @@ export function OnboardingScreen() {
   };
 
   const toggleGoal = (goalId: string) => {
-    setGoals((prev) =>
-      (prev ?? []).includes(goalId) ? (prev ?? []).filter((g) => g !== goalId) : [...(prev ?? []), goalId]
-    );
+    setGoals((prev) => (prev.includes(goalId) ? prev.filter((g) => g !== goalId) : [...prev, goalId]));
   };
 
   const toggleHabit = (habitId: string) => {
     setSelectedHabits((prev) =>
-      (prev ?? []).includes(habitId) ? (prev ?? []).filter((h) => h !== habitId) : [...(prev ?? []), habitId]
+      prev.includes(habitId) ? prev.filter((h) => h !== habitId) : [...prev, habitId]
     );
   };
-
-  const progress = (step + 1) / STEPS.length;
-
-  const ONBOARD_ART = [
-    <MeditationHeroIllustration key="a0" width={150} height={120} />,
-    <BreathworkIllustration key="a1" width={150} height={120} />,
-    <SensoryGroundingIllustration key="a2" width={150} height={120} />,
-    <HabitPlantingIllustration key="a3" width={150} height={120} />,
-    <MoodAuraIllustration key="a4" width={150} height={120} />,
-    <PrivacySanctuaryIllustration key="a5" width={150} height={120} />,
-  ];
 
   const renderStep = () => {
     switch (step) {
       case 0:
         return (
-          <View style={styles.welcomeStep}>
-            {ONBOARD_ART[0]}
-            <Text style={[styles.welcomeTitle, { color: colors.text.primary }]}>Welcome to Calmly</Text>
-            <Text style={[styles.welcomeText, { color: colors.text.secondary }]}>
-              An offline-first, private sanctuary crafted for genuine presence, emotional balance, and mindful living.
-            </Text>
+          <View style={{ gap: 16 }}>
+            <AppText variant="h2">{STEPS[0].title}</AppText>
+            <AppText variant="bodyLarge" tone="secondary" style={{ maxWidth: 300 }}>
+              A private, offline place for presence, balance and a little more room to breathe.
+            </AppText>
 
-            {/* Google Sign-In Card */}
-            <View style={[styles.authCard, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
+            <View
+              style={{
+                borderRadius: 20,
+                backgroundColor: colors.surface.default,
+                padding: 18,
+                gap: 12,
+                marginTop: 4,
+              }}
+            >
               {currentUser ? (
-                <View style={styles.authConnectedRow}>
-                  <Ionicons name="checkmark-circle" size={24} color={colors.primary.default} />
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={[styles.authConnectedTitle, { color: colors.text.primary }]}>
-                      Google Account Connected
-                    </Text>
-                    <Text style={[styles.authConnectedSub, { color: colors.text.secondary }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <Ionicons name="checkmark-circle" size={22} color={colors.primary.default} />
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="title">Google connected</AppText>
+                    <AppText variant="caption" tone="tertiary" numberOfLines={1}>
                       {currentUser.email}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               ) : (
                 <>
-                  <Text style={[styles.authCardTitle, { color: colors.text.primary }]}>
-                    Sync with Google Account
-                  </Text>
-                  <Text style={[styles.authCardSub, { color: colors.text.tertiary }]}>
-                    Sign in to enable encrypted backups to your private Google Drive.
-                  </Text>
-                  <TactilePressable
+                  <View>
+                    <AppText variant="title">Keep a backup, optionally</AppText>
+                    <AppText variant="caption" tone="tertiary" style={{ marginTop: 3, lineHeight: 18 }}>
+                      Sign in to store encrypted backups in your own Google Drive. You can skip this.
+                    </AppText>
+                  </View>
+                  <Button
+                    title={isLoggingIn ? 'Connecting…' : 'Continue with Google'}
+                    variant="secondary"
                     onPress={handleGoogleSignIn}
-                    disabled={isLoggingIn}
-                    style={[styles.googleButton, { backgroundColor: colors.primary.default }]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Continue with Google"
-                  >
-                    <Ionicons name="logo-google" size={18} color="#FFFFFF" />
-                    <Text style={styles.googleButtonText}>
-                      {isLoggingIn ? 'Connecting…' : 'Continue with Google'}
-                    </Text>
-                  </TactilePressable>
+                    loading={isLoggingIn}
+                    fullWidth
+                    leftIcon={(color, size) => <Ionicons name="logo-google" size={size} color={color} />}
+                  />
                 </>
               )}
             </View>
 
-            <View style={styles.features}>
+            <View style={{ gap: 14, marginTop: 8 }}>
               {[
-                { icon: 'shield-checkmark-outline', text: '100% Offline & Private — zero trackers, zero cloud accounts' },
-                { icon: 'journal-outline', text: 'Thoughtful Prompts & CBT cognitive reframing' },
-                { icon: 'flower-outline', text: 'Guided somatic breathing & sensory grounding' },
-              ].map((feat, i) => (
-                <View key={i} style={styles.featureItem}>
-                  <Ionicons name={feat.icon as any} size={22} color={colors.primary.default} style={{ marginTop: 2 }} />
-                  <Text style={[styles.featureText, { color: colors.text.primary }]}>{feat.text}</Text>
+                { icon: 'shield-checkmark-outline', text: 'Offline by default. No trackers, no ads.' },
+                { icon: 'book-outline', text: 'Prompts for reflection, not performance.' },
+                { icon: 'leaf-outline', text: 'Breathing, grounding and sound, at your pace.' },
+              ].map((feat) => (
+                <View key={feat.text} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                  <Ionicons
+                    name={feat.icon as any}
+                    size={19}
+                    color={colors.primary.default}
+                    style={{ marginTop: 1 }}
+                  />
+                  <AppText variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
+                    {feat.text}
+                  </AppText>
                 </View>
               ))}
             </View>
@@ -242,35 +228,53 @@ export function OnboardingScreen() {
         );
       case 1:
         return (
-          <View style={styles.selectionStep}>
-            <View style={{ alignItems: 'center' }}>{ONBOARD_ART[1]}</View>
-            <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>What brings you here?</Text>
-            <Text style={[styles.stepHint, { color: colors.text.secondary }]}>Select all that resonate with you</Text>
-            <View style={styles.goalGrid}>
-              {GOALS.map((g) => {
-                const isSelected = (goals ?? []).includes(g.id);
+          <View style={{ gap: 16 }}>
+            <View>
+              <AppText variant="h2">{STEPS[1].title}</AppText>
+              <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 6 }}>
+                {STEPS[1].hint}
+              </AppText>
+            </View>
+            <View style={{ gap: 9 }}>
+              {GOALS.map((goal) => {
+                const selected = goals.includes(goal.id);
                 return (
                   <TactilePressable
-                    key={g.id}
-                    onPress={() => toggleGoal(g.id)}
-                    style={[
-                      styles.goalCard,
-                      { backgroundColor: colors.surface.default, borderColor: colors.border.default },
-                      isSelected && { borderColor: g.color, backgroundColor: g.color + '14', borderWidth: 2 },
-                    ]}
+                    key={goal.id}
+                    onPress={() => toggleGoal(goal.id)}
+                    scaleDownTo={0.99}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 14,
+                      paddingVertical: 15,
+                      paddingHorizontal: 16,
+                      borderRadius: 16,
+                      backgroundColor: selected ? colors.surface.selected : colors.surface.default,
+                      borderWidth: 1,
+                      borderColor: selected ? colors.primary.subtleBorder : 'transparent',
+                    }}
                   >
-                    <View style={[styles.goalIcon, { backgroundColor: g.color + '20' }]}>
-                      <Ionicons name={g.icon as any} size={24} color={g.color} />
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="title" tone={selected ? 'link' : 'primary'}>
+                        {goal.label}
+                      </AppText>
+                      <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                        {goal.note}
+                      </AppText>
                     </View>
-                    <Text
-                      style={[
-                        styles.goalLabel,
-                        { color: colors.text.primary },
-                        isSelected && { color: g.color, fontWeight: '700' },
-                      ]}
-                    >
-                      {g.label}
-                    </Text>
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: colors.surface.default,
+                        borderWidth: selected ? 6 : 1.5,
+                        borderColor: selected ? colors.primary.default : colors.border.strong,
+                      }}
+                    />
                   </TactilePressable>
                 );
               })}
@@ -279,40 +283,59 @@ export function OnboardingScreen() {
         );
       case 2:
         return (
-          <View style={styles.selectionStep}>
-            <View style={{ alignItems: 'center' }}>{ONBOARD_ART[2]}</View>
-            <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>When do you prefer to check in?</Text>
-            <Text style={[styles.stepHint, { color: colors.text.secondary }]}>We tailor mindful invitations to your preferred rhythm</Text>
-            <View style={styles.timeOptions}>
-              {TIME_OPTIONS.map((t) => {
-                const isSelected = timeOfDay === t.id;
+          <View style={{ gap: 16 }}>
+            <View>
+              <AppText variant="h2">{STEPS[2].title}</AppText>
+              <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 6 }}>
+                {STEPS[2].hint}
+              </AppText>
+            </View>
+            <View style={{ gap: 9 }}>
+              {TIME_OPTIONS.map((option) => {
+                const selected = timeOfDay === option.id;
                 return (
                   <TactilePressable
-                    key={t.id}
-                    onPress={() => setTimeOfDay(t.id)}
-                    style={[
-                      styles.timeOption,
-                      { backgroundColor: colors.surface.default, borderColor: colors.border.default },
-                      isSelected && { borderColor: colors.primary.default, backgroundColor: colors.primary.default + '14', borderWidth: 2 },
-                    ]}
+                    key={option.id}
+                    onPress={() => setTimeOfDay(option.id)}
+                    scaleDownTo={0.99}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 14,
+                      paddingVertical: 15,
+                      paddingHorizontal: 16,
+                      borderRadius: 16,
+                      backgroundColor: selected ? colors.surface.selected : colors.surface.default,
+                      borderWidth: 1,
+                      borderColor: selected ? colors.primary.subtleBorder : 'transparent',
+                    }}
                   >
-                    <AppIcon name={t.icon} size={32} color={isSelected ? colors.primary.default : undefined} />
-                    <View style={styles.timeInfo}>
-                      <Text
-                        style={[
-                          styles.timeLabel,
-                          { color: colors.text.primary },
-                          isSelected && { color: colors.primary.default, fontWeight: '700' },
-                        ]}
-                      >
-                        {t.label}
-                      </Text>
-                      <Text style={[styles.timeDesc, { color: colors.text.tertiary }]}>{t.description}</Text>
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 12,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: selected ? colors.surface.default : colors.surface.muted,
+                      }}
+                    >
+                      <Ionicons name={option.icon} size={18} color={colors.primary.default} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="title" tone={selected ? 'link' : 'primary'}>
+                        {option.label}
+                      </AppText>
+                      <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                        {option.description}
+                      </AppText>
                     </View>
                     <Ionicons
-                      name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={22}
-                      color={isSelected ? colors.primary.default : colors.text.tertiary}
+                      name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={21}
+                      color={selected ? colors.primary.default : colors.border.strong}
                     />
                   </TactilePressable>
                 );
@@ -322,42 +345,59 @@ export function OnboardingScreen() {
         );
       case 3:
         return (
-          <View style={styles.selectionStep}>
-            <View style={{ alignItems: 'center' }}>{ONBOARD_ART[3]}</View>
-            <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>Start with tiny habits</Text>
-            <Text style={[styles.stepHint, { color: colors.text.secondary }]}>Pick 1-3 tiny rituals to start gentle momentum</Text>
-            <View style={styles.habitGrid}>
-              {STARTER_HABITS.map((h) => {
-                const isSelected = (selectedHabits ?? []).includes(h.id);
+          <View style={{ gap: 16 }}>
+            <View>
+              <AppText variant="h2">{STEPS[3].title}</AppText>
+              <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 6 }}>
+                {STEPS[3].hint}
+              </AppText>
+            </View>
+            <View style={{ gap: 9 }}>
+              {STARTER_HABITS.map((habit) => {
+                const selected = selectedHabits.includes(habit.id);
                 return (
                   <TactilePressable
-                    key={h.id}
-                    onPress={() => toggleHabit(h.id)}
-                    style={[
-                      styles.habitCard,
-                      { backgroundColor: colors.surface.default, borderColor: colors.border.default },
-                      isSelected && { borderColor: h.color, backgroundColor: h.color + '14', borderWidth: 2 },
-                    ]}
+                    key={habit.id}
+                    onPress={() => toggleHabit(habit.id)}
+                    scaleDownTo={0.99}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      paddingVertical: 14,
+                      paddingHorizontal: 15,
+                      borderRadius: 16,
+                      backgroundColor: selected ? colors.surface.selected : colors.surface.default,
+                      borderWidth: 1,
+                      borderColor: selected ? colors.primary.subtleBorder : 'transparent',
+                    }}
                   >
-                    <View style={[styles.habitIcon, { backgroundColor: h.color + '20' }]}>
-                      <Ionicons name={h.icon as any} size={22} color={h.color} />
+                    <View
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 12,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: selected ? colors.surface.default : colors.surface.muted,
+                      }}
+                    >
+                      <Ionicons name={habit.icon as any} size={18} color={colors.primary.default} />
                     </View>
-                    <View style={styles.habitInfo}>
-                      <Text
-                        style={[
-                          styles.habitName,
-                          { color: colors.text.primary },
-                          isSelected && { color: h.color, fontWeight: '700' },
-                        ]}
-                      >
-                        {h.name}
-                      </Text>
-                      <Text style={[styles.habitReminder, { color: colors.text.tertiary }]}>{h.reminder}</Text>
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="title" tone={selected ? 'link' : 'primary'}>
+                        {habit.name}
+                      </AppText>
+                      <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                        {habit.reminder}
+                      </AppText>
                     </View>
                     <Ionicons
-                      name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={22}
-                      color={isSelected ? h.color : colors.text.tertiary}
+                      name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={21}
+                      color={selected ? colors.primary.default : colors.border.strong}
                     />
                   </TactilePressable>
                 );
@@ -367,15 +407,24 @@ export function OnboardingScreen() {
         );
       case 4:
         return (
-          <View style={styles.inputStep}>
-            <View style={{ alignItems: 'center' }}>{ONBOARD_ART[4]}</View>
-            <Text style={[styles.stepQuestion, { color: colors.text.primary }]}>What should we call you?</Text>
-            <Text style={[styles.stepHint, { color: colors.text.secondary }]}>Used for a warm, personalized greeting</Text>
+          <View style={{ gap: 16 }}>
+            <View>
+              <AppText variant="h2">{STEPS[4].title}</AppText>
+              <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 6 }}>
+                {STEPS[4].hint}
+              </AppText>
+            </View>
             <TextInput
-              style={[
-                styles.nameInput,
-                { color: colors.text.primary, borderBottomColor: colors.primary.default },
-              ]}
+              style={{
+                fontSize: 32,
+                lineHeight: 40,
+                letterSpacing: -0.6,
+                color: colors.text.primary,
+                paddingVertical: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.primary.default,
+                marginTop: 16,
+              }}
               placeholder="Your name"
               value={name}
               onChangeText={setName}
@@ -383,52 +432,69 @@ export function OnboardingScreen() {
               autoCapitalize="words"
               autoFocus
               maxLength={30}
+              accessibilityLabel="Your name"
             />
           </View>
         );
       case 5:
         return (
-          <View style={styles.privacyStep}>
-            <View style={{ alignItems: 'center', marginBottom: 4 }}>{ONBOARD_ART[5]}</View>
-            <Text style={[styles.welcomeTitle, { color: colors.text.primary }]}>Privacy First & Always</Text>
-            <View style={styles.privacyPoints}>
+          <View style={{ gap: 16 }}>
+            <View>
+              <AppText variant="h2">{STEPS[5].title}</AppText>
+              <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 6 }}>
+                {STEPS[5].hint}
+              </AppText>
+            </View>
+            <View style={{ gap: 14, marginTop: 4 }}>
               {[
-                'Zero cloud servers: All journals and mood records live exclusively on your device',
-                'Passcode & Biometric App Lock protection available',
-                'Optional background blur in multi-tasking app switcher',
-                'One-tap complete portable JSON data backup & export',
-                'No third-party analytics, tracking pixels, or ads',
-              ].map((point, i) => (
-                <View key={i} style={styles.privacyItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.primary.default} />
-                  <Text style={[styles.privacyText, { color: colors.text.primary }]}>{point}</Text>
+                'Your journals and mood records live only on this device.',
+                'App lock with a passcode or biometrics, if you want it.',
+                'Export everything as a portable file at any time.',
+                'No third-party analytics, tracking or advertising.',
+              ].map((point) => (
+                <View key={point} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={19}
+                    color={colors.primary.default}
+                    style={{ marginTop: 1 }}
+                  />
+                  <AppText variant="bodySmall" tone="secondary" style={{ flex: 1, lineHeight: 21 }}>
+                    {point}
+                  </AppText>
                 </View>
               ))}
             </View>
 
             {currentUser ? (
-              <View style={[styles.privacyConnectedBox, { backgroundColor: colors.surface.default, borderColor: colors.primary.default }]}>
-                <Ionicons name="cloud-done-outline" size={22} color={colors.primary.default} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={[styles.privacyConnectedTitle, { color: colors.text.primary }]}>
-                    Google Account Linked
-                  </Text>
-                  <Text style={[styles.privacyConnectedSub, { color: colors.text.secondary }]}>
-                    Encrypted snapshots can be backed up to your Google Drive ({currentUser.email}).
-                  </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: 15,
+                  borderRadius: 16,
+                  backgroundColor: colors.surface.selected,
+                  marginTop: 4,
+                }}
+              >
+                <Ionicons name="cloud-done-outline" size={21} color={colors.primary.default} />
+                <View style={{ flex: 1 }}>
+                  <AppText variant="title">Google connected</AppText>
+                  <AppText variant="caption" tone="secondary" numberOfLines={2}>
+                    Encrypted backups go to your own Drive ({currentUser.email}).
+                  </AppText>
                 </View>
               </View>
             ) : (
-              <TactilePressable
+              <Button
+                title={isLoggingIn ? 'Connecting…' : 'Connect Google (optional)'}
+                variant="outline"
                 onPress={handleGoogleSignIn}
-                disabled={isLoggingIn}
-                style={[styles.googleButtonSecondary, { borderColor: colors.border.default, backgroundColor: colors.surface.default }]}
-              >
-                <Ionicons name="logo-google" size={18} color={colors.primary.default} />
-                <Text style={[styles.googleButtonSecondaryText, { color: colors.text.primary }]}>
-                  {isLoggingIn ? 'Connecting…' : 'Connect Google Account (Optional)'}
-                </Text>
-              </TactilePressable>
+                loading={isLoggingIn}
+                fullWidth
+                leftIcon={(color, size) => <Ionicons name="logo-google" size={size} color={color} />}
+              />
             )}
           </View>
         );
@@ -438,40 +504,81 @@ export function OnboardingScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default} style={styles.container}>
-      <View style={[styles.progressBar, { backgroundColor: colors.border.default }]}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary.default }]} />
-      </View>
-      <Text style={[styles.progressText, { color: colors.text.tertiary }]}>
-        Step {step + 1} of {STEPS.length}
-      </Text>
-
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + tabBarOffset }]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {renderStep()}
-      </ScrollView>
-
-      <View style={[styles.bottomBar, { bottom: tabBarOffset, borderTopColor: colors.border.default, backgroundColor: colors.background.default }]}>
-        <TouchableOpacity
-          onPress={handleBack}
-          disabled={step === 0 && !navigation.canGoBack()}
-          style={[
-            styles.backButton,
-            { borderColor: colors.border.default, backgroundColor: colors.surface.default },
-            step === 0 && !navigation.canGoBack() && { opacity: 0.3 },
-          ]}
+    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
+      <View style={{ flex: 1 }}>
+        {/* Progress */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 24,
+            paddingTop: 12,
+          }}
         >
-          <Text style={[styles.backButtonText, { color: colors.text.primary }]}>
-            {step === 0 && navigation.canGoBack() ? 'Close' : 'Back'}
-          </Text>
-        </TouchableOpacity>
-        <View style={{ flex: 2 }}>
-          <PrimaryButton
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            {step > 0 ? (
+              <TactilePressable
+                onPress={handleBack}
+                scaleDownTo={0.9}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                style={{ padding: 2 }}
+              >
+                <Ionicons name="chevron-back" size={19} color={colors.text.tertiary} />
+              </TactilePressable>
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {STEPS.map((_, index) => (
+                <View
+                  key={index}
+                  style={{
+                    width: 22,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: index <= step ? colors.primary.default : colors.border.default,
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+          <TactilePressable
+            onPress={() => completeOnboarding(true)}
+            scaleDownTo={0.95}
+            accessibilityRole="button"
+            accessibilityLabel="Skip onboarding"
+          >
+            <AppText variant="caption" tone="tertiary">
+              Skip
+            </AppText>
+          </TactilePressable>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <OnboardingScene />
+          <View style={{ marginTop: 26 }}>{renderStep()}</View>
+        </ScrollView>
+
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            paddingHorizontal: 24,
+            paddingBottom: 26,
+            paddingTop: 12,
+            backgroundColor: colors.background.default,
+          }}
+        >
+          <Button
+            title={step === STEPS.length - 1 ? 'Begin' : 'Continue'}
             onPress={handleNext}
-            title={step === STEPS.length - 1 ? 'Begin Journey' : 'Continue'}
             fullWidth
           />
         </View>
@@ -480,150 +587,117 @@ export function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  progressBar: { height: 6, marginHorizontal: 20, marginTop: 16, borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 3 },
-  progressText: { textAlign: 'center', fontSize: 13, fontWeight: '500', marginTop: 8 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, flexGrow: 1 },
-  welcomeStep: { alignItems: 'center', gap: 16, paddingVertical: 16 },
-  welcomeIconWrap: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  welcomeTitle: { fontSize: 28, fontWeight: '700', textAlign: 'center', letterSpacing: -0.4 },
-  welcomeText: { fontSize: 15, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16 },
-  features: { width: '100%', gap: 14, marginTop: 14 },
-  featureItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, paddingVertical: 4 },
-  featureText: { fontSize: 14, flex: 1, lineHeight: 21 },
-  selectionStep: { gap: 14 },
-  inputStep: { gap: 16, paddingTop: 20 },
-  privacyStep: { alignItems: 'center', gap: 16, paddingVertical: 16 },
-  stepQuestion: { fontSize: 22, fontWeight: '700', textAlign: 'center', letterSpacing: -0.3 },
-  stepHint: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  goalGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between', marginTop: 4 },
-  goalCard: {
-    width: '48%',
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    padding: 16,
-    borderWidth: 1,
-    minHeight: 120,
-  },
-  goalIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  goalLabel: { fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 18 },
-  timeOptions: { gap: 12, marginTop: 6 },
-  timeOption: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    padding: 16,
-    borderRadius: 18,
-    borderWidth: 1,
-  },
-  timeInfo: { flex: 1, gap: 2 },
-  timeLabel: { fontSize: 16, fontWeight: '600' },
-  timeDesc: { fontSize: 13, lineHeight: 18 },
-  habitGrid: { gap: 10, marginTop: 6 },
-  habitCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  habitIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  habitInfo: { flex: 1, gap: 2 },
-  habitName: { fontSize: 15, fontWeight: '600', lineHeight: 20 },
-  habitReminder: { fontSize: 12 },
-  nameInput: {
-    fontSize: 24,
-    fontWeight: '600',
-    textAlign: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 2,
-    marginHorizontal: 20,
-    marginTop: 20,
-  },
-  privacyPoints: { width: '100%', gap: 14, marginTop: 12 },
-  privacyItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  privacyText: { fontSize: 14, lineHeight: 21, flex: 1 },
-  bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  backButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  backButtonText: { fontSize: 15, fontWeight: '600' },
-  authCard: {
-    width: '100%',
-    padding: 16,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 6,
-  },
-  authCardTitle: { fontSize: 15, fontWeight: '600', textAlign: 'center' },
-  authCardSub: { fontSize: 13, textAlign: 'center', lineHeight: 18, paddingHorizontal: 10 },
-  authConnectedRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
-  authConnectedTitle: { fontSize: 14, fontWeight: '600' },
-  authConnectedSub: { fontSize: 13 },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    width: '100%',
-    marginTop: 4,
-  },
-  googleButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  privacyConnectedBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginTop: 14,
-    width: '100%',
-  },
-  privacyConnectedTitle: { fontSize: 14, fontWeight: '600' },
-  privacyConnectedSub: { fontSize: 12, lineHeight: 16 },
-  googleButtonSecondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginTop: 14,
-    width: '100%',
-  },
-  googleButtonSecondaryText: { fontSize: 14, fontWeight: '600' },
-});
+/**
+ * Flat onboarding scene: a foggy lake, two hills, one pine and a seated
+ * figure. Two fills and one tint, no outlines or gradients.
+ */
+function OnboardingScene() {
+  const { colors } = useAppTheme();
+  return (
+    <View
+      style={{
+        height: 200,
+        borderRadius: 24,
+        backgroundColor: colors.primary.subtle,
+        overflow: 'hidden',
+      }}
+    >
+      <View
+        style={{
+          position: 'absolute',
+          top: 26,
+          right: 34,
+          width: 54,
+          height: 54,
+          borderRadius: 27,
+          backgroundColor: colors.status.warning.default,
+          opacity: 0.18,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: 44,
+          right: 52,
+          width: 18,
+          height: 18,
+          borderRadius: 9,
+          backgroundColor: colors.status.warning.default,
+          opacity: 0.55,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          left: -40,
+          bottom: 44,
+          width: 260,
+          height: 130,
+          borderRadius: 130,
+          backgroundColor: colors.primary.subtleBorder,
+          opacity: 0.7,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          right: -50,
+          bottom: 44,
+          width: 230,
+          height: 110,
+          borderRadius: 110,
+          backgroundColor: colors.primary.subtleBorder,
+          opacity: 0.45,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 62,
+          backgroundColor: colors.primary.subtleBorder,
+          opacity: 0.85,
+        }}
+      />
+      {/* Pine */}
+      <View style={{ position: 'absolute', right: 52, bottom: 54, alignItems: 'center' }}>
+        <View
+          style={{
+            width: 0,
+            height: 0,
+            borderLeftWidth: 15,
+            borderRightWidth: 15,
+            borderBottomWidth: 44,
+            borderLeftColor: 'transparent',
+            borderRightColor: 'transparent',
+            borderBottomColor: colors.primary.default,
+          }}
+        />
+        <View style={{ width: 4, height: 14, backgroundColor: colors.primary.default }} />
+      </View>
+      {/* Seated figure */}
+      <View style={{ position: 'absolute', left: 132, bottom: 58, alignItems: 'center' }}>
+        <View
+          style={{
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: colors.primary.default,
+          }}
+        />
+        <View
+          style={{
+            width: 38,
+            height: 28,
+            borderTopLeftRadius: 19,
+            borderTopRightRadius: 19,
+            backgroundColor: colors.primary.default,
+            marginTop: 2,
+          }}
+        />
+      </View>
+    </View>
+  );
+}

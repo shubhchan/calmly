@@ -1,20 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, View, Text } from 'react-native';
+import { AccessibilityInfo, View } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
-import { PrimaryButton, ScreenHeader } from '../../components';
+import { AppText, Button, TactilePressable } from '../../components';
 import { RootStackParamList, BreathingPreset } from '../../types/navigation';
 import Svg, { Circle } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
-  useAnimatedStyle,
   useAnimatedProps,
   useAnimatedReaction,
   withTiming,
-  withSpring,
   cancelAnimation,
   runOnJS,
-  interpolate,
   Easing,
   useReducedMotion,
 } from 'react-native-reanimated';
@@ -22,7 +18,6 @@ import { useAppTheme } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { calmRepository } from '../../database/repositories/calmRepository';
 import { hapticFeedback } from '../../utils/haptics';
-import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -38,20 +33,20 @@ const presetPatterns: Record<BreathingPreset, { inhale: number; hold: number; ex
 };
 
 const presetLabels: Record<BreathingPreset, string> = {
-  box: 'Box Breathing',
-  '4-6': '4-6 Breathing',
-  '4-7-8': '4-7-8 Technique',
-  deep: 'Deep Breathing',
-  slow: 'Slow Breathing',
-  relaxation: 'Relaxation Flow',
+  box: 'Box breathing',
+  '4-6': '4-6 breathing',
+  '4-7-8': '4-7-8 breathing',
+  deep: 'Deep breathing',
+  slow: 'Slow breathing',
+  relaxation: 'Relaxation flow',
 };
 
 type PhaseKey = 'inhale' | 'hold' | 'exhale' | 'holdExhale';
 
 const PHASE_LABELS: Record<PhaseKey, string> = {
   inhale: 'Breathe in',
-  hold: 'Hold breath',
-  exhale: 'Release slowly',
+  hold: 'Hold',
+  exhale: 'Breathe out',
   holdExhale: 'Rest',
 };
 
@@ -65,7 +60,9 @@ const PHASE_TARGETS: Record<PhaseKey, number> = {
 };
 
 const REST_LEVEL = 0.16;
-const ARC_RADIUS = 118;
+const RING_SIZE = 286;
+const RING_CENTER = RING_SIZE / 2;
+const ARC_RADIUS = 126;
 const ARC_CIRCUMFERENCE = 2 * Math.PI * ARC_RADIUS;
 // easeInOutSine — approximates the natural deceleration of a full lung
 const LUNG_EASING = Easing.bezier(0.37, 0, 0.63, 1);
@@ -77,6 +74,19 @@ interface ActivePhase {
   isInhale: boolean;
 }
 
+function formatClock(totalSeconds: number): string {
+  const safe = Math.max(0, Math.ceil(totalSeconds));
+  const minutes = Math.floor(safe / 60);
+  const seconds = safe % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Breathing — direction B, "Guided arc".
+ *
+ * One thin ring, one word, one number. The arc closes as the session
+ * progresses and a single marker sits at its head. Nothing else moves.
+ */
 export function BreathingSessionScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'BreathingSession'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -88,7 +98,7 @@ export function BreathingSessionScreen() {
 
   const reducedMotion = useReducedMotion();
 
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
 
   // Phase table: zero-second stages are dropped so 4-6 breathing flows straight
   // from inhale to exhale with no dead frames.
@@ -123,23 +133,9 @@ export function BreathingSessionScreen() {
   const phaseCount = activePhases.length;
   const totalCycles = cycleDuration > 0 ? Math.max(1, Math.floor((safeDuration * 60) / cycleDuration)) : 1;
 
-  const phaseColors = useMemo(() => {
-    const byKey: Record<PhaseKey, string> = {
-      inhale: colors.primary.default,
-      hold: colors.status.info.default,
-      exhale: colors.accents.lavender,
-      holdExhale: colors.status.warning.default,
-    };
-    return phaseKeys.map((k) => byKey[k]);
-  }, [phaseKeys, colors.primary.default, colors.status.info.default, colors.accents.lavender, colors.status.warning.default]);
-
   // --- UI-thread session state -------------------------------------------------
-  // The entire breathing clock lives on the UI thread: no JS interval, no
-  // setState-driven frame pacing. JS state is only mirrored once per phase
-  // transition and once per visible second, purely for text display.
   const clock = useSharedValue(0); // linear 0..1 within the current phase
   const breathLevel = useSharedValue(REST_LEVEL); // 0..1 somatic expansion
-  const ripple = useSharedValue(1); // expanding wave echo on inhale crest
   const phaseSV = useSharedValue(0);
   const cycleSV = useSharedValue(0);
   const finishedSV = useSharedValue(0);
@@ -167,11 +163,6 @@ export function BreathingSessionScreen() {
         breathLevel.value = withTiming(target, { duration: durMs, easing: LUNG_EASING });
       }
 
-      if (inhaleFlags[index] && !reducedMotion && remaining >= 0.99) {
-        ripple.value = 0;
-        ripple.value = withTiming(1, { duration: 1500, easing: Easing.out(Easing.quad) });
-      }
-
       clock.value = 1 - Math.max(0.02, remaining);
       clock.value = withTiming(1, { duration: durMs, easing: Easing.linear }, (finished) => {
         'worklet';
@@ -183,9 +174,6 @@ export function BreathingSessionScreen() {
         if (nextCycle >= totalCycles) {
           finishedSV.value = 1;
           runningSV.value = 0;
-          if (!reducedMotion) {
-            breathLevel.value = withSpring(1, { damping: 14, stiffness: 80 });
-          }
           return;
         }
 
@@ -194,7 +182,7 @@ export function BreathingSessionScreen() {
         runPhase(nextIdx, 1);
       });
     },
-    [durations, targets, inhaleFlags, phaseCount, totalCycles, reducedMotion]
+    [durations, targets, phaseCount, totalCycles, reducedMotion]
   );
 
   // Mirror the UI-thread state machine into React state (display only).
@@ -277,9 +265,8 @@ export function BreathingSessionScreen() {
     return () => {
       cancelAnimation(clock);
       cancelAnimation(breathLevel);
-      cancelAnimation(ripple);
     };
-  }, [clock, breathLevel, ripple]);
+  }, [clock, breathLevel]);
 
   const toggleSession = useCallback(() => {
     if (isComplete) {
@@ -303,49 +290,7 @@ export function BreathingSessionScreen() {
     runPhase(phaseSV.value, remaining <= 0.02 ? 1 : remaining);
   }, [isComplete, isRunning, navigation, runPhase, clock, breathLevel, runningSV, phaseSV]);
 
-  const resetSession = useCallback(() => {
-    cancelAnimation(clock);
-    cancelAnimation(breathLevel);
-    cancelAnimation(ripple);
-
-    clock.value = 0;
-    breathLevel.value = REST_LEVEL;
-    ripple.value = 1;
-    phaseSV.value = 0;
-    cycleSV.value = 0;
-    finishedSV.value = 0;
-    runningSV.value = 0;
-
-    isCompleteRef.current = false;
-    setPhaseIdx(0);
-    setCycle(0);
-    setTimeLeft(durations[0] ?? 4);
-    setIsRunning(false);
-    setIsComplete(false);
-  }, [clock, breathLevel, ripple, phaseSV, cycleSV, finishedSV, runningSV, durations]);
-
   // --- UI-thread visual mappings ----------------------------------------------
-  const innerOrbStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(breathLevel.value, [0, 1], [0.82, 1.26]) }],
-  }));
-
-  const middleRingStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(breathLevel.value, [0, 1], [0.88, 1.46]) }],
-    opacity: interpolate(breathLevel.value, [0, 1], [0.12, 0.34]),
-  }));
-
-  const outerAuraStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(breathLevel.value, [0, 1], [0.92, 1.3]) }],
-    opacity: interpolate(breathLevel.value, [0, 1], [0.06, 0.14]),
-  }));
-
-  const rippleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(ripple.value, [0, 1], [0.86, 1.55]) }],
-    opacity: interpolate(ripple.value, [0, 0.35, 1], [0, 0.22, 0]),
-  }));
-
-  // The progress arc updates every frame straight from the shared clock —
-  // previously it only moved once per second with the JS interval.
   const arcAnimatedProps = useAnimatedProps(() => {
     const idx = phaseSV.value;
     const phaseDur = durations[idx] ?? 0;
@@ -359,188 +304,204 @@ export function BreathingSessionScreen() {
     };
   });
 
+  const headAnimatedProps = useAnimatedProps(() => {
+    const idx = phaseSV.value;
+    const phaseDur = durations[idx] ?? 0;
+    const elapsedInPhase = (prefixSums[idx] ?? 0) + clock.value * phaseDur;
+    const completedCycles = finishedSV.value === 1 ? totalCycles : cycleSV.value;
+    const elapsed = completedCycles * cycleDuration + elapsedInPhase;
+    const total = Math.max(1, totalCycles * cycleDuration);
+    const progress = Math.max(0, Math.min(1, elapsed / total));
+    const angle = progress * 2 * Math.PI - Math.PI / 2;
+    return {
+      cx: RING_CENTER + ARC_RADIUS * Math.cos(angle),
+      cy: RING_CENTER + ARC_RADIUS * Math.sin(angle),
+    };
+  });
+
   const safeTotalCycles = totalCycles > 0 ? totalCycles : 1;
   const currentPhaseKey = phaseKeys[phaseIdx] ?? 'inhale';
-  const currentLabel = isComplete ? 'Session complete' : PHASE_LABELS[currentPhaseKey] ?? 'Breathe in';
-  const currentColor = isComplete ? colors.primary.default : phaseColors[phaseIdx] ?? colors.primary.default;
+  const currentLabel = isComplete ? 'Complete' : PHASE_LABELS[currentPhaseKey] ?? 'Breathe in';
+  const phaseSeconds = isComplete ? 0 : timeLeft;
+
+  const elapsedSeconds =
+    cycle * cycleDuration + (prefixSums[phaseIdx] ?? 0) + (durations[phaseIdx] ?? 0) - timeLeft;
+  const remainingSeconds = isComplete ? 0 : Math.max(0, totalCycles * cycleDuration - elapsedSeconds);
+
+  const patternLine = activePhases
+    .map((phase) =>
+      phase.key === 'inhale'
+        ? `in for ${phase.duration}`
+        : phase.key === 'exhale'
+          ? `out for ${phase.duration}`
+          : `hold for ${phase.duration}`
+    )
+    .join(' · ');
+
+  const markerCount = Math.min(safeTotalCycles, 6);
 
   return (
-    <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
-      <ScreenHeader title={presetLabels[safePreset] ?? 'Breathing'} />
-      <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
-        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text.secondary }}>
-          {presetLabels[safePreset] ?? 'Breathing'} · {safeDuration} min · Tap Start to begin
-        </Text>
-      </View>
+    <ScreenContainer scroll={false} animate={false} backgroundColor={colors.background.default}>
+      <View style={{ flex: 1, paddingHorizontal: 24 }}>
+        {/* Header */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 8,
+            height: 44,
+          }}
+        >
+          <TactilePressable
+            onPress={() => navigation?.goBack?.()}
+            scaleDownTo={0.92}
+            accessibilityRole="button"
+            accessibilityLabel="Close session"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 13,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.surface.default,
+            }}
+          >
+            <Ionicons name="close" size={18} color={colors.primary.default} />
+          </TactilePressable>
+          <AppText variant="caption" tone="tertiary">
+            {presetLabels[safePreset] ?? 'Breathing'}
+          </AppText>
+          <AppText variant="label" tone="link" style={{ width: 38, textAlign: 'right' }}>
+            {formatClock(remainingSeconds)}
+          </AppText>
+        </View>
 
-      {/* Somatic Multi-Layer Breathing Orb */}
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
-        <View style={{ width: 280, height: 280, alignItems: 'center', justifyContent: 'center' }}>
-          {/* Outer Ambient Glow */}
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                width: 250,
-                height: 250,
-                borderRadius: 125,
-                backgroundColor: currentColor,
-              },
-              outerAuraStyle,
-            ]}
-          />
+        {/* Ring */}
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: -20 }}>
+          <View style={{ width: RING_SIZE, height: RING_SIZE }}>
+            <Svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}>
+              <Circle
+                cx={RING_CENTER}
+                cy={RING_CENTER}
+                r={ARC_RADIUS}
+                fill="none"
+                stroke={colors.border.default}
+                strokeWidth={2}
+              />
+              <AnimatedCircle
+                cx={RING_CENTER}
+                cy={RING_CENTER}
+                r={ARC_RADIUS}
+                fill="none"
+                stroke={colors.primary.default}
+                strokeWidth={4}
+                strokeDasharray={ARC_CIRCUMFERENCE}
+                strokeDashoffset={ARC_CIRCUMFERENCE}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${RING_CENTER} ${RING_CENTER})`}
+                animatedProps={arcAnimatedProps}
+              />
+              <AnimatedCircle
+                cx={RING_CENTER}
+                cy={RING_CENTER - ARC_RADIUS}
+                r={6}
+                fill={colors.primary.default}
+                animatedProps={headAnimatedProps}
+              />
+            </Svg>
 
-          {/* Expanding wave echo on each inhale crest */}
-          <Animated.View
-            style={[
-              {
+            <View
+              style={{
                 position: 'absolute',
-                width: 210,
-                height: 210,
-                borderRadius: 105,
-                borderWidth: 1.5,
-                borderColor: currentColor,
-              },
-              rippleStyle,
-            ]}
-          />
-
-          {/* Middle Wave Ring */}
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                width: 210,
-                height: 210,
-                borderRadius: 105,
-                borderWidth: 2,
-                borderColor: currentColor,
-              },
-              middleRingStyle,
-            ]}
-          />
-
-          {/* Inner Breathing Core with soft gradient depth */}
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                width: 170,
-                height: 170,
-                borderRadius: 85,
-                borderWidth: 1.5,
-                borderColor: currentColor + '40',
-                overflow: 'hidden',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
                 alignItems: 'center',
                 justifyContent: 'center',
-              },
-              innerOrbStyle,
-            ]}
-          >
-            <LinearGradient
-              colors={[currentColor + (isDark ? '38' : '22'), currentColor + (isDark ? '14' : '08')]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            />
-            <Ionicons name="leaf-outline" size={32} color={currentColor} />
-          </Animated.View>
-
-          {/* SVG Progress Arc — animated on the UI thread at display refresh rate */}
-          <Svg width={270} height={270} style={{ position: 'absolute' }}>
-            <Circle
-              cx={135}
-              cy={135}
-              r={ARC_RADIUS}
-              fill="none"
-              stroke={colors.border.default}
-              strokeWidth={5}
-              opacity={0.6}
-            />
-            <AnimatedCircle
-              cx={135}
-              cy={135}
-              r={ARC_RADIUS}
-              fill="none"
-              stroke={currentColor}
-              strokeWidth={6}
-              strokeDasharray={ARC_CIRCUMFERENCE}
-              strokeDashoffset={ARC_CIRCUMFERENCE}
-              strokeLinecap="round"
-              transform="rotate(-90 135 135)"
-              animatedProps={arcAnimatedProps}
-            />
-          </Svg>
-        </View>
-
-        {/* Phase instruction and countdown — refreshed once per second, not per frame */}
-        <View style={{ marginTop: 32, alignItems: 'center' }}>
-          <Text
-            accessibilityLiveRegion="polite"
-            style={{
-              fontFamily: fontFamilies.serif.bold,
-              fontSize: 26,
-              fontWeight: '700',
-              textAlign: 'center',
-              color: currentColor,
-            }}
-          >
-            {currentLabel}
-          </Text>
-          <Text
-            style={{
-              fontFamily: fontFamilies.sans.bold,
-              fontSize: 48,
-              fontWeight: '800',
-              marginTop: 6,
-              color: colors.text.primary,
-              letterSpacing: -1.5,
-              fontVariant: ['tabular-nums'],
-            }}
-          >
-            {isComplete ? '✓' : `${Number.isFinite(timeLeft) ? timeLeft : 0}s`}
-          </Text>
-          {!isComplete && (
-            <Text
-              style={{
-                fontFamily: fontFamilies.sans.medium,
-                fontSize: 14,
-                color: colors.text.tertiary,
-                marginTop: 6,
               }}
             >
-              Cycle {Math.min(cycle + 1, safeTotalCycles)} of {safeTotalCycles}
-            </Text>
-          )}
-        </View>
-      </View>
+              <AppText variant="overline" tone="tertiary" accessibilityLiveRegion="polite">
+                {currentLabel}
+              </AppText>
+              <AppText
+                variant="display"
+                style={{ fontSize: 64, lineHeight: 68, marginTop: 4, fontVariant: ['tabular-nums'] }}
+              >
+                {isComplete ? '·' : phaseSeconds}
+              </AppText>
+              <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                {isComplete ? 'well done' : 'seconds'}
+              </AppText>
+            </View>
+          </View>
 
-      {/* Bottom Controls */}
-      <View style={{ paddingHorizontal: 24, paddingBottom: Math.max(insets.bottom + 20, 52), alignItems: 'center' }}>
-        <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
-          <PrimaryButton
-            title={isComplete ? 'Complete' : isRunning ? 'Pause' : 'Start'}
-            variant="primary"
-            size="lg"
-            onPress={toggleSession}
-            style={{ flex: 1, maxWidth: 170 }}
-            fullWidth={false}
-          />
-          {!isComplete && (
-            <PrimaryButton
-              title="Reset"
-              variant="outline"
-              size="lg"
-              onPress={resetSession}
-              style={{ flex: 1, maxWidth: 170 }}
-              fullWidth={false}
+          {/* Round markers */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 34 }}>
+            {Array.from({ length: markerCount }).map((_, index) => (
+              <View
+                key={index}
+                style={{
+                  height: 6,
+                  width: 26,
+                  borderRadius: 3,
+                  backgroundColor:
+                    index <= Math.min(cycle, markerCount - 1)
+                      ? colors.primary.default
+                      : colors.surface.muted,
+                }}
+              />
+            ))}
+            <AppText variant="caption" tone="tertiary" style={{ marginLeft: 6 }}>
+              Round {Math.min(cycle + 1, safeTotalCycles)} of {safeTotalCycles}
+            </AppText>
+          </View>
+
+          <AppText variant="caption" tone="secondary" style={{ marginTop: 14 }}>
+            {patternLine}
+          </AppText>
+        </View>
+
+        {/* Controls */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            paddingBottom: Math.max(insets.bottom, 24) + 10,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Button
+              title={isComplete ? 'Done' : isRunning ? 'Pause' : 'Begin'}
+              variant={isRunning || isComplete ? 'primary' : 'outline'}
+              onPress={toggleSession}
+              fullWidth
+              leftIcon={(color, size) =>
+                isComplete ? null : (
+                  <Ionicons name={isRunning ? 'pause' : 'play'} size={size} color={color} />
+                )
+              }
             />
-          )}
+          </View>
+          <TactilePressable
+            onPress={() => navigation?.goBack?.()}
+            scaleDownTo={0.92}
+            accessibilityRole="button"
+            accessibilityLabel="End session"
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.surface.muted,
+            }}
+          >
+            <Ionicons name="close" size={18} color={colors.text.secondary} />
+          </TactilePressable>
         </View>
-
-        <Text style={{ fontSize: 13, color: colors.text.tertiary, textAlign: 'center' }}>
-          {safeDuration} min session · Mindful presence
-        </Text>
       </View>
     </ScreenContainer>
   );

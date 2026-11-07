@@ -2,12 +2,31 @@ import { Platform, TextStyle } from 'react-native';
 import { getActiveFont } from './fontStore';
 
 /**
- * Editorial & Humanist Typographic Design System for Calmly.
- * Dynamic: reads the currently active font (bundled or Google Font) with weight hierarchy.
+ * Typographic system for Calmly — "Still Water".
+ *
+ * One voice: the user's active app font (default Plus Jakarta Sans) drives
+ * titles, body copy, labels and every control.
+ *
+ * Display sizes 48 / 40 / 32 / 24 with -0.02em tracking.
+ * Body sizes 17 / 15 / 13. Label 12 / 600.
+ * Maximum three weights per screen; never bold body copy.
  */
 
+/** Fixed editorial faces. Kept for font previews and back-compat. */
+export const displayFaces = {
+  regular: 'Newsreader_400Regular',
+  medium: 'Newsreader_500Medium',
+  semiBold: 'Newsreader_600SemiBold',
+  bold: 'Newsreader_700Bold',
+  italic: 'Newsreader_400Regular_Italic',
+} as const;
+
+/** Body and UI faces follow the user's font choice. */
 export const fontFamilies = {
-  // Active Font (Powers screen titles, greetings, mindfulness cards, quotes)
+  get display() {
+    return displayFaces;
+  },
+  // Active Font (Powers body copy, labels and every control)
   get calming() {
     const f = getActiveFont().faces;
     return {
@@ -18,7 +37,7 @@ export const fontFamilies = {
       get fallback() { return f.regular; },
     };
   },
-  // Headings mapped to active font
+  // Headings mapped to the active font
   get serif() {
     const f = getActiveFont().faces;
     return {
@@ -30,7 +49,7 @@ export const fontFamilies = {
       get fallback() { return f.regular; },
     };
   },
-  // Editorial Book Serif mapped to active font
+  // Editorial Book Serif mapped to the active font
   get editorial() {
     const f = getActiveFont().faces;
     return {
@@ -58,81 +77,84 @@ export const fontFamilies = {
 
 export const typography: Record<string, TextStyle> = {
   displayLarge: {
-    fontFamily: fontFamilies.calming.bold,
-    fontSize: 34,
-    lineHeight: 42,
-    letterSpacing: 0.1,
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 48,
+    lineHeight: 56,
+    letterSpacing: -0.96,
   },
   displayMedium: {
-    fontFamily: fontFamilies.calming.semiBold,
-    fontSize: 28,
-    lineHeight: 36,
-    letterSpacing: 0.1,
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 40,
+    lineHeight: 48,
+    letterSpacing: -0.8,
   },
   displaySmall: {
-    fontFamily: fontFamilies.calming.medium,
-    fontSize: 23,
-    lineHeight: 30,
-    letterSpacing: 0.1,
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 32,
+    lineHeight: 42,
+    letterSpacing: -0.64,
   },
   quote: {
-    fontFamily: fontFamilies.calming.regular,
-    fontSize: 21,
-    lineHeight: 28,
-    letterSpacing: 0.2,
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 24,
+    lineHeight: 32,
+    letterSpacing: -0.2,
   },
   titleLarge: {
-    fontFamily: fontFamilies.sans.bold,
+    fontFamily: fontFamilies.sans.semiBold,
     fontSize: 22,
     lineHeight: 28,
-    letterSpacing: 0.1,
+    letterSpacing: -0.2,
   },
   titleMedium: {
     fontFamily: fontFamilies.sans.semiBold,
-    fontSize: 18,
+    fontSize: 17,
     lineHeight: 24,
-    letterSpacing: 0.1,
+    letterSpacing: 0,
   },
   titleSmall: {
     fontFamily: fontFamilies.sans.semiBold,
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
-    letterSpacing: 0.1,
+    letterSpacing: 0,
   },
   bodyLarge: {
     fontFamily: fontFamilies.sans.regular,
     fontSize: 17,
     lineHeight: 25,
-    letterSpacing: 0.15,
+    letterSpacing: 0,
   },
   bodyMedium: {
     fontFamily: fontFamilies.sans.regular,
     fontSize: 15,
     lineHeight: 22,
-    letterSpacing: 0.15,
+    letterSpacing: 0,
   },
   bodySmall: {
     fontFamily: fontFamilies.sans.regular,
     fontSize: 13,
     lineHeight: 19,
-    letterSpacing: 0.15,
+    letterSpacing: 0,
   },
   labelLarge: {
     fontFamily: fontFamilies.sans.semiBold,
     fontSize: 15,
     lineHeight: 20,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   labelMedium: {
     fontFamily: fontFamilies.sans.semiBold,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     letterSpacing: 0.2,
   },
   labelSmall: {
-    fontFamily: fontFamilies.sans.bold,
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 0.3,
+    fontFamily: fontFamilies.sans.semiBold,
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 0.4,
   },
 };
+
+// Platform is kept for downstream modules that import it from this file.
+export const fontPlatform = Platform.OS;

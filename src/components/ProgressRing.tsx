@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { View, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useAppTheme } from '../theme/ThemeContext';
+import { AppText } from './ui/AppText';
 
 interface ProgressRingProps {
   progress: number;
@@ -73,9 +74,9 @@ export const ProgressRing = ({
           }}
         >
           {showPercentage && (
-            <Text className="font-bold text-headline-md text-[var(--color-text-primary)]" style={textStyle}>
+            <AppText variant="h3" style={textStyle}>
               {Math.round(progress * 100)}%
-            </Text>
+            </AppText>
           )}
           {children && !showPercentage && children}
         </View>

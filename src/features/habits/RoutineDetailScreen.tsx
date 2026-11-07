@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, StyleSheet, Keyboard } from 'react-native';
+import { View, TextInput, ScrollView, StyleSheet } from 'react-native';
 import { Alert } from '../../services/appAlert';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,24 +7,20 @@ import { RootStackParamList } from '../../types/navigation';
 import { routineRepository, TimeOfDay } from '../../database/repositories/routineRepository';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import Habit from '../../database/models/Habit';
-import { Card } from '../../components/Card';
-import { PrimaryButton } from '../../components/PrimaryButton';
-import { TactilePressable, StaggeredEntry, ScreenHeader } from '../../components';
+import { AppText, Button, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { DetailSkeleton } from '../../components/interactive/LoadingState';
-import Animated from 'react-native-reanimated';
-import { sharedSpringStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'RoutineDetail'>['navigation'];
 type RouteProp = NativeStackScreenProps<RootStackParamList, 'RoutineDetail'>['route'];
 
-const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { label: string; icon: any; color: string }> = {
-  morning: { label: 'Morning', icon: 'sunny-outline', color: '#EB876D' },
-  afternoon: { label: 'Afternoon', icon: 'sunny', color: '#5A955A' },
-  evening: { label: 'Evening', icon: 'moon-outline', color: '#877FC5' },
+const SECTIONS: Record<TimeOfDay, { label: string; icon: keyof typeof Ionicons.glyphMap; hint: string }> = {
+  morning: { label: 'Morning', icon: 'sunny-outline', hint: 'Start gentle' },
+  afternoon: { label: 'Afternoon', icon: 'partly-sunny-outline', hint: 'Midday pause' },
+  evening: { label: 'Evening', icon: 'moon-outline', hint: 'Wind down' },
 };
 
 const FREQUENCY_LABELS: Record<string, string> = {
@@ -45,6 +41,12 @@ function getIconName(icon?: string | null): any {
   return iconMap[icon ?? ''] || 'checkbox-outline';
 }
 
+/**
+ * Routine detail — a name, then a list of habits in order.
+ *
+ * The form is a page, not a stack of boxes: one field, one selectable list,
+ * one action at the end.
+ */
 export function RoutineDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
@@ -52,7 +54,7 @@ export function RoutineDetailScreen() {
   const { timeOfDay = 'morning', routine } = route.params ?? {};
   const isEditing = !!routine;
 
-  const config = TIME_OF_DAY_CONFIG[timeOfDay] ?? TIME_OF_DAY_CONFIG.morning;
+  const config = SECTIONS[timeOfDay] ?? SECTIONS.morning;
   const [name, setName] = useState(routine?.name ?? '');
   const [habits, setHabits] = useState<Habit[]>([]);
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>(() => {
@@ -125,22 +127,18 @@ export function RoutineDetailScreen() {
 
   const handleDelete = () => {
     if (!routine?.id) return;
-    Alert.alert(
-      'Delete routine?',
-      'This will remove the routine but your habits will remain safe.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (!routine?.id) return;
-            await routineRepository.delete(routine.id);
-            navigation.goBack();
-          },
+    Alert.alert('Delete routine?', 'This will remove the routine but your habits will remain safe.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          if (!routine?.id) return;
+          await routineRepository.delete(routine.id);
+          navigation.goBack();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (loadingHabits) {
@@ -153,7 +151,7 @@ export function RoutineDetailScreen() {
 
   return (
     <ScreenContainer scroll={false} animate={false} backgroundColor={colors.background.default}>
-      <ScreenHeader title={isEditing ? 'Edit Routine' : `New ${config.label} Routine`} />
+      <ScreenHeader title={isEditing ? 'Edit routine' : `${config.label} routine`} />
 
       <ScrollView
         style={styles.scrollView}
@@ -162,132 +160,155 @@ export function RoutineDetailScreen() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14, paddingHorizontal: 4 }}>
-          <Animated.View
-            sharedTransitionTag={sharedTransitionTags.routineIcon(timeOfDay)}
-            sharedTransitionStyle={sharedSpringStyle}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View
             style={{
               width: 44,
               height: 44,
-              borderRadius: 14,
-              backgroundColor: config.color + '20',
+              borderRadius: 15,
+              backgroundColor: colors.primary.subtle,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name={config.icon} size={24} color={config.color} />
-          </Animated.View>
+            <Ionicons name={config.icon} size={21} color={colors.primary.default} />
+          </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary }}>{config.label} Routine</Text>
-            <Text style={{ fontSize: 12, color: colors.text.tertiary }}>
-              {isEditing ? 'Adjust routine sequence & habits' : `Define your ${config.label.toLowerCase()} habits`}
-            </Text>
+            <AppText variant="overline" tone="tertiary">
+              {config.hint}
+            </AppText>
+            <AppText variant="body" tone="secondary" style={{ marginTop: 2 }}>
+              {isEditing ? 'Adjust the sequence or its habits.' : 'Give the routine a name and link its habits.'}
+            </AppText>
           </View>
         </View>
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>Routine Title</Text>
+
+        <View style={{ marginTop: 32 }}>
+          <AppText variant="overline" tone="tertiary" style={{ marginBottom: 8 }}>
+            Routine name
+          </AppText>
           <TextInput
-            style={[styles.input, { color: colors.text.primary, borderBottomColor: colors.border.default }]}
-            placeholder={`e.g. ${config.label} Awakening`}
+            style={[
+              styles.input,
+              {
+                color: colors.text.primary,
+                backgroundColor: colors.surface.default,
+                borderColor: colors.border.default,
+              },
+            ]}
+            placeholder={`e.g. ${config.label} awakening`}
             value={name}
             onChangeText={setName}
             placeholderTextColor={colors.text.tertiary}
             autoCapitalize="words"
             maxLength={50}
+            accessibilityLabel="Routine name"
           />
-        </Card>
+        </View>
 
         <PopIn index={1}>
-        <Card style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>
-              Linked Habits ({selectedHabitIds.length})
-            </Text>
-            {selectedHabitIds.length > 0 && (
-              <Text style={{ fontSize: 12, color: colors.primary.default, fontWeight: '600' }}>
-                Tap checkbox to toggle
-              </Text>
-            )}
-          </View>
-
-          {habits.length === 0 ? (
-            <View style={styles.noHabits}>
-              <Ionicons name="leaf-outline" size={36} color={colors.text.tertiary} />
-              <Text style={[styles.noHabitsText, { color: colors.text.secondary }]}>No habits available</Text>
-              <Text style={[styles.noHabitsSubtext, { color: colors.text.tertiary }]}>
-                Create habits in the Habits tab first, then link them to this routine.
-              </Text>
+          <View style={{ marginTop: 32 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <AppText variant="overline" tone="tertiary">
+                Linked habits
+              </AppText>
+              <AppText variant="caption" tone="tertiary">
+                {selectedHabitIds.length} selected
+              </AppText>
             </View>
-          ) : (
-            <View style={styles.habitList}>
-              {habits.map((item, index) => {
-                const isSelected = selectedHabitIds.includes(item.id);
-                const order = selectedHabitIds.indexOf(item.id) + 1;
-                return (
-                  <StaggeredEntry key={item.id} index={index}>
-                    <TactilePressable
-                      style={[
-                        styles.habitSelectItem,
-                        { backgroundColor: colors.background.secondary, borderColor: isSelected ? colors.primary.default : colors.border.default },
-                        isSelected && { backgroundColor: colors.primary.default + '15', borderWidth: 2 },
-                      ]}
-                      onPress={() => toggleHabit(item.id)}
-                      scaleDownTo={0.98}
-                      hapticStyle="selection"
+
+            {habits.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                <Ionicons name="leaf-outline" size={26} color={colors.text.tertiary} />
+                <AppText variant="bodyLarge" center style={{ marginTop: 12 }}>
+                  No habits yet
+                </AppText>
+                <AppText variant="bodySmall" tone="tertiary" center style={{ marginTop: 4, maxWidth: 280 }}>
+                  Create habits in the Habits tab first, then link them to this routine.
+                </AppText>
+              </View>
+            ) : (
+              <View style={{ marginTop: 4 }}>
+                {habits.map((item, index) => {
+                  const isSelected = selectedHabitIds.includes(item.id);
+                  const order = selectedHabitIds.indexOf(item.id) + 1;
+                  return (
+                    <View
+                      key={item.id}
+                      style={{
+                        borderTopWidth: index === 0 ? 0 : 1,
+                        borderTopColor: colors.border.default,
+                      }}
                     >
-                      <View style={styles.habitSelectLeft}>
-                        <View style={[styles.habitSelectIcon, { backgroundColor: item.color || config.color }]}>
-                          <Ionicons name={getIconName(item.icon)} size={20} color="#FFFFFF" />
+                      <TactilePressable
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 12,
+                          paddingVertical: 13,
+                        }}
+                        onPress={() => toggleHabit(item.id)}
+                        scaleDownTo={0.99}
+                        hapticStyle="selection"
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isSelected }}
+                        accessibilityLabel={item.name}
+                      >
+                        <View
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 11,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isSelected ? colors.primary.subtle : colors.surface.muted,
+                          }}
+                        >
+                          <Ionicons
+                            name={getIconName(item.icon)}
+                            size={16}
+                            color={isSelected ? colors.primary.default : colors.text.secondary}
+                          />
                         </View>
-                        <View style={styles.habitSelectInfo}>
-                          <Text style={[styles.habitSelectName, { color: colors.text.primary }]}>{item.name}</Text>
-                          <Text style={[styles.habitSelectFrequency, { color: colors.text.tertiary }]}>
+                        <View style={{ flex: 1 }}>
+                          <AppText variant="body" numberOfLines={1}>
+                            {item.name}
+                          </AppText>
+                          <AppText variant="caption" tone="tertiary" style={{ marginTop: 1 }}>
                             {FREQUENCY_LABELS[item.frequency] || item.frequency}
-                          </Text>
+                          </AppText>
                         </View>
-                      </View>
-                      <View style={styles.habitSelectRight}>
-                        {isSelected && (
-                          <View style={[styles.orderBadge, { backgroundColor: colors.primary.default }]}>
-                            <Text style={styles.orderBadgeText}>{order}</Text>
-                          </View>
-                        )}
+                        {isSelected ? (
+                          <AppText variant="caption" tone="link">
+                            {order}
+                          </AppText>
+                        ) : null}
                         <Ionicons
                           name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                          size={22}
+                          size={21}
                           color={isSelected ? colors.primary.default : colors.text.tertiary}
                         />
-                      </View>
-                    </TactilePressable>
-                  </StaggeredEntry>
-                );
-              })}
-            </View>
-          )}
-        </Card>
+                      </TactilePressable>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
         </PopIn>
 
         <PopIn index={2}>
-        <View style={styles.buttonRow}>
-          <View style={{ flex: 1 }}>
-            <PrimaryButton
+          <View style={{ marginTop: 36, gap: 12 }}>
+            <Button
               onPress={handleSave}
               loading={loading}
-              title={isEditing ? 'Save Routine' : 'Create Routine'}
+              title={isEditing ? 'Save routine' : 'Create routine'}
               fullWidth
             />
+            {isEditing ? (
+              <Button onPress={handleDelete} variant="ghost" title="Delete routine" fullWidth />
+            ) : null}
           </View>
-          {isEditing && (
-            <TactilePressable
-              onPress={handleDelete}
-              scaleDownTo={0.96}
-              hapticStyle="medium"
-              style={[styles.deleteButton, { borderColor: colors.accents.rose }]}
-            >
-              <Text style={[styles.deleteButtonText, { color: colors.accents.rose }]}>Delete</Text>
-            </TactilePressable>
-          )}
-        </View>
         </PopIn>
       </ScrollView>
     </ScreenContainer>
@@ -295,86 +316,14 @@ export function RoutineDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110, gap: 16 },
-  section: { gap: 10, padding: 16, borderRadius: 20 },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 48 },
   input: {
     fontSize: 17,
-    fontWeight: '500',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  habitList: { gap: 10, marginTop: 4 },
-  habitSelectItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
-  },
-  habitSelectLeft: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    flex: 1,
-  },
-  habitSelectIcon: {
-    width: 40,
-    height: 40,
+    lineHeight: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  habitSelectInfo: { flex: 1, gap: 3 },
-  habitSelectName: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
-  habitSelectFrequency: { fontSize: 12, lineHeight: 16 },
-  habitSelectRight: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    marginTop: 2,
-  },
-  orderBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  orderBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  noHabits: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    gap: 8,
-  },
-  noHabitsText: { fontSize: 15, fontWeight: '600' },
-  noHabitsSubtext: { fontSize: 13, textAlign: 'center', lineHeight: 18, paddingHorizontal: 16 },
-  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  deleteButton: {
-    paddingHorizontal: 20,
-    borderRadius: 16,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  deleteButtonText: { fontSize: 15, fontWeight: '600' },
 });

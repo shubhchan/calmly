@@ -1,20 +1,18 @@
 import React, { Suspense, useEffect, useRef, useCallback, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { StackActions } from '@react-navigation/native';
-import { BlurView } from 'expo-blur';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withSpring,
-  interpolate,
   Easing,
 } from 'react-native-reanimated';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { TabParamList, RootStackParamList } from '../types/navigation';
-import { useThemeColors } from '../theme/ThemeContext';
+import { useAppTheme, useThemeColors } from '../theme/ThemeContext';
 import { bootLog } from '../components/ErrorBoundary';
 import { HomeStack } from '../features/home/HomeStack';
 import { JournalStack } from '../features/journal/JournalStack';
@@ -84,13 +82,13 @@ function TabLoadingFallback() {
   try {
     colors = useThemeColors();
   } catch {
-    colors = { bgPrimary: '#FBF9F5', accentPrimary: '#3E7B52' };
+    colors = { bgPrimary: '#F4F5F1', accentPrimary: '#2C4F45' };
   }
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: colors?.bgPrimary ?? '#FBF9F5',
+        backgroundColor: colors?.bgPrimary ?? '#F4F5F1',
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -106,33 +104,33 @@ function TabCrashFallback({ tabName, onRetry }: { tabName: string; onRetry: () =
     colors = useThemeColors();
   } catch {
     colors = {
-      bgPrimary: '#FBF9F5',
-      textPrimary: '#1A212D',
-      textTertiary: '#607085',
-      accentPrimary: '#3E7B52',
+      bgPrimary: '#F4F5F1',
+      textPrimary: '#1A2420',
+      textTertiary: '#6C7873',
+      accentPrimary: '#2C4F45',
     };
   }
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: colors?.bgPrimary ?? '#FBF9F5',
+        backgroundColor: colors?.bgPrimary ?? '#F4F5F1',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 32,
       }}
     >
-      <Text style={{ fontSize: 18, fontWeight: '700', color: colors?.textPrimary ?? '#1A212D', textAlign: 'center' }}>
+      <Text style={{ fontSize: 18, fontWeight: '700', color: colors?.textPrimary ?? '#1A2420', textAlign: 'center' }}>
         {tabName} couldn&apos;t load
       </Text>
-      <Text style={{ marginTop: 8, fontSize: 14, color: colors?.textTertiary ?? '#607085', textAlign: 'center' }}>
+      <Text style={{ marginTop: 8, fontSize: 14, color: colors?.textTertiary ?? '#6C7873', textAlign: 'center' }}>
         The rest of the app is fine — this tab hit a problem.
       </Text>
       <Pressable
         onPress={onRetry}
         style={{
           marginTop: 16,
-          backgroundColor: colors?.accentPrimary ?? '#3E7B52',
+          backgroundColor: colors?.accentPrimary ?? '#2C4F45',
           paddingVertical: 12,
           paddingHorizontal: 20,
           borderRadius: 12,
@@ -197,20 +195,29 @@ const GuardedSettingsStack = guardTab(SettingsStack, 'Settings');
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
+/** Route keys stay stable; the visible labels are the five-tab product nav. */
+const TAB_LABELS: Record<string, string> = {
+  Home: 'Today',
+  Calm: 'Calm',
+  Journal: 'Journal',
+  Insights: 'Insights',
+  Settings: 'Me',
+};
+
 function tabIcon(routeName: keyof TabParamList, focused: boolean): TabIconName {
   switch (routeName) {
     case 'Home':
-      return focused ? 'home' : 'home-outline';
+      return focused ? 'sunny' : 'sunny-outline';
     case 'Journal':
       return focused ? 'book' : 'book-outline';
     case 'Calm':
       return focused ? 'leaf' : 'leaf-outline';
     case 'Insights':
-      return focused ? 'stats-chart' : 'stats-chart-outline';
+      return focused ? 'analytics' : 'analytics-outline';
     case 'Settings':
-      return focused ? 'settings' : 'settings-outline';
+      return focused ? 'person' : 'person-outline';
     default:
-      return 'ellipse';
+      return 'ellipse-outline';
   }
 }
 
@@ -219,43 +226,26 @@ interface AnimatedTabItemProps {
   isFocused: boolean;
   navigation: BottomTabBarProps['navigation'];
   colors: any;
-  isDark: boolean;
 }
 
 /**
- * Tab item with a spring-animated focus pill, icon swell and press physics —
- * all on the UI thread. Mirrors the iOS 18 tab bar convention while staying
- * fully themed for Android.
+ * One tab: icon and label, with press physics on the UI thread.
+ * Active state is ink and weight, never a floating pill or glow.
  */
 const AnimatedTabItem = React.memo(function AnimatedTabItem({
   route,
   isFocused,
   navigation,
   colors,
-  isDark,
 }: AnimatedTabItemProps) {
   const scale = useSharedValue(1);
-  const focus = useSharedValue(isFocused ? 1 : 0);
-
-  useEffect(() => {
-    focus.value = withSpring(isFocused ? 1 : 0, { mass: 0.5, damping: 18, stiffness: 240 });
-  }, [isFocused, focus]);
 
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
-  const pillStyle = useAnimatedStyle(() => ({
-    opacity: focus.value,
-    transform: [{ scale: interpolate(focus.value, [0, 1], [0.55, 1]) }],
-  }));
-
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(focus.value, [0, 1], [1, 1.08]) }],
-  }));
-
   const handlePressIn = () => {
-    scale.value = withTiming(0.88, { duration: 90, easing: Easing.out(Easing.quad) });
+    scale.value = withTiming(0.92, { duration: 90, easing: Easing.out(Easing.quad) });
   };
 
   const handlePressOut = () => {
@@ -287,7 +277,8 @@ const AnimatedTabItem = React.memo(function AnimatedTabItem({
   }, [navigation, route.key, route.name, isFocused]);
 
   const iconName = tabIcon(route.name as keyof TabParamList, isFocused);
-  const tintColor = isFocused ? colors.accentPrimary : colors.textTertiary;
+  const tintColor = isFocused ? colors.primary.default : colors.text.tertiary;
+  const label = TAB_LABELS[route.name] ?? route.name;
 
   return (
     <Pressable
@@ -297,33 +288,21 @@ const AnimatedTabItem = React.memo(function AnimatedTabItem({
       style={tabBarStyles.tabItemPressable}
       accessibilityRole="button"
       accessibilityState={isFocused ? { selected: true } : {}}
-      accessibilityLabel={route.name}
+      accessibilityLabel={label}
     >
       <Animated.View style={[tabBarStyles.tabItemInner, pressStyle]}>
-        <View style={tabBarStyles.tabIconWrapper}>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              tabBarStyles.tabFocusPill,
-              { backgroundColor: colors.accentBg ?? (isDark ? '#172E1E' : '#EDF5EF') },
-              pillStyle,
-            ]}
-          />
-          <Animated.View style={iconStyle}>
-            <Ionicons name={iconName} size={23} color={tintColor} />
-          </Animated.View>
-        </View>
+        <Ionicons name={iconName} size={23} color={tintColor} />
         <Text
           style={[
             tabBarStyles.tabLabel,
             {
               color: tintColor,
-              fontWeight: isFocused ? '700' : '500',
+              fontWeight: isFocused ? '600' : '500',
             },
           ]}
           numberOfLines={1}
         >
-          {route.name}
+          {label}
         </Text>
       </Animated.View>
     </Pressable>
@@ -331,32 +310,14 @@ const AnimatedTabItem = React.memo(function AnimatedTabItem({
 });
 
 /**
- * Floating "Liquid Glass" tab bar. On iOS the BlurView samples live scroll
- * content behind the bar (systemChromeMaterial). On Android — where realtime
- * background blur costs a RenderNode sample per frame — it degrades gracefully
- * to a near-opaque translucent material rather than dropping frames.
+ * Flat, quiet tab bar. A single surface with a hairline rule, no blur and no
+ * shadow — contrast does the separating.
  */
 function CustomTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
-  let themeColors: ReturnType<typeof useThemeColors> | undefined;
-  try {
-    themeColors = useThemeColors();
-  } catch {
-    themeColors = undefined;
-  }
-  const colors = themeColors ?? ({
-    accentPrimary: '#3E7B52',
-    accentBg: '#EDF5EF',
-    textTertiary: '#607085',
-    textPrimary: '#1A212D',
-    bgCard: '#FFFFFF',
-    borderLight: '#E6E0D4',
-    isDark: false,
-  } as any);
+  const colors = useAppTheme().colors;
 
-  const isDark = !!colors.isDark;
   const bottomInset = insets?.bottom ?? 0;
-  const barHeight = 58 + (bottomInset > 0 ? bottomInset : 10);
-  const androidFallback = isDark ? 'rgba(24, 33, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)';
+  const barHeight = 60 + (bottomInset > 0 ? bottomInset : 10);
 
   // Hide tab bar if active tab is displaying an inner/nested stack screen
   const currentTab = state.routes[state.index];
@@ -372,22 +333,11 @@ function CustomTabBar({ state, descriptors, navigation, insets }: BottomTabBarPr
         {
           height: barHeight,
           paddingBottom: bottomInset > 0 ? bottomInset : 10,
-          borderTopColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.borderLight,
-          shadowColor: colors.textPrimary ?? '#000000',
-          shadowOpacity: isDark ? 0.4 : 0.07,
+          backgroundColor: colors.surface.default,
+          borderTopColor: colors.border.subtle,
         },
       ]}
     >
-      <BlurView
-        pointerEvents="none"
-        intensity={isDark ? 70 : 90}
-        tint={isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: Platform.OS === 'android' ? androidFallback : 'transparent' },
-        ]}
-      />
-
       {state.routes.map((route, index) => (
         <AnimatedTabItem
           key={route.key}
@@ -395,7 +345,6 @@ function CustomTabBar({ state, descriptors, navigation, insets }: BottomTabBarPr
           isFocused={state.index === index}
           navigation={navigation}
           colors={colors}
-          isDark={isDark}
         />
       ))}
     </View>
@@ -411,12 +360,8 @@ const tabBarStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingTop: 6,
+    paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-    elevation: 16,
-    shadowOffset: { width: 0, height: -3 },
-    shadowRadius: 14,
   },
   tabItemPressable: {
     flex: 1,
@@ -429,18 +374,7 @@ const tabBarStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-  },
-  tabIconWrapper: {
-    width: 52,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabFocusPill: {
-    position: 'absolute',
-    width: 52,
-    height: 30,
-    borderRadius: 15,
+    gap: 3,
   },
   tabLabel: {
     fontSize: 12,
@@ -465,8 +399,8 @@ export function AppNavigator() {
       screenOptions={{ ...tabTransition(), popToTopOnBlur: true }}
     >
       <Tab.Screen name="Home" component={GuardedHomeStack} />
-      <Tab.Screen name="Journal" component={GuardedJournalStack} />
       <Tab.Screen name="Calm" component={GuardedCalmStack} />
+      <Tab.Screen name="Journal" component={GuardedJournalStack} />
       <Tab.Screen name="Insights" component={GuardedInsightsStack} />
       <Tab.Screen name="Settings" component={GuardedSettingsStack} />
     </Tab.Navigator>

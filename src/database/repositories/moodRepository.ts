@@ -132,9 +132,13 @@ export const moodRepository = {
     const entries = await this.getByDateRange(startDate, endDate);
     const distribution: Record<string, number> = {};
     (entries ?? []).forEach((entry: any) => {
-      if (entry?.mood) {
-        distribution[entry.mood] = (distribution[entry.mood] || 0) + 1;
-      }
+      String(entry?.mood ?? '')
+        .split(',')
+        .map((mood) => mood.trim())
+        .filter(Boolean)
+        .forEach((mood) => {
+          distribution[mood] = (distribution[mood] || 0) + 1;
+        });
     });
     return distribution;
   },

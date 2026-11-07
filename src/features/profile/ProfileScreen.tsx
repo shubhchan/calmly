@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput as NativeTextInput,
+  View,
+} from 'react-native';
 import { Alert } from '../../services/appAlert';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,25 +17,17 @@ import { format } from 'date-fns';
 import {
   AppText,
   BottomSheet,
-  Button,
-  Card,
-  CardContent,
   InlineAlert,
-  ScreenHeader,
   TactilePressable,
-  TextInput,
 } from '../../components';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ProfileAvatarView } from '../../components/profile/ProfileAvatarView';
-import { ZEN_MASCOTS, ZenMascotAvatar } from '../../components/profile/ZenMascotAvatar';
+import { mascotById, ZEN_MASCOTS, ZenMascotAvatar } from '../../components/profile/ZenMascotAvatar';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { settingsRepository, type AppSettings } from '../../database/repositories/settingsRepository';
-import { journalRepository } from '../../database/repositories/journalRepository';
-import { moodRepository } from '../../database/repositories/moodRepository';
-import { calmRepository } from '../../database/repositories/calmRepository';
 import { getCalmlyAuth, loginWithGoogle, logoutCloud } from '../../services/calmlyAuth';
 import { persistProfileImage } from '../../utils/avatarStorage';
 import { hapticFeedback } from '../../utils/haptics';
+import { displayFaces } from '../../theme/typography';
 import type { AvatarMascotId, ProfileAvatar } from '../../types/profile';
 
 const SHEET_NONE = 'none';
@@ -36,29 +36,20 @@ const SHEET_MASCOTS = 'mascots';
 
 type SheetMode = typeof SHEET_NONE | typeof SHEET_OPTIONS | typeof SHEET_MASCOTS;
 
-interface SanctuaryStats {
-  days: number;
-  reflections: number;
-  mindfulMinutes: number;
-  streak: number;
-}
+const QUICK_MASCOTS: { id: AvatarMascotId; label: string }[] = [
+  { id: 'panda', label: 'Crane' },
+  { id: 'bonsai', label: 'Bonsai' },
+  { id: 'lotus', label: 'Lotus' },
+  { id: 'pebble', label: 'Stone' },
+  { id: 'koi', label: 'Wave' },
+];
 
-const EMPTY_STATS: SanctuaryStats = { days: 1, reflections: 0, mindfulMinutes: 0, streak: 0 };
-
-function computeStreak(timestamps: number[]): number {
-  const days = new Set(
-    timestamps.filter((timestamp) => Number.isFinite(timestamp)).map((timestamp) => new Date(timestamp).toDateString())
-  );
-  const cursor = new Date();
-  if (!days.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
-  let streak = 0;
-  while (days.has(cursor.toDateString())) {
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
-
+/**
+ * Your profile — follows Doop `Profile — A · Edit identity` (frame tOFThuXUAM) 1:1.
+ *
+ * Quiet ground #F4F5F1, modular white cards with 20px radius, 80x80 identity avatar
+ * with quick Zen mascot chips, structured identity fields, and cloud backup account card.
+ */
 export function ProfileScreen() {
   const navigation = useNavigation<any>();
   const { colors } = useAppTheme();
@@ -72,7 +63,7 @@ export function ProfileScreen() {
   const [busy, setBusy] = useState('');
   const [savingIdentity, setSavingIdentity] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
-  const [stats, setStats] = useState<SanctuaryStats>(EMPTY_STATS);
+  const [showCloudDetails, setShowCloudDetails] = useState(false);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -88,32 +79,8 @@ export function ProfileScreen() {
       setName(loaded.userName ?? '');
       setMantra(loaded.userMantra ?? '');
       setBio(loaded.userBio ?? '');
-
-      const now = Date.now();
-      const [journals, moods, calmSessions, breathingSessions] = await Promise.all([
-        journalRepository.getAll().catch(() => []),
-        moodRepository.getAll().catch(() => []),
-        calmRepository.getSessionsByDateRange(0, now).catch(() => []),
-        calmRepository.getBreathingSessions(0, now).catch(() => []),
-      ]);
-
-      const sessions = [...calmSessions, ...breathingSessions];
-      const mindfulSeconds = sessions.reduce((sum: number, session: any) => sum + (session?.duration || 0), 0);
-      const timestamps = [
-        ...(journals as any[]).map((entry) => entry?.createdAt),
-        ...(moods as any[]).map((entry) => entry?.createdAt),
-        ...sessions.map((session: any) => session?.createdAt),
-      ];
-
-      setStats({
-        days: Math.max(1, Math.floor((now - (loaded.firstUseAt ?? now)) / 86400000) + 1),
-        reflections: journals.length,
-        mindfulMinutes: Math.round(mindfulSeconds / 60),
-        streak: computeStreak(timestamps),
-      });
     } catch (error) {
       console.warn('Could not load profile:', error);
-      setStats(EMPTY_STATS);
     }
   }, []);
 
@@ -224,7 +191,7 @@ export function ProfileScreen() {
       setSettings((current) =>
         current ? { ...current, userName: trimmedName, userMantra: trimmedMantra, userBio: trimmedBio } : current
       );
-      setSavedMessage('Profile details saved');
+      setSavedMessage('Identity saved');
       hapticFeedback.success();
     } catch (error) {
       Alert.alert('Not saved', error instanceof Error ? error.message : 'Could not save your profile details.');
@@ -295,188 +262,294 @@ export function ProfileScreen() {
     ]);
   };
 
-  const displayName = name.trim() || settings?.googleDisplayName || 'A quiet friend';
+  const displayName = name.trim() || settings?.googleDisplayName || 'Shubby';
+  const initialLetter = displayName.charAt(0).toUpperCase() || 'S';
   const isConnected = !!authUser;
+  const connectedEmail = authUser?.email || settings?.googleEmail || '';
+
+  const photoUri =
+    settings?.userAvatar?.kind === 'custom'
+      ? settings.userAvatar.uri
+      : settings?.userAvatar?.kind === 'google'
+      ? settings?.googlePhotoUrl
+      : undefined;
+
+  const activeMascotId =
+    settings?.userAvatar?.kind === 'mascot' ? settings.userAvatar.mascotId : undefined;
+  const activeMascot = activeMascotId ? mascotById(activeMascotId) : undefined;
 
   return (
     <ScreenContainer
-      contentContainerStyle={styles.content}
-      backgroundColor={colors.background.default}
-      bottomPadding={130}
+      contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 10, paddingBottom: 60 }}
+      backgroundColor="#F4F5F1"
     >
-      <ScreenHeader title="Your profile" subtitle="A quiet space that is yours" />
+      {/* Inner page top bar — 1:1 match with Doop tOFThuXUAM */}
+      <View style={styles.topBar}>
+        <TactilePressable
+          onPress={() => navigation?.goBack?.()}
+          scaleDownTo={0.92}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Back to Me"
+          style={styles.backButton}
+        >
+          <Ionicons name="chevron-back" size={20} color="#5C6B65" />
+          <Text style={styles.backText}>Me</Text>
+        </TactilePressable>
 
-      {busy && sheet === SHEET_NONE ? <InlineAlert tone="info" message={`${busy}…`} /> : null}
+        <Text style={styles.pageTitle}>Your profile</Text>
 
-      <Card variant="elevated" tone="cream">
-        <CardContent style={styles.heroContent}>
-          <View>
-            <ProfileAvatarView
-              avatar={settings?.userAvatar}
-              googlePhotoUrl={settings?.googlePhotoUrl}
-              size={108}
-              showGuestBadge={!isConnected && !settings?.googlePhotoUrl}
-            />
-            <TactilePressable
-              onPress={() => setSheet(SHEET_OPTIONS)}
-              accessibilityRole="button"
-              accessibilityLabel="Edit profile photo"
-              hapticStyle="selection"
-              style={[
-                styles.cameraBadge,
-                { backgroundColor: colors.primary.default, borderColor: colors.surface.default },
-              ]}
-            >
-              <Ionicons name="camera" size={18} color={colors.primary.foreground} />
-            </TactilePressable>
-          </View>
-          <AppText variant="h3" style={{ marginTop: 12 }}>
-            {displayName}
-          </AppText>
-          <AppText variant="bodySmall" tone="secondary" center>
-            {settings?.userMantra || 'Taking it one breath at a time'}
-          </AppText>
-          {settings?.userBio ? (
-            <AppText variant="caption" tone="tertiary" center style={{ marginTop: 2 }}>
-              {settings.userBio}
-            </AppText>
-          ) : null}
-          <Button
-            title="Edit photo"
-            variant="secondary"
-            size="sm"
-            onPress={() => setSheet(SHEET_OPTIONS)}
-            style={{ marginTop: 12 }}
-          />
-        </CardContent>
-      </Card>
-
-      <Card variant="outlined">
-        <CardContent style={styles.sectionContent}>
-          <SectionTitle icon="person-outline" title="Your identity" />
-          <TextInput
-            label="Display name"
-            value={name}
-            onChangeText={setName}
-            placeholder="What should we call you?"
-            maxLength={40}
-            autoCapitalize="words"
-          />
-          <TextInput
-            label="Calm mantra"
-            value={mantra}
-            onChangeText={setMantra}
-            placeholder="Taking it one breath at a time"
-            maxLength={90}
-          />
-          <TextInput
-            label="About you"
-            value={bio}
-            onChangeText={setBio}
-            placeholder="A line or two about what matters to you"
-            maxLength={160}
-            multiline
-          />
-          <Button title="Save details" onPress={saveIdentity} loading={savingIdentity} fullWidth />
-          {savedMessage ? (
-            <AppText variant="caption" tone="success">
-              {savedMessage}
-            </AppText>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <Card variant="outlined">
-        <CardContent style={styles.sectionContent}>
-          <SectionTitle icon="logo-google" title="Google account" />
-          {isConnected ? (
-            <>
-              <View style={styles.googleIdentityRow}>
-                <ProfileAvatarView
-                  avatar={{ kind: 'google' }}
-                  googlePhotoUrl={settings?.googlePhotoUrl}
-                  size={46}
-                />
-                <View style={{ flex: 1 }}>
-                  <AppText variant="label">
-                    {authUser?.displayName || settings?.googleDisplayName || 'Google account'}
-                  </AppText>
-                  <AppText variant="caption" tone="tertiary">
-                    {authUser?.email || settings?.googleEmail || authUser?.uid}
-                  </AppText>
-                </View>
-                <View style={[styles.connectedChip, { backgroundColor: colors.status.success.subtle }]}>
-                  <AppText variant="caption" tone="success">
-                    Connected
-                  </AppText>
-                </View>
-              </View>
-
-              <View style={styles.metaRow}>
-                <Ionicons name="cloud-done-outline" size={18} color={colors.primary.default} />
-                <AppText variant="bodySmall" tone="secondary">
-                  {settings?.lastDriveSyncAt
-                    ? `Last backup ${format(new Date(settings.lastDriveSyncAt), 'MMM d, h:mm a')}`
-                    : 'No encrypted backup yet'}
-                </AppText>
-              </View>
-
-              <AppText variant="caption" tone="tertiary">
-                Backups are encrypted on this device and stored in a Calmly Backups folder in your Drive.
-              </AppText>
-
-              <Button
-                title="Manage Drive backups"
-                variant="secondary"
-                fullWidth
-                onPress={() => navigation.navigate('CloudStorage')}
-                leftIcon={(color, size) => <Ionicons name="cloud-upload-outline" size={size} color={color} />}
-              />
-              <View style={styles.googleActions}>
-                <Button title="Switch account" variant="outline" size="sm" onPress={switchAccount} style={{ flex: 1 }} />
-                <Button title="Sign out" variant="ghost" size="sm" onPress={signOut} style={{ flex: 1 }} />
-              </View>
-            </>
+        <TactilePressable
+          onPress={saveIdentity}
+          disabled={savingIdentity}
+          scaleDownTo={0.92}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Save profile"
+          style={styles.saveHeaderButton}
+        >
+          {savingIdentity ? (
+            <ActivityIndicator size="small" color="#2C4F45" />
           ) : (
-            <>
-              <AppText variant="bodySmall" tone="secondary">
-                Connect Google to use your account photo and encrypted Drive backups. Your local reflections stay on this
-                device unless you choose to back them up.
-              </AppText>
-              <Button
-                title="Connect Google account"
-                onPress={connectGoogle}
-                loading={busy === 'Connecting Google'}
-                fullWidth
-                leftIcon={(color, size) => <Ionicons name="logo-google" size={size} color={color} />}
-              />
-            </>
+            <Text style={styles.saveHeaderText}>Save</Text>
           )}
-        </CardContent>
-      </Card>
+        </TactilePressable>
+      </View>
 
-      <Card variant="outlined">
-        <CardContent style={styles.sectionContent}>
-          <SectionTitle icon="stats-chart-outline" title="Your sanctuary" />
-          <View style={styles.statsGrid}>
-            <StatTile icon="calendar-outline" value={`${stats.days}`} label="Days in Calmly" />
-            <StatTile icon="book-outline" value={`${stats.reflections}`} label="Reflections" />
-            <StatTile icon="leaf-outline" value={`${stats.mindfulMinutes}`} label="Mindful minutes" />
-            <StatTile icon="flame-outline" value={`${stats.streak}`} label="Day streak" />
+      {/* Title & subtitle */}
+      <View style={styles.headerBlock}>
+        <Text style={styles.heroTitle}>Your quiet space</Text>
+        <Text style={styles.heroSubtitle}>
+          A place for who you are today. Nothing is shared.
+        </Text>
+      </View>
+
+      {busy && sheet === SHEET_NONE ? (
+        <InlineAlert tone="info" message={`${busy}…`} style={{ marginTop: 14 }} />
+      ) : null}
+
+      {savedMessage ? (
+        <InlineAlert tone="success" message={savedMessage} style={{ marginTop: 14 }} />
+      ) : null}
+
+      {/* Card 1: Avatar & Zen Mascots — Square with rounded corners */}
+      <View style={[styles.card, { marginTop: 20, padding: 20, alignItems: 'center' }]}>
+        <View style={styles.avatarWrap}>
+          <View
+            style={[
+              styles.avatarCircle,
+              activeMascot ? { backgroundColor: activeMascot.background } : null,
+            ]}
+          >
+            {photoUri ? (
+              <Image
+                source={{ uri: photoUri }}
+                style={styles.avatarImage}
+                accessibilityRole="image"
+                accessibilityLabel="Profile photo"
+              />
+            ) : activeMascotId ? (
+              <ZenMascotAvatar id={activeMascotId} size={80} shape="square" borderRadius={28} />
+            ) : (
+              <Text style={styles.avatarInitial}>{initialLetter}</Text>
+            )}
           </View>
-        </CardContent>
-      </Card>
+          <TactilePressable
+            onPress={() => setSheet(SHEET_OPTIONS)}
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile photo"
+            style={styles.cameraBadge}
+          >
+            <Ionicons name="camera" size={14} color="#2C4F45" />
+          </TactilePressable>
+        </View>
 
+        <TactilePressable
+          onPress={() => setSheet(SHEET_OPTIONS)}
+          scaleDownTo={0.96}
+          accessibilityRole="button"
+          accessibilityLabel="Choose mascot or photo"
+          style={{ marginTop: 12 }}
+        >
+          <Text style={styles.chooseText}>Choose mascot or photo</Text>
+        </TactilePressable>
+
+        {/* Quick Mascot Chips */}
+        <View style={styles.chipsRow}>
+          {QUICK_MASCOTS.map((m) => {
+            const isSelected = activeMascotId === m.id;
+            return (
+              <TactilePressable
+                key={m.id}
+                onPress={() => chooseMascot(m.id)}
+                scaleDownTo={0.94}
+                style={[styles.chip, isSelected && styles.chipOn]}
+                accessibilityRole="button"
+                accessibilityLabel={`Mascot ${m.label}`}
+                accessibilityState={{ selected: isSelected }}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextOn]}>
+                  {m.label}
+                </Text>
+              </TactilePressable>
+            );
+          })}
+          <TactilePressable
+            onPress={() => setSheet(SHEET_MASCOTS)}
+            scaleDownTo={0.94}
+            style={styles.chip}
+            accessibilityRole="button"
+            accessibilityLabel="More mascots"
+          >
+            <Text style={styles.chipText}>More…</Text>
+          </TactilePressable>
+        </View>
+      </View>
+
+      {/* Card 2: Identity Fields */}
+      <View style={[styles.card, { marginTop: 14, padding: 18 }]}>
+        {/* Name */}
+        <View style={{ marginBottom: 14 }}>
+          <Text style={styles.fieldLabel}>Name</Text>
+          <View style={styles.fieldBox}>
+            <NativeTextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="What should we call you?"
+              placeholderTextColor="#9AA5A0"
+              maxLength={40}
+              autoCapitalize="words"
+              style={styles.fieldInput}
+            />
+          </View>
+        </View>
+
+        {/* Daily Intention / Mantra */}
+        <View style={{ marginBottom: 14 }}>
+          <Text style={styles.fieldLabel}>Daily Intention / Mantra</Text>
+          <View style={styles.fieldBox}>
+            <NativeTextInput
+              value={mantra}
+              onChangeText={setMantra}
+              placeholder="Taking it one breath at a time"
+              placeholderTextColor="#9AA5A0"
+              maxLength={90}
+              style={[styles.fieldInput, { color: '#46524C' }]}
+            />
+          </View>
+        </View>
+
+        {/* Quiet Bio */}
+        <View>
+          <Text style={styles.fieldLabel}>Quiet Bio</Text>
+          <View style={[styles.fieldBox, { minHeight: 64, height: undefined, paddingVertical: 10 }]}>
+            <NativeTextInput
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Seeking stillness and gentle mornings."
+              placeholderTextColor="#9AA5A0"
+              maxLength={160}
+              multiline
+              style={[styles.fieldInput, { color: '#46524C', textAlignVertical: 'top' }]}
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Card 3: Account & Cloud Sync */}
+      <View style={[styles.card, { marginTop: 14, padding: 16 }]}>
+        <TactilePressable
+          onPress={() => {
+            if (isConnected) {
+              setShowCloudDetails((prev) => !prev);
+            } else {
+              connectGoogle();
+            }
+          }}
+          scaleDownTo={0.98}
+          accessibilityRole="button"
+          accessibilityLabel="Google Drive Sync status"
+          style={styles.cloudRow}
+        >
+          <View style={styles.cloudIconPlate}>
+            <Ionicons name="cloud-outline" size={19} color="#2C4F45" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cloudTitle}>Google Drive Sync</Text>
+            <Text style={styles.cloudSubtitle} numberOfLines={1}>
+              {isConnected
+                ? connectedEmail || 'shubbyychan@gmail.com'
+                : 'Connect to backup quietly to Google Drive'}
+            </Text>
+          </View>
+          {isConnected ? (
+            <View style={styles.activePill}>
+              <Text style={styles.activePillText}>Active</Text>
+            </View>
+          ) : (
+            <View style={styles.connectPill}>
+              <Text style={styles.connectPillText}>Connect</Text>
+            </View>
+          )}
+        </TactilePressable>
+
+        {isConnected && showCloudDetails ? (
+          <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderColor: '#EDF0EC', gap: 10 }}>
+            {settings?.lastDriveSyncAt ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="checkmark-circle-outline" size={16} color="#2C4F45" />
+                <Text style={{ fontSize: 12.5, color: '#6C7873' }}>
+                  Last backup {format(new Date(settings.lastDriveSyncAt), 'MMM d, h:mm a')}
+                </Text>
+              </View>
+            ) : null}
+            <TactilePressable
+              onPress={() => navigation.navigate('CloudStorage')}
+              style={styles.cloudActionBtn}
+            >
+              <Text style={styles.cloudActionBtnText}>Manage Drive backups</Text>
+            </TactilePressable>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+              <TactilePressable onPress={switchAccount} style={[styles.cloudSubBtn, { flex: 1 }]}>
+                <Text style={styles.cloudSubBtnText}>Switch account</Text>
+              </TactilePressable>
+              <TactilePressable onPress={signOut} style={[styles.cloudSubBtn, { flex: 1 }]}>
+                <Text style={[styles.cloudSubBtnText, { color: '#A04040' }]}>Sign out</Text>
+              </TactilePressable>
+            </View>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Save Button */}
+      <View style={{ marginTop: 20, marginBottom: 28 }}>
+        <TactilePressable
+          onPress={saveIdentity}
+          disabled={savingIdentity}
+          scaleDownTo={0.98}
+          accessibilityRole="button"
+          accessibilityLabel="Save identity"
+          style={styles.bottomSaveBtn}
+        >
+          {savingIdentity ? (
+            <ActivityIndicator size="small" color="#EDF3EF" />
+          ) : (
+            <Text style={styles.bottomSaveText}>Save identity</Text>
+          )}
+        </TactilePressable>
+      </View>
+
+      {/* Photo Options Bottom Sheet */}
       <BottomSheet
         visible={sheet === SHEET_OPTIONS}
         onClose={() => setSheet(SHEET_NONE)}
         title="Update your photo"
         subtitle="A face, a mascot, or a little of both."
       >
-        <View style={styles.sheetList}>
+        <View style={{ gap: 10 }}>
           {busy ? (
-            <View style={styles.busyRow}>
-              <ActivityIndicator size="small" color={colors.primary.default} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 2 }}>
+              <ActivityIndicator size="small" color="#2C4F45" />
               <AppText variant="bodySmall" tone="secondary">
                 {busy}…
               </AppText>
@@ -511,13 +584,14 @@ export function ProfileScreen() {
         </View>
       </BottomSheet>
 
+      {/* Zen Mascot Picker Bottom Sheet */}
       <BottomSheet
         visible={sheet === SHEET_MASCOTS}
         onClose={() => setSheet(SHEET_NONE)}
         title="Choose a zen mascot"
         subtitle="A small companion for your sanctuary."
       >
-        <View style={styles.mascotGrid}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 }}>
           {ZEN_MASCOTS.map((mascot) => {
             const selected =
               settings?.userAvatar?.kind === 'mascot' && settings.userAvatar.mascotId === mascot.id;
@@ -528,22 +602,39 @@ export function ProfileScreen() {
                 hapticStyle="selection"
                 accessibilityRole="button"
                 accessibilityLabel={`Choose ${mascot.label}`}
-                style={[
-                  styles.mascotTile,
-                  {
-                    backgroundColor: colors.surface.default,
-                    borderColor: selected ? colors.primary.default : colors.border.default,
-                    borderWidth: selected ? 2 : 1,
-                  },
-                ]}
+                style={{
+                  width: '31%',
+                  borderRadius: 18,
+                  paddingVertical: 12,
+                  paddingHorizontal: 6,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface.default,
+                  borderColor: selected ? '#2C4F45' : 'transparent',
+                  borderWidth: selected ? 2 : 0,
+                }}
               >
-                <ZenMascotAvatar id={mascot.id} size={62} />
+                <View style={styles.mascotPickerFrame}>
+                  <ZenMascotAvatar id={mascot.id} size={58} shape="square" borderRadius={14} />
+                </View>
                 <AppText variant="caption" center numberOfLines={2} style={{ marginTop: 6 }}>
                   {mascot.label}
                 </AppText>
                 {selected ? (
-                  <View style={[styles.mascotCheck, { backgroundColor: colors.primary.default }]}>
-                    <Ionicons name="checkmark" size={12} color={colors.primary.foreground} />
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#2C4F45',
+                    }}
+                  >
+                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
                   </View>
                 ) : null}
               </TactilePressable>
@@ -552,18 +643,6 @@ export function ProfileScreen() {
         </View>
       </BottomSheet>
     </ScreenContainer>
-  );
-}
-
-function SectionTitle({ icon, title }: { icon: React.ComponentProps<typeof Ionicons>['name']; title: string }) {
-  const { colors } = useAppTheme();
-  return (
-    <View style={styles.sectionTitleRow}>
-      <View style={[styles.sectionIcon, { backgroundColor: colors.primary.subtle }]}>
-        <Ionicons name={icon} size={18} color={colors.primary.default} />
-      </View>
-      <AppText variant="h3">{title}</AppText>
-    </View>
   );
 }
 
@@ -578,16 +657,15 @@ function SheetAction({
   subtitle: string;
   onPress: () => void;
 }) {
-  const { colors } = useAppTheme();
   return (
     <TactilePressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={title}
-      style={[styles.sheetAction, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
+      style={styles.sheetAction}
     >
-      <View style={[styles.sheetActionIcon, { backgroundColor: colors.primary.subtle }]}>
-        <Ionicons name={icon} size={20} color={colors.primary.default} />
+      <View style={styles.sheetIconBox}>
+        <Ionicons name={icon} size={20} color="#2C4F45" />
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <AppText variant="label">{title}</AppText>
@@ -595,91 +673,262 @@ function SheetAction({
           {subtitle}
         </AppText>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+      <Ionicons name="chevron-forward" size={18} color="#B4BEB8" />
     </TactilePressable>
   );
 }
 
-function StatTile({
-  icon,
-  value,
-  label,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  value: string;
-  label: string;
-}) {
-  const { colors } = useAppTheme();
-  return (
-    <View style={[styles.statTile, { backgroundColor: colors.surface.muted, borderColor: colors.border.default }]}>
-      <Ionicons name={icon} size={18} color={colors.primary.default} />
-      <AppText variant="h3" style={{ marginTop: 4 }}>
-        {value}
-      </AppText>
-      <AppText variant="caption" tone="tertiary">
-        {label}
-      </AppText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 8, gap: 16 },
-  heroContent: { alignItems: 'center', paddingVertical: 26 },
+  topBar: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    height: 40,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    marginLeft: -4,
+  },
+  backText: {
+    fontSize: 12.5,
+    color: '#6C7873',
+    fontWeight: '500',
+  },
+  pageTitle: {
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: '#1A2420',
+  },
+  saveHeaderButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginRight: -4,
+  },
+  saveHeaderText: {
+    fontSize: 14,
+    color: '#2C4F45',
+    fontWeight: '600',
+  },
+  headerBlock: {
+    marginTop: 16,
+  },
+  heroTitle: {
+    fontFamily: displayFaces.regular,
+    fontSize: 28,
+    color: '#1A2420',
+    letterSpacing: -0.56,
+    lineHeight: 33,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    color: '#6C7873',
+    marginTop: 4,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+  },
+  avatarWrap: {
+    position: 'relative',
+    width: 80,
+    height: 80,
+  },
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 28,
+    backgroundColor: '#2C4F45',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+  },
+  avatarInitial: {
+    fontFamily: displayFaces.regular,
+    fontSize: 32,
+    color: '#EDF3EF',
+  },
   cameraBadge: {
     position: 'absolute',
-    right: 0,
-    bottom: 2,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 3,
+    right: -2,
+    bottom: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#14241E',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  mascotPickerFrame: {
+    width: 58,
+    height: 58,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  chooseText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2C4F45',
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    flexWrap: 'wrap',
+  },
+  chip: {
+    height: 32,
+    paddingHorizontal: 13,
+    borderRadius: 999,
+    backgroundColor: '#EAEDE7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionContent: { gap: 14 },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sectionIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  googleIdentityRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  connectedChip: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  googleActions: { flexDirection: 'row', gap: 10 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  statTile: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
+  chipOn: {
+    backgroundColor: '#E3ECE7',
   },
-  sheetList: { gap: 10 },
-  busyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 2 },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#46524C',
+  },
+  chipTextOn: {
+    color: '#2C4F45',
+    fontWeight: '600',
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.88,
+    textTransform: 'uppercase',
+    color: '#838F89',
+    marginBottom: 6,
+  },
+  fieldBox: {
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#F4F5F1',
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+  },
+  fieldInput: {
+    fontSize: 14.5,
+    color: '#1A2420',
+    fontWeight: '500',
+    padding: 0,
+    margin: 0,
+  },
+  cloudRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  cloudIconPlate: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: '#EAEDE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cloudTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A2420',
+  },
+  cloudSubtitle: {
+    fontSize: 12,
+    color: '#6C7873',
+    marginTop: 1,
+  },
+  activePill: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: '#E3ECE7',
+  },
+  activePillText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#2C4F45',
+  },
+  connectPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#2C4F45',
+  },
+  connectPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EDF3EF',
+  },
+  cloudActionBtn: {
+    backgroundColor: '#EAEDE7',
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cloudActionBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2C4F45',
+  },
+  cloudSubBtn: {
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#EAEDE7',
+  },
+  cloudSubBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6C7873',
+  },
+  bottomSaveBtn: {
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#2C4F45',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomSaveText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#EDF3EF',
+  },
   sheetAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 14,
     borderRadius: 16,
-    borderWidth: 1,
+    backgroundColor: '#EAEDE7',
   },
-  sheetActionIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  mascotGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
-  mascotTile: {
-    width: '31%',
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
+  sheetIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  mascotCheck: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#EAEDE7',
   },
 });

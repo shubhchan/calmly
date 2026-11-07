@@ -1,37 +1,45 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Switch, Modal, Pressable, Linking } from 'react-native';
+import { View, StyleSheet, Switch, Modal, Pressable, Linking } from 'react-native';
 import { Alert } from '../../services/appAlert';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from '../../components/Card';
-import { ScreenHeader, TactilePressable } from '../../components';
+import { AppText, ScreenHeader, TactilePressable } from '../../components';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { notificationService, NotificationCategory } from '../../services/notifications';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { BrandedLoader } from '../../components/interactive/LoadingState';
-import { resolveTint } from '../../theme/tints';
 
-const NOTIFICATION_CATEGORIES: { key: NotificationCategory; label: string; description: string; icon: any; color: string }[] = [
-  { key: 'morningCheckIn', label: 'Morning Check-In', description: 'A gentle prompt to start your day mindfully', icon: 'sunny-outline', color: '#EB876D' },
-  { key: 'journalReminder', label: 'Journal Reminder', description: 'Evening nudge to reflect on your day', icon: 'book-outline', color: '#877FC5' },
-  { key: 'habitReminder', label: 'Habit Reminder', description: 'Friendly encouragement for your daily habits', icon: 'checkmark-circle-outline', color: '#5A955A' },
-  { key: 'eveningReflection', label: 'Evening Reflection', description: 'Wind down with a brief mindful reflection', icon: 'moon-outline', color: '#6B9BCD' },
-  { key: 'sleepRoutine', label: 'Sleep Routine', description: 'Prepare body and mind for restful sleep', icon: 'bed-outline', color: '#877FC5' },
-  { key: 'weeklyReflection', label: 'Weekly Reflection', description: 'Sunday celebration of your progress', icon: 'calendar-outline', color: '#EB876D' },
+const NOTIFICATION_CATEGORIES: {
+  key: NotificationCategory;
+  label: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { key: 'morningCheckIn', label: 'Morning check-in', description: 'A gentle prompt to start the day', icon: 'sunny-outline' },
+  { key: 'journalReminder', label: 'Journal reminder', description: 'An evening nudge to reflect', icon: 'book-outline' },
+  { key: 'habitReminder', label: 'Habit reminder', description: 'A quiet nudge for daily habits', icon: 'checkmark-circle-outline' },
+  { key: 'eveningReflection', label: 'Evening reflection', description: 'Wind down with a short pause', icon: 'moon-outline' },
+  { key: 'sleepRoutine', label: 'Sleep routine', description: 'Prepare the body for rest', icon: 'bed-outline' },
+  { key: 'weeklyReflection', label: 'Weekly reflection', description: 'A Sunday note on your progress', icon: 'calendar-outline' },
 ];
 
 const REMINDER_TIMES = ['06:00', '07:00', '08:00', '09:00', '12:00', '17:00', '18:00', '20:00', '21:00', '22:00'];
 
+/**
+ * Notifications — one master switch, then one row per reminder.
+ *
+ * Each row is a name, a short reason, a time and a switch. Times open in a
+ * small sheet. Nothing shouts.
+ */
 export function NotificationsScreen() {
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const [masterEnabled, setMasterEnabled] = useState(false);
   const [categories, setCategories] = useState<Record<NotificationCategory, boolean>>({} as any);
   const [times, setTimes] = useState<Record<NotificationCategory, string>>({} as any);
   const [loading, setLoading] = useState(true);
   const [permission, setPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
   const [timePickerFor, setTimePickerFor] = useState<NotificationCategory | null>(null);
-  const skyTint = resolveTint(!!isDark, 'sky');
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -62,7 +70,7 @@ export function NotificationsScreen() {
       if (enabled && !notificationService.isAvailable()) {
         setMasterEnabled(false);
         Alert.alert(
-          'Not Available in This Build',
+          'Not available in this build',
           'Scheduled reminders need native notifications support. Use a development build to receive reminders on this device.'
         );
         return;
@@ -72,11 +80,11 @@ export function NotificationsScreen() {
         if (!granted) {
           setMasterEnabled(false);
           Alert.alert(
-            'Permission Needed',
+            'Permission needed',
             'Calmly needs notification permission to send gentle reminders. You can enable it from your device settings.',
             [
-              { text: 'Not Now', style: 'cancel' },
-              { text: 'Open Settings', onPress: () => { Linking.openSettings?.(); } },
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open settings', onPress: () => { Linking.openSettings?.(); } },
             ]
           );
           return;
@@ -140,19 +148,19 @@ export function NotificationsScreen() {
 
   const handleTestNotification = async (category: NotificationCategory) => {
     if (!masterEnabled) {
-      Alert.alert('Reminders Are Off', 'Turn on "All Reminders" first, then try the test again.');
+      Alert.alert('Reminders are off', 'Turn on reminders first, then try the test again.');
       return;
     }
     const scheduled = await notificationService.scheduleTestNotification(category);
     if (scheduled) {
-      Alert.alert('Test Scheduled', 'You will receive a reminder in a few seconds.');
+      Alert.alert('Test scheduled', 'You will receive a reminder in a few seconds.');
     } else {
       Alert.alert(
-        "Couldn't Schedule Test",
+        'Could not schedule the test',
         'Notifications are unavailable or the system permission is off. You can enable it from your device settings.',
         [
           { text: 'OK', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => { Linking.openSettings?.(); } },
+          { text: 'Open settings', onPress: () => { Linking.openSettings?.(); } },
         ]
       );
     }
@@ -168,92 +176,102 @@ export function NotificationsScreen() {
 
   return (
     <ScreenContainer contentContainerStyle={styles.content}>
-      <ScreenHeader title="Mindful Reminders" />
+      <ScreenHeader title="Reminders" />
 
       <PopIn index={0}>
-        <Card tone="sky" style={styles.card}>
-          <View style={styles.masterRow}>
-            <View style={styles.masterInfo}>
-              <Text style={[styles.masterLabel, { color: skyTint.text }]}>All Reminders</Text>
-              <Text style={[styles.masterDesc, { color: skyTint.muted }]}>
-                {!notificationService.isAvailable()
-                  ? 'Reminders require a development build in this environment'
-                  : permission === 'granted'
-                  ? 'Master toggle for notifications'
-                  : 'Turn on to allow system notifications'}
-              </Text>
-            </View>
-            <Switch
-              value={masterEnabled}
-              onValueChange={handleMasterToggle}
-              thumbColor="#FFFFFF"
-              trackColor={{ false: skyTint.border, true: skyTint.accent }}
-            />
+        <View style={[styles.masterRow, { backgroundColor: colors.surface.selected }]}>
+          <View style={{ flex: 1 }}>
+            <AppText variant="bodyLarge">All reminders</AppText>
+            <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+              {!notificationService.isAvailable()
+                ? 'Requires a development build'
+                : permission === 'granted'
+                ? 'Master switch for every reminder'
+                : 'Turn on to allow system notifications'}
+            </AppText>
           </View>
-        </Card>
+          <Switch
+            value={masterEnabled}
+            onValueChange={handleMasterToggle}
+            thumbColor={colors.primary.foreground}
+            trackColor={{ false: colors.border.strong, true: colors.primary.default }}
+          />
+        </View>
       </PopIn>
 
       <PopIn index={1}>
-        <Card style={styles.card}>
-        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Categories</Text>
-        <Text style={[styles.sectionDesc, { color: colors.text.secondary }]}>
-          Invitational, non-guilt prompts calibrated for mindful presence.
-        </Text>
-        {(NOTIFICATION_CATEGORIES ?? []).map((cat, idx) => (
-          <View
-            key={cat.key}
-            style={[
-              styles.categoryItem,
-              { borderBottomColor: colors.border.default },
-              idx === NOTIFICATION_CATEGORIES.length - 1 && { borderBottomWidth: 0 },
-            ]}
-          >
-            <View style={[styles.categoryIcon, { backgroundColor: cat.color + '18' }]}>
-              <Ionicons name={cat.icon} size={22} color={cat.color} />
-            </View>
-            <View style={styles.categoryInfo}>
-              <Text style={[styles.categoryLabel, { color: colors.text.primary }]}>{cat.label}</Text>
-              <Text style={[styles.categoryDesc, { color: colors.text.tertiary }]}>{cat.description}</Text>
-              <TactilePressable
-                onPress={() => setTimePickerFor(cat.key)}
-                hapticStyle="selection"
-                style={[styles.timeChip, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}
-              >
-                <Ionicons name="time-outline" size={13} color={colors.text.secondary} />
-                <Text style={[styles.timeChipText, { color: colors.text.secondary }]}>
-                  {(times ?? {})[cat.key] ?? '08:00'}
-                </Text>
-              </TactilePressable>
-            </View>
-            <View style={styles.categoryControls}>
-              <TactilePressable
-                onPress={() => handleTestNotification(cat.key)}
-                style={[styles.testButton, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}
-              >
-                <Text style={[styles.testButtonText, { color: colors.primary.default }]}>Test</Text>
-              </TactilePressable>
+        <View style={{ marginTop: 32 }}>
+          <AppText variant="overline" tone="tertiary">
+            Reminders
+          </AppText>
+          <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
+            Invitations, not obligations.
+          </AppText>
+
+          {(NOTIFICATION_CATEGORIES ?? []).map((cat, idx) => (
+            <View
+              key={cat.key}
+              style={[
+                styles.categoryItem,
+                {
+                  borderTopColor: colors.border.default,
+                  borderTopWidth: idx === 0 ? 0 : 1,
+                  opacity: masterEnabled ? 1 : 0.55,
+                },
+              ]}
+            >
+              <Ionicons name={cat.icon} size={19} color={colors.text.secondary} style={{ marginTop: 3 }} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="body" tone="primary">
+                  {cat.label}
+                </AppText>
+                <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                  {cat.description}
+                </AppText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 }}>
+                  <TactilePressable
+                    onPress={() => setTimePickerFor(cat.key)}
+                    hapticStyle="selection"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Change time for ${cat.label}`}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
+                  >
+                    <Ionicons name="time-outline" size={13} color={colors.primary.default} />
+                    <AppText variant="caption" tone="link">
+                      {(times ?? {})[cat.key] ?? '08:00'}
+                    </AppText>
+                  </TactilePressable>
+                  <TactilePressable
+                    onPress={() => handleTestNotification(cat.key)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Send a test for ${cat.label}`}
+                    disabled={!masterEnabled}
+                  >
+                    <AppText variant="caption" tone="tertiary">
+                      Send a test
+                    </AppText>
+                  </TactilePressable>
+                </View>
+              </View>
               <Switch
-                value={(categories ?? {})[cat.key] && masterEnabled}
+                value={!!(categories ?? {})[cat.key] && masterEnabled}
                 onValueChange={(enabled) => handleCategoryToggle(cat.key, enabled)}
-                thumbColor="#FFFFFF"
-                trackColor={{ false: colors.border.default, true: colors.primary.default }}
+                thumbColor={colors.primary.foreground}
+                trackColor={{ false: colors.border.strong, true: colors.primary.default }}
                 disabled={!masterEnabled}
               />
             </View>
-          </View>
-        ))}
-        </Card>
+          ))}
+        </View>
       </PopIn>
 
       <PopIn index={2}>
-        <Card variant="outlined" style={[styles.noteCard, { backgroundColor: colors.primary.default + '10', borderColor: colors.primary.default + '30' }]}>
-          <View style={styles.noteContent}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.primary.default} />
-            <Text style={[styles.noteText, { color: colors.text.secondary }]}>
-              All notification messages use gentle, encouraging language. No aggressive streak warnings or guilt prompts.
-            </Text>
-          </View>
-        </Card>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 32, alignItems: 'flex-start' }}>
+          <Ionicons name="information-circle-outline" size={17} color={colors.text.tertiary} style={{ marginTop: 1 }} />
+          <AppText variant="caption" tone="tertiary" style={{ flex: 1, lineHeight: 18 }}>
+            Every message uses gentle language. No streak warnings and no guilt.
+          </AppText>
+        </View>
       </PopIn>
 
       <Modal
@@ -262,10 +280,12 @@ export function NotificationsScreen() {
         animationType="fade"
         onRequestClose={() => setTimePickerFor(null)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay.scrim }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setTimePickerFor(null)} />
-          <View style={[styles.timePickerContainer, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-            <Text style={[styles.pickerTitle, { color: colors.text.primary }]}>Reminder Time</Text>
+          <View style={[styles.timePickerContainer, { backgroundColor: colors.surface.default }]}>
+            <AppText variant="h3" center>
+              Reminder time
+            </AppText>
             <View style={styles.timeGrid}>
               {REMINDER_TIMES.map((t) => {
                 const selected = timePickerFor ? (times ?? {})[timePickerFor] === t : false;
@@ -274,21 +294,18 @@ export function NotificationsScreen() {
                     key={t}
                     onPress={() => handleTimeSelect(t)}
                     hapticStyle="selection"
-                    style={[
-                      styles.timeButton,
-                      { backgroundColor: colors.background.default, borderColor: colors.border.default },
-                      selected && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
-                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Set reminder for ${t}`}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 9,
+                      borderRadius: 12,
+                      backgroundColor: selected ? colors.primary.default : colors.surface.muted,
+                    }}
                   >
-                    <Text
-                      style={[
-                        styles.timeButtonText,
-                        { color: colors.text.primary },
-                        selected && { color: '#FFFFFF', fontWeight: '700' },
-                      ]}
-                    >
+                    <AppText variant="label" tone={selected ? 'onPrimary' : 'secondary'}>
                       {t}
-                    </Text>
+                    </AppText>
                   </TactilePressable>
                 );
               })}
@@ -301,65 +318,31 @@ export function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 60, gap: 16 },
-  card: { padding: 18, borderRadius: 20, gap: 12 },
-  masterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  masterInfo: { flex: 1 },
-  masterLabel: { fontSize: 16, fontWeight: '700' },
-  masterDesc: { fontSize: 13, marginTop: 2 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
-  sectionDesc: { fontSize: 14, lineHeight: 20, marginBottom: 8 },
+  content: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 56 },
+  masterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    padding: 18,
+    borderRadius: 20,
+  },
   categoryItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
+    paddingVertical: 16,
   },
-  categoryIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  categoryInfo: { flex: 1, gap: 3 },
-  categoryLabel: { fontSize: 15, fontWeight: '600' },
-  categoryDesc: { fontSize: 12, lineHeight: 17 },
-  timeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 4,
-  },
-  timeChipText: { fontSize: 12, fontWeight: '600' },
-  categoryControls: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 },
-  testButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  testButtonText: { fontSize: 12, fontWeight: '600' },
-  noteCard: { padding: 16, borderRadius: 16 },
-  noteContent: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  noteText: { flex: 1, fontSize: 13, lineHeight: 18 },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 20, 28, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
   },
   timePickerContainer: {
     width: '100%',
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 18,
-    gap: 14,
+    borderRadius: 28,
+    padding: 22,
+    gap: 18,
   },
-  pickerTitle: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  timeButton: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, borderWidth: 1 },
-  timeButtonText: { fontSize: 13, fontWeight: '600' },
 });

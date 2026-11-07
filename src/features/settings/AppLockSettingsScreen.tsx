@@ -1,26 +1,32 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Switch, Platform } from 'react-native';
+import { View, StyleSheet, Switch, Platform } from 'react-native';
 import { Alert } from '../../services/appAlert';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from '../../components/Card';
 import { settingsRepository } from '../../database/repositories/settingsRepository';
 import { appLockService } from '../../services/appLock';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ScreenHeader, TactilePressable } from '../../components';
+import { AppText, Button, ScreenHeader, TactilePressable } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
 import { BrandedLoader } from '../../components/interactive/LoadingState';
-import { resolveTint } from '../../theme/tints';
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'AppLockSettings'>['navigation'];
 
+const AUTO_LOCK_OPTIONS = [0, 1, 5, 15, 30];
+
+/**
+ * App lock and security — one method, one timeout, one privacy switch.
+ *
+ * The page reads as sections of hairline rows, not a stack of coloured boxes.
+ * Anything destructive is quiet until you reach it.
+ */
 export function AppLockSettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const [pinEnabled, setPinEnabled] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [autoLockMinutes, setAutoLockMinutes] = useState(5);
@@ -28,7 +34,6 @@ export function AppLockSettingsScreen() {
   const [allowScreenshots, setAllowScreenshots] = useState(true);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
-  const lilacTint = resolveTint(!!isDark, 'lilac');
 
   const loadSettings = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -180,194 +185,178 @@ export function AppLockSettingsScreen() {
     );
   }
 
+  const privacySwitch = Platform.OS === 'ios'
+    ? {
+        label: 'Hide in app switcher',
+        desc: 'Blur the preview when switching tasks. Confirmation is required to change this.',
+        icon: 'eye-off-outline' as const,
+        value: hideInSwitcher,
+        onChange: handleSwitcherToggle,
+      }
+    : {
+        label: 'Allow screenshots',
+        desc: "Let you capture the screen. When off, screenshots and the app-switcher preview are blocked.",
+        icon: 'camera-outline' as const,
+        value: allowScreenshots,
+        onChange: handleScreenshotToggle,
+      };
+
   return (
     <ScreenContainer contentContainerStyle={styles.content}>
-      <ScreenHeader title="App Lock & Security" />
+      <ScreenHeader title="App lock & security" />
 
       <PopIn index={0}>
-        <Card tone="lilac" style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: lilacTint.text }]}>Lock Method</Text>
+        <View style={{ marginTop: 8 }}>
+          <AppText variant="overline" tone="tertiary">
+            Lock method
+          </AppText>
 
-          <View style={styles.lockOption}>
-            <View style={styles.lockOptionInfo}>
-              <View style={[styles.lockIcon, { backgroundColor: lilacTint.plate }]}>
-                <Ionicons name="lock-closed" size={20} color={lilacTint.accent} />
-              </View>
-              <View style={styles.lockOptionText}>
-                <Text style={[styles.lockOptionLabel, { color: lilacTint.text }]}>PIN Protection</Text>
-                <Text style={[styles.lockOptionDesc, { color: lilacTint.muted }]}>
-                  {pinEnabled ? '6-digit PIN required on opening' : 'Set a private 6-digit PIN'}
-                </Text>
-              </View>
+          <View style={[styles.row, { borderBottomColor: colors.border.default }]}>
+            <View style={[styles.iconPlate, { backgroundColor: colors.primary.subtle }]}>
+              <Ionicons name="lock-closed-outline" size={19} color={colors.primary.default} />
             </View>
-            <View style={styles.lockOptionActions}>
+            <View style={{ flex: 1 }}>
+              <AppText variant="body">PIN protection</AppText>
+              <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                {pinEnabled ? 'Six digits required on opening' : 'Set a private six-digit PIN'}
+              </AppText>
               {pinEnabled ? (
-                <>
-                  <TactilePressable
-                    onPress={handleChangePin}
-                    style={[styles.changeButton, { backgroundColor: lilacTint.plate, borderColor: lilacTint.border }]}
-                  >
-                    <Text style={[styles.changeButtonText, { color: lilacTint.accent }]}>Change</Text>
+                <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
+                  <TactilePressable onPress={handleChangePin} accessibilityRole="button" accessibilityLabel="Change PIN">
+                    <AppText variant="caption" tone="link">
+                      Change PIN
+                    </AppText>
                   </TactilePressable>
-                  <TactilePressable
-                    onPress={handleRemovePin}
-                    style={[styles.removeButton, { borderColor: colors.accents.rose + '60' }]}
-                  >
-                    <Text style={[styles.removeButtonText, { color: colors.accents.rose }]}>Remove</Text>
+                  <TactilePressable onPress={handleRemovePin} accessibilityRole="button" accessibilityLabel="Remove PIN">
+                    <AppText variant="caption" tone="error">
+                      Remove
+                    </AppText>
                   </TactilePressable>
-                </>
+                </View>
               ) : (
-                <TactilePressable
+                <Button
+                  title="Set up PIN"
+                  variant="secondary"
+                  size="sm"
                   onPress={() => handlePinToggle(true)}
-                  hapticStyle="medium"
-                  style={[styles.setupButton, { backgroundColor: colors.primary.default }]}
-                >
-                  <Text style={styles.setupButtonText}>Set Up PIN</Text>
-                </TactilePressable>
+                  style={{ alignSelf: 'flex-start', marginTop: 10 }}
+                />
               )}
             </View>
           </View>
 
-          <View style={[styles.lockOption, styles.lockOptionDivider, { borderTopColor: lilacTint.border }]}>
-            <View style={styles.lockOptionInfo}>
-              <View style={[styles.lockIcon, { backgroundColor: lilacTint.plate, opacity: biometricAvailable ? 1 : 0.5 }]}>
-                <Ionicons name="finger-print" size={20} color={lilacTint.accent} />
-              </View>
-              <View style={styles.lockOptionText}>
-                <Text style={[styles.lockOptionLabel, { color: lilacTint.text }]}>Biometric Unlock</Text>
-                <Text style={[styles.lockOptionDesc, { color: lilacTint.muted }]}>
-                  {!biometricAvailable
-                    ? 'Not available on this device'
-                    : !pinEnabled
-                      ? 'Set a PIN first to enable biometrics'
-                      : biometricEnabled
-                        ? 'Biometrics active'
-                        : 'Unlock using Face ID or Fingerprint'}
-                </Text>
-              </View>
+          <View style={[styles.row, { borderBottomColor: colors.border.default, opacity: biometricAvailable ? 1 : 0.6 }]}>
+            <View style={[styles.iconPlate, { backgroundColor: colors.surface.muted }]}>
+              <Ionicons name="finger-print-outline" size={19} color={colors.text.secondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="body">Biometric unlock</AppText>
+              <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                {!biometricAvailable
+                  ? 'Not available on this device'
+                  : !pinEnabled
+                    ? 'Set a PIN first to enable biometrics'
+                    : biometricEnabled
+                      ? 'Biometrics active'
+                      : 'Unlock with Face ID or a fingerprint'}
+              </AppText>
             </View>
             <Switch
               value={biometricEnabled}
               onValueChange={handleBiometricToggle}
-              thumbColor="#FFFFFF"
-              trackColor={{ false: lilacTint.border, true: lilacTint.accent }}
+              thumbColor={colors.primary.foreground}
+              trackColor={{ false: colors.border.strong, true: colors.primary.default }}
               disabled={!pinEnabled || !biometricAvailable}
-              style={{ marginTop: 2, opacity: biometricAvailable ? 1 : 0.5 }}
             />
           </View>
-        </Card>
+        </View>
       </PopIn>
 
       <PopIn index={1}>
-        <Card style={styles.card}>
-        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Auto-Lock Timeout</Text>
-        <Text style={[styles.sectionDesc, { color: colors.text.secondary }]}>
-          Require passcode after app remains inactive
-        </Text>
-        <View style={styles.autoLockOptions}>
-          {[0, 1, 5, 15, 30].map((minutes) => {
-            const isSelected = autoLockMinutes === minutes;
-            return (
-              <TactilePressable
-                key={minutes}
-                onPress={() => handleAutoLockChange(minutes)}
-                style={[
-                  styles.autoLockButton,
-                  { backgroundColor: colors.surface.default, borderColor: colors.border.default },
-                  isSelected && { backgroundColor: colors.primary.default, borderColor: colors.primary.default },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.autoLockButtonText,
-                    { color: colors.text.primary },
-                    isSelected && { color: '#FFFFFF', fontWeight: '700' },
-                  ]}
+        <View style={{ marginTop: 32 }}>
+          <AppText variant="overline" tone="tertiary">
+            Auto-lock
+          </AppText>
+          <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
+            Require the passcode after the app stays inactive.
+          </AppText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+            {AUTO_LOCK_OPTIONS.map((minutes) => {
+              const isSelected = autoLockMinutes === minutes;
+              return (
+                <TactilePressable
+                  key={minutes}
+                  onPress={() => handleAutoLockChange(minutes)}
+                  scaleDownTo={0.95}
+                  hapticStyle="selection"
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  style={{
+                    paddingHorizontal: 15,
+                    paddingVertical: 10,
+                    borderRadius: 999,
+                    backgroundColor: isSelected ? colors.primary.default : colors.surface.muted,
+                  }}
                 >
-                  {minutes === 0 ? 'Immediately' : `${minutes} min`}
-                </Text>
-              </TactilePressable>
-            );
-          })}
+                  <AppText variant="caption" tone={isSelected ? 'onPrimary' : 'secondary'}>
+                    {minutes === 0 ? 'Immediately' : `${minutes} min`}
+                  </AppText>
+                </TactilePressable>
+              );
+            })}
+          </View>
         </View>
-      </Card>
-
       </PopIn>
 
       <PopIn index={2}>
-        <Card style={styles.card}>
-        {Platform.OS === 'ios' ? (
-          <View style={styles.switcherRow}>
-            <View style={styles.switcherInfo}>
-              <View style={[styles.lockIcon, { backgroundColor: colors.accents.peach + '18' }]}>
-                <Ionicons name="eye-off-outline" size={20} color={colors.accents.peach} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.lockOptionLabel, { color: colors.text.primary }]}>Hide in App Switcher</Text>
-                <Text style={[styles.lockOptionDesc, { color: colors.text.tertiary }]}>
-                  Blur the app preview when switching tasks. Confirmation is required to change this.
-                </Text>
-              </View>
+        <View style={{ marginTop: 32 }}>
+          <AppText variant="overline" tone="tertiary">
+            Privacy
+          </AppText>
+          <View style={[styles.row, { borderBottomWidth: 0 }]}>
+            <View style={[styles.iconPlate, { backgroundColor: colors.surface.muted }]}>
+              <Ionicons name={privacySwitch.icon} size={19} color={colors.text.secondary} />
+            </View>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <AppText variant="body">{privacySwitch.label}</AppText>
+              <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                {privacySwitch.desc}
+              </AppText>
             </View>
             <Switch
-              value={hideInSwitcher}
-              onValueChange={handleSwitcherToggle}
-              thumbColor="#FFFFFF"
-              trackColor={{ false: colors.border.default, true: colors.primary.default }}
-              style={{ marginTop: 2 }}
+              value={privacySwitch.value}
+              onValueChange={privacySwitch.onChange}
+              thumbColor={colors.primary.foreground}
+              trackColor={{ false: colors.border.strong, true: colors.primary.default }}
             />
           </View>
-        ) : (
-          <View style={styles.switcherRow}>
-            <View style={styles.switcherInfo}>
-              <View style={[styles.lockIcon, { backgroundColor: colors.accents.sky + '18' }]}>
-                <Ionicons name="camera-outline" size={20} color={colors.accents.sky} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.lockOptionLabel, { color: colors.text.primary }]}>Allow Screenshots</Text>
-                <Text style={[styles.lockOptionDesc, { color: colors.text.tertiary }]}>
-                  Let you capture what's on screen. When off, screenshots and the app-switcher preview are blocked.
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={allowScreenshots}
-              onValueChange={handleScreenshotToggle}
-              thumbColor="#FFFFFF"
-              trackColor={{ false: colors.border.default, true: colors.primary.default }}
-              style={{ marginTop: 2 }}
-            />
-          </View>
-        )}
-        </Card>
+        </View>
+      </PopIn>
+
+      <PopIn index={3}>
+        <AppText variant="caption" tone="tertiary" style={{ marginTop: 28, lineHeight: 18 }}>
+          Your PIN and privacy settings stay on this device. They are never uploaded.
+        </AppText>
       </PopIn>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
-  card: { padding: 18, borderRadius: 20, gap: 14 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
-  sectionDesc: { fontSize: 14, lineHeight: 20 },
-  lockOption: { gap: 12 },
-  lockOptionDivider: { paddingTop: 14, borderTopWidth: 1, marginTop: 4, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  lockOptionInfo: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 },
-  lockIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  lockOptionText: { flex: 1, gap: 3 },
-  lockOptionLabel: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
-  lockOptionDesc: { fontSize: 12, lineHeight: 16 },
-  lockOptionActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  setupButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
-  setupButtonText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
-  changeButton: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1 },
-  changeButtonText: { fontSize: 13, fontWeight: '600' },
-  removeButton: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1 },
-  removeButtonText: { fontSize: 13, fontWeight: '600' },
-  autoLockOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  autoLockButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
-  autoLockButtonText: { fontSize: 13, fontWeight: '600' },
-  switcherRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  switcherInfo: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1, paddingRight: 8 },
+  content: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 56 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  iconPlate: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
 });

@@ -1,157 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Text } from 'react-native';
+import { View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { RootStackParamList, BreathingPreset } from '../../types/navigation';
 import { useAppTheme } from '../../theme/ThemeContext';
-import {
-  AppText,
-  AppIcon,
-  Card,
-  CardContent,
-  Chip,
-  Button,
-  TactilePressable,
-  BreathworkIllustration,
-  NatureSoundscapeIllustration,
-  SensoryGroundingIllustration,
-  BodyScanIllustration,
-  PanicAnchorIllustration,
-  AffirmationsRadianceIllustration,
-  ThoughtReframingIllustration,
-  SphereOfControlIllustration,
-} from '../../components';
+import { AppText, TactilePressable } from '../../components';
 import { soundService } from '../../services/soundService';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { PopIn } from '../../components/interactive/PopIn';
-import { resolveTint } from '../../theme/tints';
-import { borderWidths, iconSizes, layout, radius, sizes, spacing } from '../../theme/tokens';
-import Animated from 'react-native-reanimated';
-import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
+import { spacing } from '../../theme/tokens';
+import { withAlpha } from '../../theme/tokens/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface QuickSound {
   id: 'rain' | 'ocean' | 'birds' | 'night';
   label: string;
-  icon: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
   atmosphere: string;
 }
 
 const SOUNDS: QuickSound[] = [
-  { id: 'rain', label: 'Rainfall', icon: 'i-rainy-outline', atmosphere: 'Soft drizzle' },
-  { id: 'ocean', label: 'Ocean Waves', icon: 'i-water-outline', atmosphere: 'Deep tides' },
-  { id: 'birds', label: 'Forest Birds', icon: 'i-leaf-outline', atmosphere: 'Morning woods' },
-  { id: 'night', label: 'Night Breeze', icon: 'i-moon-outline', atmosphere: 'Quiet stream' },
+  { id: 'rain', label: 'Rain', icon: 'rainy-outline', atmosphere: 'Soft drizzle' },
+  { id: 'ocean', label: 'Shore', icon: 'water-outline', atmosphere: 'Slow tide' },
+  { id: 'birds', label: 'Pines', icon: 'leaf-outline', atmosphere: 'Morning woods' },
+  { id: 'night', label: 'Night', icon: 'moon-outline', atmosphere: 'Quiet air' },
 ];
 
-const SOUND_ROWS: [QuickSound, QuickSound][] = [
-  [SOUNDS[0], SOUNDS[1]],
-  [SOUNDS[2], SOUNDS[3]],
-];
+const PRACTICES = ['Breathe', 'Body scan', 'Senses', 'Soundscapes'] as const;
 
-/** Static three-bar glyph shown while an ambient sound plays. */
-function MiniEqualizer({ color }: { color: string }) {
-  return (
-    <View style={styles.equalizerRow}>
-      <View style={[styles.eqBar, { backgroundColor: color, height: 9 }]} />
-      <View style={[styles.eqBar, { backgroundColor: color, height: 13 }]} />
-      <View style={[styles.eqBar, { backgroundColor: color, height: 7 }]} />
-    </View>
-  );
-}
-
-function AnimatedSoundTile({
-  snd,
-  isPlaying,
-  colors,
-  skyTint,
-  onPress,
-}: {
-  snd: QuickSound;
-  isPlaying: boolean;
-  colors: any;
-  skyTint: any;
-  onPress: () => void;
-}) {
-  return (
-    <View style={{ flex: 1 }}>
-      <TactilePressable
-        onPress={onPress}
-        scaleDownTo={1}
-        accessibilityRole="button"
-        accessibilityLabel={`${snd.label}, ${isPlaying ? 'playing' : snd.atmosphere}`}
-        style={[
-          styles.soundTile,
-          {
-            backgroundColor: isPlaying ? colors.primary.subtle : skyTint.plate,
-            borderColor: isPlaying ? colors.primary.default : skyTint.border,
-          },
-        ]}
-      >
-        <View style={styles.soundTileTop}>
-          <View
-            style={[
-              styles.soundTileOrb,
-              {
-                backgroundColor: isPlaying ? colors.primary.default : colors.surface.default,
-                borderColor: isPlaying ? colors.primary.default : skyTint.border,
-              },
-            ]}
-          >
-            <AppIcon
-              name={isPlaying ? 'i-pause' : snd.icon}
-              size={18}
-              color={isPlaying ? colors.primary.foreground : skyTint.accent}
-            />
-          </View>
-
-          {isPlaying && (
-            <View style={styles.playingIndicatorRow}>
-              <MiniEqualizer color={colors.primary.default} />
-            </View>
-          )}
-        </View>
-
-        <AppText
-          variant="label"
-          color={isPlaying ? colors.primary.default : skyTint.text}
-          numberOfLines={1}
-        >
-          {snd.label}
-        </AppText>
-        <AppText
-          variant="caption"
-          color={isPlaying ? colors.primary.default : skyTint.muted}
-          numberOfLines={1}
-          style={styles.soundTileSub}
-        >
-          {isPlaying ? 'Tap to pause' : snd.atmosphere}
-        </AppText>
-      </TactilePressable>
-    </View>
-  );
-}
-
-interface QuickBreathwork {
-  id: BreathingPreset;
+const PRACTICE_LIST: {
   title: string;
-  cadence: string;
-  benefit: string;
-  duration: number;
-}
-
-const BREATH_PRESETS: QuickBreathwork[] = [
-  { id: 'box', title: 'Box Breathing', cadence: '4 · 4 · 4 · 4', benefit: 'Focus & steady pulse', duration: 180 },
-  { id: '4-7-8', title: '4-7-8 Tranquil', cadence: '4 · 7 · 8', benefit: 'Deep calm & sleep aid', duration: 300 },
-  { id: 'deep', title: 'Vagal Resonance', cadence: '5.5 · 5.5', benefit: 'Heart rate balance', duration: 300 },
+  note: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  route: string;
+}[] = [
+  { title: 'Body scan', note: 'Release tension, head to feet', icon: 'body-outline', route: 'BodyScan' },
+  { title: 'Sensory grounding', note: 'Five senses, one at a time', icon: 'hand-left-outline', route: 'SensoryGrounding' },
+  { title: 'Breathwork studio', note: 'Choose your own cadence', icon: 'pulse-outline', route: 'BreathworkStudio' },
+  { title: 'Playground', note: 'Bubbles, sand, a small companion', icon: 'ellipse-outline', route: 'ZenPlayground' },
+  { title: 'Affirmations', note: 'Words to keep close', icon: 'sparkles-outline', route: 'Affirmations' },
+  { title: 'Thought reframing', note: 'Meet a hard thought gently', icon: 'swap-horizontal-outline', route: 'ThoughtReframing' },
+  { title: 'Sphere of control', note: 'Sort what is yours to carry', icon: 'aperture-outline', route: 'WhatCanIControl' },
 ];
 
 export function CalmScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const [activeSound, setActiveSound] = useState<string | null>(null);
-  const [category, setCategory] = useState('Breathing');
+  const [practice, setPractice] = useState<string>('Breathe');
 
   useEffect(() => {
     const unsub = soundService.addListener((state) => {
@@ -168,645 +66,412 @@ export function CalmScreen() {
     }
   };
 
-  const handleStartBreathSession = (preset: BreathingPreset, duration: number) => {
-    navigation.navigate('BreathingSession', { preset, duration });
-  };
-
-  const skyTint = resolveTint(!!isDark, 'sky');
-  const coralTint = resolveTint(!!isDark, 'coral');
-  const creamTint = resolveTint(!!isDark, 'cream');
-  const sageTint = resolveTint(!!isDark, 'sage');
-  const blushTint = resolveTint(!!isDark, 'blush');
-  const mintTint = resolveTint(!!isDark, 'mint');
-
-  // Ink for solid accent fills: white in light mode, deep surface in dark mode.
-  const solidInk = isDark ? colors.background.default : '#FFFFFF';
-  const PRACTICES = ['Breathing', 'Body Scan', 'Senses', 'Soundscapes'] as const;
   const startPractice = () => {
-    if (category === 'Body Scan') navigation.navigate('BodyScan');
-    else if (category === 'Senses') navigation.navigate('SensoryGrounding');
-    else if (category === 'Soundscapes') navigation.navigate('Soundscapes');
+    if (practice === 'Body scan') navigation.navigate('BodyScan');
+    else if (practice === 'Senses') navigation.navigate('SensoryGrounding');
+    else if (practice === 'Soundscapes') navigation.navigate('Soundscapes');
     else navigation.navigate('BreathingSession', { preset: 'box', duration: 180 });
   };
 
   return (
-    <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
-      {/* Sanctuary Top Bar */}
-      <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <View>
-            <AppText variant="h1">Calm</AppText>
-            <AppText variant="bodySmall" tone="tertiary" style={styles.mainSubtitle}>
-              Tactile mindful tools & somatic rest
-            </AppText>
-          </View>
-          <Animated.View
-            sharedTransitionTag={sharedTransitionTags.ambientStatusBadge}
-            sharedTransitionStyle={sharedElementStyle}
-          >
-            <TactilePressable
-              onPress={() => navigation.navigate('Soundscapes')}
-              scaleDownTo={0.92}
-              hitSlop={sizes.hitSlop}
-              accessibilityRole="button"
-              accessibilityLabel="Open soundscapes"
-              style={[
-                styles.soundStatusBadge,
-                {
-                  backgroundColor: activeSound ? colors.primary.subtle : colors.surface.default,
-                  borderColor: activeSound ? colors.primary.default : colors.border.default,
-                },
-              ]}
-            >
-              <AppIcon
-                name={activeSound ? 'i-volume-medium' : 'i-headset-outline'}
-                size={18}
-                color={activeSound ? colors.primary.default : colors.text.tertiary}
-              />
-              {activeSound && (
-                <View style={styles.pulseDotWrapper}>
-                  <View
-                    style={[
-                      styles.pulseDotInner,
-                      { backgroundColor: colors.primary.default },
-                    ]}
-                  />
-                </View>
-              )}
-            </TactilePressable>
-          </Animated.View>
+    <ScreenContainer
+      contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 120 }}
+      backgroundColor={colors.background.default}
+    >
+      {/* Header — Still Water v2 */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <View style={{ flex: 1 }}>
+          <AppText variant="overline" tone="tertiary">
+            Calm
+          </AppText>
+          <AppText variant="display" style={{ fontSize: 32, lineHeight: 44, paddingBottom: 4, marginTop: 4 }}>
+            Four rooms
+          </AppText>
+          <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 6 }}>
+            Pick the one your body is asking for.
+          </AppText>
         </View>
-
-        {/* Live Audio Mini-Player Bar */}
-        {activeSound && (
-          <Animated.View
-            sharedTransitionTag={sharedTransitionTags.ambientPlayerBar}
-            sharedTransitionStyle={sharedElementStyle}
-            style={styles.miniPlayerWrapper}
-          >
-            <TactilePressable
-              onPress={() => navigation.navigate('Soundscapes')}
-              scaleDownTo={0.98}
-              accessibilityRole="button"
-              accessibilityLabel="Open soundscapes player"
-              style={[
-                styles.miniPlayerBar,
-                {
-                  backgroundColor: colors.primary.subtle,
-                  borderColor: colors.primary.subtleBorder,
-                },
-              ]}
-            >
-              <View style={styles.miniPlayerInfo}>
-                <AppIcon name="i-musical-notes" size={16} color={colors.primary.default} />
-                <AppText
-                  variant="labelSmall"
-                  color={colors.primary.default}
-                  numberOfLines={1}
-                  style={styles.miniPlayerText}
-                >
-                  Playing: {activeSound.toUpperCase()} Ambient Soundscape
-                </AppText>
-              </View>
-              <TactilePressable
-                onPress={(e) => {
-                  e.stopPropagation();
-                  soundService.stop();
-                }}
-                scaleDownTo={0.88}
-                hitSlop={sizes.hitSlop}
-                accessibilityRole="button"
-                accessibilityLabel="Stop ambient sound"
-                style={styles.miniPlayerStop}
-              >
-                <AppIcon name="i-pause" size={14} color={colors.primary.default} />
-              </TactilePressable>
-            </TactilePressable>
-          </Animated.View>
-        )}
+        <TactilePressable
+          onPress={() => navigation.navigate('Soundscapes')}
+          scaleDownTo={0.92}
+          accessibilityRole="button"
+          accessibilityLabel="Open soundscapes"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 14,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: activeSound ? colors.surface.selected : colors.surface.default,
+          }}
+        >
+          <Ionicons
+            name={activeSound ? 'volume-medium' : 'headset-outline'}
+            size={20}
+            color={activeSound ? colors.primary.default : colors.text.secondary}
+          />
+        </TactilePressable>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      {/* Continue Card — Still Water hero */}
+      <TactilePressable
+        onPress={() => navigation.navigate('BodyScan')}
+        scaleDownTo={0.99}
+        accessibilityRole="button"
+        accessibilityLabel="Continue body scan practice"
+        style={{
+          marginTop: 22,
+          backgroundColor: colors.primary.default,
+          borderRadius: 22,
+          padding: 18,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+          overflow: 'hidden',
+        }}
       >
-        {/* Practice shortcut — one tap to the tool you need */}
-        <View style={styles.quickStart}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.practiceRow}
-          >
-            {PRACTICES.map((p) => (
-              <Chip key={p} label={p} selected={category === p} onPress={() => setCategory(p)} />
-            ))}
-          </ScrollView>
-          <Button title={`Start ${category.toLowerCase()}`} onPress={startPractice} fullWidth />
+        <View style={{ flex: 1 }}>
+          <AppText variant="overline" color="#A9CBBC" style={{ letterSpacing: 1.2 }}>
+            Continue
+          </AppText>
+          <AppText variant="display" color="#EDF3EF" style={{ fontSize: 22, lineHeight: 30, paddingBottom: 2, marginTop: 4 }}>
+            Evening wind-down
+          </AppText>
+          <AppText variant="caption" color="#C6DCD1" style={{ marginTop: 4 }}>
+            {activeSound ? `Soundscape · ${activeSound}` : 'Body scan · 3 of 8 min'}
+          </AppText>
+          <View style={{ height: 4, borderRadius: 2, backgroundColor: 'rgba(198,220,209,0.25)', marginTop: 12, width: 120, overflow: 'hidden' }}>
+            <View style={{ width: '42%', height: '100%', backgroundColor: '#D2B078', borderRadius: 2 }} />
+          </View>
         </View>
-
-        {/* 0. Cute Tactile Zen Playground Card — mint pop card */}
-        <PopIn index={0}>
-        <Card
-          variant="elevated"
-          tone="mint"
-          onPress={() => navigation.navigate('ZenPlayground')}
+        <View
+          style={{
+            width: 54,
+            height: 54,
+            borderRadius: 27,
+            backgroundColor: '#EDF3EF',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <CardContent style={styles.cardInner}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopyWide}>
-                <AppText variant="h3" color={mintTint.text}>
-                  Zen Playground
-                </AppText>
-                <AppText variant="caption" color={mintTint.muted} numberOfLines={2} style={styles.sectionSub}>
-                  Cute tactile stress relievers: satisfying bubble wrap, sand garden & breathing companion
-                </AppText>
-                <View style={styles.inlineCta}>
-                  <AppText variant="label" color={mintTint.accent}>
-                    Play & De-Stress
-                  </AppText>
-                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={mintTint.accent} />
-                </View>
-              </View>
-              <View style={[styles.gameThumbBadge, { backgroundColor: mintTint.plate }]}>
-                <Text style={{ fontSize: 34 }}>🫧</Text>
-              </View>
-            </View>
-          </CardContent>
-        </Card>
-        </PopIn>
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="#223E36">
+            <Path d="M8 5l12 7-12 7z" />
+          </Svg>
+        </View>
+      </TactilePressable>
 
-        {/* 1. Nature Soundscapes Interactive Player Hub — sky pop card */}
-        <PopIn index={1}>
-        <Card variant="elevated" tone="sky">
-          <CardContent style={styles.cardInner}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopy}>
-                <AppText variant="h3" color={skyTint.text}>
-                  Ambient Sanctuary
-                </AppText>
-                <AppText variant="caption" color={skyTint.muted} style={styles.sectionSub}>
-                  Tap any atmosphere for immediate calm
-                </AppText>
-              </View>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.calmHero('soundscapes')}
-                sharedTransitionStyle={sharedElementStyle}
-              >
-                <TactilePressable
-                  onPress={() => navigation.navigate('Soundscapes')}
-                  scaleDownTo={0.96}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open nature soundscapes player"
-                >
-                  <NatureSoundscapeIllustration width={96} height={76} />
-                </TactilePressable>
-              </Animated.View>
-            </View>
-
-            {/* Ambient Sound Grid (2x2 tactile cards with subtle animated click & pulse) */}
-            <View style={styles.soundGrid}>
-              {SOUND_ROWS.map((row, rIdx) => (
-                <View key={rIdx} style={styles.soundGridRow}>
-                  {row.map((snd) => (
-                    <AnimatedSoundTile
-                      key={snd.id}
-                      snd={snd}
-                      isPlaying={activeSound === snd.id}
-                      colors={colors}
-                      skyTint={skyTint}
-                      onPress={() => handleToggleSound(snd.id)}
-                    />
-                  ))}
-                </View>
-              ))}
-            </View>
-
-            <TactilePressable
-              onPress={() => navigation.navigate('Soundscapes')}
-              scaleDownTo={0.99}
-              accessibilityRole="button"
-              accessibilityLabel="Open full soundscapes player"
-              style={[styles.fullPageLink, { borderTopColor: skyTint.border }]}
-            >
-              <AppText variant="label" color={skyTint.accent}>
-                Full Soundscapes Player & Sleep Timer
-              </AppText>
-              <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={skyTint.accent} />
-            </TactilePressable>
-          </CardContent>
-        </Card>
-        </PopIn>
-
-        {/* 2. Interactive Breathwork Studio Hub — coral pop card */}
-        <PopIn index={1}>
-        <Card
-          variant="elevated"
-          tone="coral"
-          onPress={() => navigation.navigate('BreathworkStudio')}
+      {/* Four Rooms Grid — Still Water v2 */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
+        {/* Room 1: Breathe */}
+        <TactilePressable
+          onPress={() => navigation.navigate('BreathingSession', { preset: 'box', duration: 180 })}
+          scaleDownTo={0.98}
+          accessibilityRole="button"
+          accessibilityLabel="Open Breathe room"
+          style={{
+            width: '48%',
+            flexGrow: 1,
+            backgroundColor: '#E3ECE7',
+            borderRadius: 18,
+            padding: 16,
+            minHeight: 128,
+            justifyContent: 'space-between',
+          }}
         >
-          <CardContent style={styles.cardInner}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopyWide}>
-                <AppText variant="h3" color={coralTint.text}>
-                  Paced Breathing
-                </AppText>
-                <AppText variant="caption" color={coralTint.muted} numberOfLines={2} style={styles.sectionSub}>
-                  Clinical parasympathetic cadence, 4-7-8, box breathing & custom sessions
-                </AppText>
-                <View style={styles.inlineCta}>
-                  <AppText variant="label" color={coralTint.accent}>
-                    Open Breathwork Studio
-                  </AppText>
-                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={coralTint.accent} />
-                </View>
-              </View>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.calmHero('breathwork')}
-                sharedTransitionStyle={sharedElementStyle}
-              >
-                <BreathworkIllustration width={96} height={76} />
-              </Animated.View>
-            </View>
-          </CardContent>
-        </Card>
-        </PopIn>
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 11,
+              backgroundColor: '#FFFFFF',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#2C4F45" strokeWidth="1.8" strokeLinecap="round">
+              <Path d="M12 3c3.5 3 6 6 6 9a6 6 0 01-12 0c0-3 2.5-6 6-9z" />
+            </Svg>
+          </View>
+          <View style={{ marginTop: 20 }}>
+            <AppText variant="title" color="#223E36" style={{ fontWeight: '600' }}>
+              Breathe
+            </AppText>
+            <AppText variant="caption" color="#5C7568" style={{ marginTop: 2 }}>
+              Paced &amp; box
+            </AppText>
+          </View>
+        </TactilePressable>
 
-        {/* 3. 5-4-3-2-1 Sensory Grounding Card — cream pop card */}
-        <PopIn index={2}>
-        <Card
-          variant="elevated"
-          tone="cream"
+        {/* Room 2: Ground */}
+        <TactilePressable
           onPress={() => navigation.navigate('SensoryGrounding')}
+          scaleDownTo={0.98}
+          accessibilityRole="button"
+          accessibilityLabel="Open Ground room"
+          style={{
+            width: '48%',
+            flexGrow: 1,
+            backgroundColor: colors.surface.default,
+            borderRadius: 18,
+            padding: 16,
+            minHeight: 128,
+            justifyContent: 'space-between',
+          }}
         >
-          <CardContent style={styles.cardInner}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopyWide}>
-                <AppText variant="h3" color={creamTint.text}>
-                  Sensory Grounding
-                </AppText>
-                <AppText variant="caption" color={creamTint.muted} numberOfLines={2} style={styles.sectionSub}>
-                  Engage physical senses to interrupt cognitive spirals
-                </AppText>
-                <View style={styles.inlineCta}>
-                  <AppText variant="label" color={creamTint.accent}>
-                    Begin Grounding
-                  </AppText>
-                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={creamTint.accent} />
-                </View>
-              </View>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.calmHero('sensory')}
-                sharedTransitionStyle={sharedElementStyle}
-              >
-                <SensoryGroundingIllustration width={96} height={76} />
-              </Animated.View>
-            </View>
-          </CardContent>
-        </Card>
-        </PopIn>
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 11,
+              backgroundColor: '#EAEDE7',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#2C4F45" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M20 4C10.5 4 4 10.5 4 20c9.5 0 16-6.5 16-16z" />
+              <Path d="M8 16c2.5-4 5.5-6.5 9-8" />
+            </Svg>
+          </View>
+          <View style={{ marginTop: 20 }}>
+            <AppText variant="title" style={{ fontWeight: '600' }}>
+              Ground
+            </AppText>
+            <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+              5 senses · 3 min
+            </AppText>
+          </View>
+        </TactilePressable>
 
-        {/* 4. Somatic Body Scan Card — sage pop card */}
-        <PopIn index={3}>
-        <Card
-          variant="elevated"
-          tone="sage"
+        {/* Room 3: Sleep */}
+        <TactilePressable
           onPress={() => navigation.navigate('BodyScan')}
+          scaleDownTo={0.98}
+          accessibilityRole="button"
+          accessibilityLabel="Open Sleep room"
+          style={{
+            width: '48%',
+            flexGrow: 1,
+            backgroundColor: colors.surface.default,
+            borderRadius: 18,
+            padding: 16,
+            minHeight: 128,
+            justifyContent: 'space-between',
+          }}
         >
-          <CardContent style={styles.cardInner}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopyWide}>
-                <AppText variant="h3" color={sageTint.text}>
-                  Somatic Body Scan
-                </AppText>
-                <AppText variant="caption" color={sageTint.muted} numberOfLines={2} style={styles.sectionSub}>
-                  Progressive tension release across 5 anatomy zones
-                </AppText>
-                <View style={styles.inlineCta}>
-                  <AppText variant="label" color={sageTint.accent}>
-                    Begin Body Scan
-                  </AppText>
-                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={sageTint.accent} />
-                </View>
-              </View>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.calmHero('bodyScan')}
-                sharedTransitionStyle={sharedElementStyle}
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 11,
+              backgroundColor: '#F0E7D6',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B08A4F" strokeWidth="1.8" strokeLinecap="round">
+              <Path d="M20 14.5A8.5 8.5 0 019.5 4 8.5 8.5 0 1020 14.5z" />
+            </Svg>
+          </View>
+          <View style={{ marginTop: 20 }}>
+            <AppText variant="title" style={{ fontWeight: '600' }}>
+              Sleep
+            </AppText>
+            <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+              Wind-down stories
+            </AppText>
+          </View>
+        </TactilePressable>
+
+        {/* Room 4: Sounds */}
+        <TactilePressable
+          onPress={() => navigation.navigate('Soundscapes')}
+          scaleDownTo={0.98}
+          accessibilityRole="button"
+          accessibilityLabel="Open Sounds room"
+          style={{
+            width: '48%',
+            flexGrow: 1,
+            backgroundColor: colors.surface.default,
+            borderRadius: 18,
+            padding: 16,
+            minHeight: 128,
+            justifyContent: 'space-between',
+          }}
+        >
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 11,
+              backgroundColor: '#EAEDE7',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#2C4F45" strokeWidth="1.8" strokeLinecap="round">
+              <Path d="M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4 0M4 9c2-2 4-2 6 0s4 2 6 0 4-2 4 0" />
+            </Svg>
+          </View>
+          <View style={{ marginTop: 20 }}>
+            <AppText variant="title" style={{ fontWeight: '600' }}>
+              Sounds
+            </AppText>
+            <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+              Rain, forest, room
+            </AppText>
+          </View>
+        </TactilePressable>
+      </View>
+
+      {/* Only three minutes? Quick banner */}
+      <TactilePressable
+        onPress={() => navigation.navigate('BreathingSession', { preset: '4-7-8', duration: 180 })}
+        scaleDownTo={0.99}
+        accessibilityRole="button"
+        accessibilityLabel="Start 3 minute 4-7-8 breath"
+        style={{
+          marginTop: 18,
+          padding: 16,
+          borderRadius: 16,
+          backgroundColor: '#EAEDE7',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="#2C4F45" strokeWidth="1.8" strokeLinecap="round">
+          <Circle cx="12" cy="12" r="9" />
+          <Path d="M12 7v5l3 2" />
+        </Svg>
+        <View style={{ flex: 1 }}>
+          <AppText variant="label" color="#223E36" style={{ fontWeight: '600' }}>
+            Only three minutes?
+          </AppText>
+          <AppText variant="caption" color="#6C7873" style={{ marginTop: 1 }}>
+            Try 4-7-8 breathing, no timer.
+          </AppText>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#6C7873" />
+      </TactilePressable>
+
+      {/* Sounds */}
+      <View style={{ marginTop: 40 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+          <AppText variant="h3">Rooms of sound</AppText>
+          <TactilePressable scaleDownTo={0.95} onPress={() => navigation.navigate('Soundscapes')}>
+            <AppText variant="label" tone="link">
+              Mixer
+            </AppText>
+          </TactilePressable>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {SOUNDS.map((snd) => {
+            const playing = activeSound === snd.id;
+            return (
+              <TactilePressable
+                key={snd.id}
+                onPress={() => handleToggleSound(snd.id)}
+                scaleDownTo={0.97}
+                accessibilityRole="button"
+                accessibilityLabel={`${snd.label}, ${playing ? 'playing' : 'play'}`}
+                style={{
+                  flex: 1,
+                  paddingVertical: 14,
+                  paddingHorizontal: 8,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: playing ? colors.surface.selected : colors.surface.default,
+                }}
               >
-                <BodyScanIllustration width={96} height={76} />
-              </Animated.View>
-            </View>
-          </CardContent>
-        </Card>
-        </PopIn>
+                <Ionicons
+                  name={playing ? 'pause' : snd.icon}
+                  size={19}
+                  color={playing ? colors.primary.default : colors.text.secondary}
+                />
+                <AppText variant="label" tone={playing ? 'link' : 'secondary'}>
+                  {snd.label}
+                </AppText>
+              </TactilePressable>
+            );
+          })}
+        </View>
+      </View>
 
-        {/* 5. Emergency SOS Acute Panic Anchor Card — blush pop card */}
-        <PopIn index={4}>
-        <Card
-          variant="elevated"
-          tone="blush"
-          onPress={() => navigation.navigate('PanicAnchor')}
-        >
-          <CardContent style={styles.cardInner}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopyWide}>
-                <AppText variant="h3" color={blushTint.text}>
-                  Acute Panic Anchor
-                </AppText>
-                <AppText variant="caption" color={blushTint.muted} numberOfLines={2} style={styles.sectionSub}>
-                  Physiological sigh & cold water reflex for rapid de-escalation
-                </AppText>
-                <View style={styles.inlineCta}>
-                  <AppText variant="label" color={blushTint.accent}>
-                    Open SOS Relief
-                  </AppText>
-                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={blushTint.accent} />
-                </View>
-              </View>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.calmHero('panic')}
-                sharedTransitionStyle={sharedElementStyle}
-              >
-                <PanicAnchorIllustration width={96} height={76} />
-              </Animated.View>
+      {/* More practices */}
+      <View style={{ marginTop: 40 }}>
+        <AppText variant="h3" style={{ marginBottom: 8 }}>
+          More ways to settle
+        </AppText>
+        {PRACTICE_LIST.map((item) => (
+          <TactilePressable
+            key={item.title}
+            onPress={() => navigation.navigate(item.route as any)}
+            scaleDownTo={0.99}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${item.title}`}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+              paddingVertical: 15,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border.default,
+            }}
+          >
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surface.selected,
+              }}
+            >
+              <Ionicons name={item.icon} size={18} color={colors.primary.default} />
             </View>
-          </CardContent>
-        </Card>
-        </PopIn>
+            <View style={{ flex: 1 }}>
+              <AppText variant="title">{item.title}</AppText>
+              <AppText variant="caption" tone="tertiary" style={{ marginTop: 1 }}>
+                {item.note}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+          </TactilePressable>
+        ))}
+      </View>
 
-        {/* 6. Mindful Affirmations Card */}
-        <PopIn index={5}>
-        <Card
-          variant="elevated"
-          tone="coral"
-          onPress={() => navigation.navigate('Affirmations')}
-        >
-          <CardContent style={styles.cardInner}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopyWide}>
-                <AppText variant="h3" color={coralTint.text}>
-                  Mindful Affirmations
-                </AppText>
-                <AppText variant="caption" color={coralTint.muted} numberOfLines={2} style={styles.sectionSub}>
-                  Radiant self-worth and grounded positive self-dialogue
-                </AppText>
-                <View style={styles.inlineCta}>
-                  <AppText variant="label" color={coralTint.accent}>
-                    Open Affirmations
-                  </AppText>
-                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={coralTint.accent} />
-                </View>
-              </View>
-              <AffirmationsRadianceIllustration width={96} height={76} />
-            </View>
-          </CardContent>
-        </Card>
-        </PopIn>
+      {/* Emergency */}
+      <TactilePressable
+        onPress={() => navigation.navigate('PanicAnchor')}
+        scaleDownTo={0.99}
+        accessibilityRole="button"
+        accessibilityLabel="Open acute panic relief"
+        style={{
+          marginTop: 32,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          padding: 16,
+          borderRadius: 16,
+          backgroundColor: colors.status.warning.subtle,
+        }}
+      >
+        <Ionicons name="flash-outline" size={18} color={colors.status.warning.default} />
+        <View style={{ flex: 1 }}>
+          <AppText variant="label" tone="warning">
+            If it is too much right now
+          </AppText>
+          <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+            A short, physical reset. No explanation needed.
+          </AppText>
+        </View>
+        <Ionicons name="arrow-forward" size={16} color={colors.status.warning.default} />
+      </TactilePressable>
 
-        {/* 7. Thought Reframing Card */}
-        <PopIn index={6}>
-        <Card
-          variant="elevated"
-          tone="sage"
-          onPress={() => navigation.navigate('ThoughtReframing')}
-        >
-          <CardContent style={styles.cardInner}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopyWide}>
-                <AppText variant="h3" color={sageTint.text}>
-                  Thought Reframing
-                </AppText>
-                <AppText variant="caption" color={sageTint.muted} numberOfLines={2} style={styles.sectionSub}>
-                  Transform storm clouds and distortions into balanced perspective
-                </AppText>
-                <View style={styles.inlineCta}>
-                  <AppText variant="label" color={sageTint.accent}>
-                    Begin Reframing
-                  </AppText>
-                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={sageTint.accent} />
-                </View>
-              </View>
-              <ThoughtReframingIllustration width={96} height={76} />
-            </View>
-          </CardContent>
-        </Card>
-        </PopIn>
-
-        {/* 8. Sphere of Control Card */}
-        <PopIn index={7}>
-        <Card
-          variant="elevated"
-          tone="sky"
-          onPress={() => navigation.navigate('WhatCanIControl')}
-        >
-          <CardContent style={styles.cardInner}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderCopyWide}>
-                <AppText variant="h3" color={skyTint.text}>
-                  Sphere of Control
-                </AppText>
-                <AppText variant="caption" color={skyTint.muted} numberOfLines={2} style={styles.sectionSub}>
-                  Focus on what you influence; peacefully surrender what you cannot
-                </AppText>
-                <View style={styles.inlineCta}>
-                  <AppText variant="label" color={skyTint.accent}>
-                    Explore Sphere
-                  </AppText>
-                  <AppIcon name="i-arrow-forward" size={iconSizes.xs} color={skyTint.accent} />
-                </View>
-              </View>
-              <SphereOfControlIllustration width={96} height={76} />
-            </View>
-          </CardContent>
-        </Card>
-        </PopIn>
-      </ScrollView>
+      <View style={{ height: spacing[6] }} />
     </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: spacing[5],
-    paddingTop: spacing[4],
-    paddingBottom: spacing[2],
-  },
-  miniPlayerWrapper: {
-    marginTop: spacing[3],
-    overflow: 'hidden',
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mainSubtitle: {
-    marginTop: spacing[1],
-  },
-  soundStatusBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.full,
-    borderWidth: borderWidths.thin,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pulseDotWrapper: {
-    position: 'absolute',
-    top: 9,
-    right: 9,
-    width: 8,
-    height: 8,
-  },
-  pulseDotInner: {
-    width: 8,
-    height: 8,
-    borderRadius: radius.full,
-  },
-  miniPlayerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    borderRadius: radius.lg,
-    borderWidth: borderWidths.thin,
-  },
-  miniPlayerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    flex: 1,
-  },
-  miniPlayerText: {
-    flexShrink: 1,
-  },
-  miniPlayerStop: {
-    padding: spacing[1],
-  },
-  scrollContent: {
-    paddingHorizontal: spacing[5],
-    paddingTop: spacing[4],
-    paddingBottom: layout.screenBottomClearance,
-    gap: spacing[4],
-  },
-  quickStart: {
-    gap: spacing[3],
-  },
-  practiceRow: {
-    gap: spacing[2],
-    paddingRight: spacing[5],
-  },
-  cardInner: {
-    padding: spacing[5],
-    gap: spacing[3],
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  cardHeaderCopy: {
-    flex: 1,
-    paddingRight: spacing[2],
-  },
-  cardHeaderCopyWide: {
-    flex: 1,
-    paddingRight: spacing[3],
-  },
-  sectionSub: {
-    marginTop: spacing[1],
-  },
-  inlineCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1],
-    marginTop: spacing[3],
-  },
-  soundGrid: {
-    gap: spacing[3],
-  },
-  soundGridRow: {
-    flexDirection: 'row',
-    gap: spacing[3],
-  },
-  soundTile: {
-    flex: 1,
-    padding: spacing[3],
-    borderRadius: radius.lg,
-    borderWidth: borderWidths.thin,
-    minHeight: 104,
-    justifyContent: 'space-between',
-  },
-  soundTileTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing[2],
-  },
-  playingIndicatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  equalizerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2.5,
-    height: 14,
-  },
-  eqBar: {
-    width: 2.5,
-    borderRadius: 1.5,
-  },
-  soundTileOrb: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.full,
-    borderWidth: borderWidths.thin,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  soundTileSub: {
-    marginTop: spacing[1],
-  },
-  fullPageLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: spacing[3],
-    borderTopWidth: borderWidths.thin,
-    marginTop: spacing[1],
-  },
-  presetList: {
-    gap: spacing[2],
-  },
-  presetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[3],
-    borderRadius: radius.lg,
-    borderWidth: borderWidths.thin,
-    gap: spacing[3],
-  },
-  presetCopy: {
-    flex: 1,
-    gap: spacing[1],
-  },
-  presetStartButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1],
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    borderRadius: radius.full,
-  },
-  gameThumbBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

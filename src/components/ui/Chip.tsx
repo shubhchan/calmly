@@ -82,6 +82,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing[1],
     borderRadius: radius.full,
-    borderWidth: borderWidths.thin,
+    borderWidth: borderWidths.none,
   },
 });

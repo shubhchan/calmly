@@ -73,6 +73,15 @@ export const PatchedText = React.forwardRef<any, any>((props, ref) => {
     });
   }
 
+  // Display type uses a fixed bundled face and must not follow the body font.
+  if (flat.fixedFont) {
+    return React.createElement(OriginalText, {
+      ...props,
+      ref,
+      style: [props.style, { fontWeight: 'normal' }],
+    });
+  }
+
   // Resolve the active font face for the requested weight hierarchy
   const resolvedFace = resolveFaceForWeight(
     active.faces,
@@ -107,6 +116,14 @@ export const PatchedTextInput = React.forwardRef<any, any>((props, ref) => {
   }
 
   if (isPreviewText(flat)) {
+    return React.createElement(OriginalTextInput, {
+      ...props,
+      ref,
+      style: [props.style, { fontWeight: 'normal' }],
+    });
+  }
+
+  if (flat.fixedFont) {
     return React.createElement(OriginalTextInput, {
       ...props,
       ref,

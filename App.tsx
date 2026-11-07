@@ -41,11 +41,11 @@ function TopInsetSpacer() {
   try {
     colors = useThemeColors();
   } catch {
-    colors = { bgPrimary: '#FBF9F5', isDark: false };
+    colors = { bgPrimary: '#F4F5F1', isDark: false };
   }
   const top = insets?.top ?? 0;
   if (!top) return null;
-  const barColor = colors?.bgPrimary ?? (colors?.isDark ? '#0F141C' : '#FBF9F5');
+  const barColor = colors?.bgPrimary ?? (colors?.isDark ? '#0F1513' : '#F4F5F1');
   return <View style={{ height: top, backgroundColor: barColor }} />;
 }
 
@@ -61,10 +61,10 @@ function BootSplash() {
     colors = useThemeColors();
   } catch {
     colors = {
-      bgPrimary: '#FBF9F5',
-      accentPrimary: '#3E7B52',
-      textPrimary: '#1A212D',
-      textTertiary: '#607085',
+      bgPrimary: '#F4F5F1',
+      accentPrimary: '#2C4F45',
+      textPrimary: '#1A2420',
+      textTertiary: '#6C7873',
     };
   }
   return (
@@ -75,19 +75,19 @@ function BootSplash() {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: colors?.bgPrimary ?? '#FBF9F5',
+        backgroundColor: colors?.bgPrimary ?? '#F4F5F1',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 32,
       }}
     >
-      <AppIcon name="i-leaf" size={48} color={colors?.accentPrimary ?? '#3E7B52'} />
+      <AppIcon name="i-leaf" size={48} color={colors?.accentPrimary ?? '#2C4F45'} />
       <Text
         style={{
           marginTop: 14,
           fontSize: 26,
           fontWeight: '700',
-          color: colors?.textPrimary ?? '#1A212D',
+          color: colors?.textPrimary ?? '#1A2420',
           letterSpacing: -0.3,
         }}
       >
@@ -97,7 +97,7 @@ function BootSplash() {
         style={{
           marginTop: 6,
           fontSize: 14,
-          color: colors?.textTertiary ?? '#607085',
+          color: colors?.textTertiary ?? '#6C7873',
           textAlign: 'center',
         }}
       >
@@ -138,24 +138,24 @@ function StallOverlay({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: '#FDFBF7',
+        backgroundColor: '#F4F5F1',
         paddingTop: 72,
         paddingHorizontal: 20,
       }}
     >
-      <AppIcon name="i-time" size={40} color="#EB876D" />
+      <AppIcon name="i-time" size={40} color="#B08A4F" />
       <Text
         style={{
           marginTop: 8,
           fontSize: 20,
           fontWeight: '700',
-          color: '#1E232E',
+          color: '#1A2420',
           textAlign: 'center',
         }}
       >
         Taking longer than usual…
       </Text>
-      <Text style={{ marginTop: 8, fontSize: 14, color: '#425474', textAlign: 'center' }}>
+      <Text style={{ marginTop: 8, fontSize: 14, color: '#46524C', textAlign: 'center' }}>
         The app is still trying to load. You can wait, retry, or send this info to the
         developer.
       </Text>
@@ -164,7 +164,7 @@ function StallOverlay({
         <Pressable
           onPress={onCopy}
           style={{
-            backgroundColor: '#5A955A',
+            backgroundColor: '#2C4F45',
             paddingVertical: 12,
             paddingHorizontal: 16,
             borderRadius: 10,
@@ -173,14 +173,14 @@ function StallOverlay({
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#FDFBF7', fontWeight: '700' }}>
+          <Text style={{ color: '#F4F5F1', fontWeight: '700' }}>
             {copied ? 'Copied ✓' : 'Copy info'}
           </Text>
         </Pressable>
         <Pressable
           onPress={onReload}
           style={{
-            backgroundColor: '#6B9BCD',
+            backgroundColor: '#2C4F45',
             paddingVertical: 12,
             paddingHorizontal: 16,
             borderRadius: 10,
@@ -189,12 +189,12 @@ function StallOverlay({
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#FDFBF7', fontWeight: '700' }}>Reload UI</Text>
+          <Text style={{ color: '#F4F5F1', fontWeight: '700' }}>Reload UI</Text>
         </Pressable>
         <Pressable
           onPress={onDismiss}
           style={{
-            backgroundColor: '#E4DEBC',
+            backgroundColor: '#EAEDE7',
             paddingVertical: 12,
             paddingHorizontal: 16,
             borderRadius: 10,
@@ -202,12 +202,12 @@ function StallOverlay({
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#1E232E', fontWeight: '700' }}>Dismiss</Text>
+          <Text style={{ color: '#1A2420', fontWeight: '700' }}>Dismiss</Text>
         </Pressable>
       </View>
 
       <ScrollView style={{ flex: 1 }}>
-        <Text selectable style={{ color: '#425474', fontSize: 12, fontFamily: 'monospace' }}>
+        <Text selectable style={{ color: '#46524C', fontSize: 12, fontFamily: 'monospace' }}>
           {trail || '(boot trail empty — JS may not be executing)'}
         </Text>
       </ScrollView>
@@ -285,10 +285,10 @@ function AppShell({
   try {
     colors = useThemeColors();
   } catch {
-    colors = { bgPrimary: '#FBF9F5', isDark: false };
+    colors = { bgPrimary: '#F4F5F1', isDark: false };
   }
   const isDark = !!colors?.isDark;
-  const statusBarColor = colors?.bgPrimary ?? (isDark ? '#0F141C' : '#FBF9F5');
+  const statusBarColor = colors?.bgPrimary ?? (isDark ? '#0F1513' : '#F4F5F1');
   const barStyle = isDark ? 'light-content' : 'dark-content';
 
   // The navigation container's own background must match the app surface.
@@ -300,12 +300,12 @@ function AppShell({
       ...base,
       colors: {
         ...base.colors,
-        primary: colors?.accentPrimary ?? '#3E7B52',
-        background: colors?.bgPrimary ?? (isDark ? '#111722' : '#FAF8F5'),
-        card: colors?.bgCard ?? colors?.bgPrimary ?? (isDark ? '#17202E' : '#FFFFFF'),
-        text: colors?.textPrimary ?? (isDark ? '#E8ECF1' : '#1A212D'),
-        border: colors?.borderLight ?? (isDark ? '#243245' : '#EBE3D5'),
-        notification: colors?.accentPrimary ?? '#3E7B52',
+        primary: colors?.accentPrimary ?? '#2C4F45',
+        background: colors?.bgPrimary ?? (isDark ? '#0F1513' : '#F4F5F1'),
+        card: colors?.bgCard ?? colors?.bgPrimary ?? (isDark ? '#161E1B' : '#FFFFFF'),
+        text: colors?.textPrimary ?? (isDark ? '#ECF1EE' : '#1A2420'),
+        border: colors?.borderLight ?? (isDark ? '#26312C' : '#DEE3DC'),
+        notification: colors?.accentPrimary ?? '#2C4F45',
       },
     };
   }, [isDark, colors]);

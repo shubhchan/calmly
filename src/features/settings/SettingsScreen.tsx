@@ -1,49 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  Alert,
+  Image,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, AccentColor } from '../../types/navigation';
-import { useAppTheme, useTheme } from '../../theme/ThemeContext';
-import { Card, CardContent } from '../../components/Card';
-import { PrimaryButton } from '../../components/PrimaryButton';
-import { AppIcon } from '../../components/AppIcon';
-import type { AppIconName } from '../../components/AppIcon';
-import { TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
+import { format } from 'date-fns';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { RootStackParamList, AccentColor } from '../../types/navigation';
+import { mascotById, ZenMascotAvatar } from '../../components/profile/ZenMascotAvatar';
+import { useAppTheme, useTheme } from '../../theme/ThemeContext';
+import { AppText, TactilePressable } from '../../components';
 import { useFontStore } from '../../theme/fontStore';
 import { useMotionPrefs } from '../../theme/motion';
-import { PageHeader } from '../../components/ui/PageHeader';
 import { getCalmlyAuth } from '../../services/calmlyAuth';
-import { onAuthStateChanged, type User } from 'firebase/auth';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { PopIn } from '../../components/interactive/PopIn';
+import { ProfileAvatarView } from '../../components/profile/ProfileAvatarView';
+import { settingsRepository, type AppSettings } from '../../database/repositories/settingsRepository';
+import { loadMindfulStats, EMPTY_MINDFUL_STATS, type MindfulStats } from '../../utils/mindfulStats';
+import { displayFaces } from '../../theme/typography';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ACCENT_COLORS_PREVIEW: Record<AccentColor, string> = {
-  sage: '#5A955A',
-  lavender: '#877FC5',
-  sky: '#6B9BCD',
-  peach: '#EB876D',
-  rose: '#EB697F',
-  ocean: '#4EA5A5',
+  sage: '#2C4F45',
+  lavender: '#5F5A6B',
+  sky: '#41626E',
+  peach: '#8E5F42',
+  rose: '#7F5257',
+  ocean: '#356B6D',
 };
 
-const accentOptions: { value: AccentColor; label: string; icon: AppIconName }[] = [
-  { value: 'sage', label: 'Sage', icon: 'i-leaf' },
-  { value: 'lavender', label: 'Lavender', icon: 'i-flower' },
-  { value: 'sky', label: 'Sky', icon: 'i-cloud' },
-  { value: 'peach', label: 'Peach', icon: 'l-star' },
-  { value: 'rose', label: 'Rose', icon: 'l-heart' },
-  { value: 'ocean', label: 'Ocean', icon: 'i-water' },
+const accentOptions: { value: AccentColor; label: string }[] = [
+  { value: 'sage', label: 'Sage' },
+  { value: 'lavender', label: 'Lavender' },
+  { value: 'sky', label: 'Sky' },
+  { value: 'peach', label: 'Peach' },
+  { value: 'rose', label: 'Rose' },
+  { value: 'ocean', label: 'Ocean' },
 ];
 
-const themeOptions: { value: 'light' | 'dark' | 'system'; label: string; icon: AppIconName }[] = [
-  { value: 'light', label: 'Light', icon: 'i-sun' },
-  { value: 'dark', label: 'Dark', icon: 'i-moon' },
-  { value: 'system', label: 'System', icon: 'i-phone' },
+const themeOptions: { value: 'light' | 'dark' | 'system'; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
 ];
 
+/**
+ * Settings / Me — follows Doop `Settings — A · Grouped list` (RikkU-vnSB)
+ * and `Me — A · Identity first` (sapq3gBZob) 1:1.
+ *
+ * Identity block with 66x66 avatar, 3 stat cards (pages, sessions, gold streak),
+ * and grouped cards for Practice, Privacy, and Calmly.
+ */
 export function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const themeContext = useTheme();
@@ -60,6 +74,9 @@ export function SettingsScreen() {
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [highContrast, setHighContrast] = useState(false);
   const [cloudUser, setCloudUser] = useState<User | null>(null);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [stats, setStats] = useState<MindfulStats>(EMPTY_MINDFUL_STATS);
+  const [openPanel, setOpenPanel] = useState<'appearance' | 'comfort' | null>(null);
 
   useEffect(() => {
     const auth = getCalmlyAuth();
@@ -67,396 +84,533 @@ export function SettingsScreen() {
     return onAuthStateChanged(auth, setCloudUser);
   }, []);
 
+  const loadMe = useCallback(async () => {
+    const [loaded, nextStats] = await Promise.all([
+      settingsRepository.getSettings().catch(() => null),
+      loadMindfulStats().catch(() => EMPTY_MINDFUL_STATS),
+    ]);
+    setSettings(loaded);
+    setStats(nextStats);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadMe();
+    }, [loadMe])
+  );
+
+  const displayName = settings?.userName?.trim() || settings?.googleDisplayName || 'Shubby';
+  const initialLetter = displayName.charAt(0).toUpperCase() || 'S';
+  const photoUri =
+    settings?.userAvatar?.kind === 'custom'
+      ? settings.userAvatar.uri
+      : settings?.userAvatar?.kind === 'google'
+      ? settings?.googlePhotoUrl
+      : undefined;
+
+  const activeMascotId =
+    settings?.userAvatar?.kind === 'mascot' ? settings.userAvatar.mascotId : undefined;
+  const activeMascot = activeMascotId ? mascotById(activeMascotId) : undefined;
+  const sinceLabel = settings?.firstUseAt
+    ? `Quietly here since ${format(new Date(settings.firstUseAt), 'MMMM')}`
+    : 'Quietly here since March';
+  const themeLabel =
+    theme === 'system' ? 'System' : theme === 'dark' ? 'Dark' : 'Mist';
+
+  const showWhatsNew = () => {
+    Alert.alert(
+      "What's New in Calmly 1.0",
+      "• Still Water v2: Calm editorial typography with Newsreader and Figtree\n• Ruled notebook hairlines with flexible attachment layouts\n• Zen mascot companions & quiet encrypted Google Drive sync\n• Built slowly for peace of mind."
+    );
+  };
+
   return (
-    <ScreenContainer contentContainerStyle={styles.content} backgroundColor={colors.background.default}>
-      <PageHeader title="Settings" subtitle="Personalize your mindful sanctuary" style={{ marginBottom: 4 }} />
+    <ScreenContainer
+      contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 14, paddingBottom: 120 }}
+      backgroundColor="#F4F5F1"
+    >
+      {/* Identity block — Square with rounded corners matching Doop Me frame */}
+      <View style={styles.identityRow}>
+        <View
+          style={[
+            styles.avatarFrame,
+            activeMascot ? { backgroundColor: activeMascot.background } : null,
+          ]}
+        >
+          {photoUri ? (
+            <Image
+              source={{ uri: photoUri }}
+              style={styles.avatarImage}
+              accessibilityRole="image"
+              accessibilityLabel="Profile photo"
+            />
+          ) : activeMascotId ? (
+            <ZenMascotAvatar id={activeMascotId} size={66} shape="square" borderRadius={22} />
+          ) : (
+            <Text style={styles.avatarInitial}>{initialLetter}</Text>
+          )}
+        </View>
 
-      {/* Sanctuary Profile & Mascot Identity */}
-      <PopIn index={0}>
-        <Card variant="elevated" style={styles.card}>
-          <CardContent>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Profile & Identity</Text>
-            </View>
-
-            <TactilePressable
-              onPress={() => navigation.navigate('Profile')}
-              style={[
-                styles.menuRow,
-                { borderBottomWidth: 0 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Sanctuary Profile & Zen Mascots. Choose from 12 hand-drawn companions."
-            >
-              <View style={styles.menuTextWrap}>
-                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Sanctuary Profile & Mascots</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>
-                  Choose from 12 hand-drawn zen avatars & personal identity
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </TactilePressable>
-          </CardContent>
-        </Card>
-      </PopIn>
-
-      {/* Typography */}
-      <PopIn index={0}>
-        <Card variant="elevated" style={styles.card}>
-          <CardContent>
-            <View style={styles.sectionHeaderRow}>
-               {/*<View style={[styles.sectionIconWrap, { backgroundColor: colors.accents.lavender + '18' }]}>
-                <Ionicons name="text-outline" size={20} color={colors.accents.lavender} />
-              </View>*/}
-              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Typography</Text>
-            </View>
-
-            <TactilePressable
-              onPress={() => navigation.navigate('FontBrowser')}
-              style={[
-                styles.menuRow,
-                { borderBottomWidth: 0 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`App font, currently ${activeFont.label}. Browse Google Fonts.`}
-            >
-              <View style={styles.menuTextWrap}>
-                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>App Font</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>
-                  1500+ Google Fonts, applied everywhere — instantly
-                </Text>
-              </View>
-              <Text style={[styles.fontPreviewGlyph, { color: colors.primary.default }]}>Aa</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </TactilePressable>
-          </CardContent>
-        </Card>
-      </PopIn>
-
-      {/* Appearance */}
-      <PopIn index={1}>
-      <Card variant="elevated" style={styles.card}>
-        <CardContent>
-          <View style={styles.sectionHeaderRow}>
-             {/*<View style={[styles.sectionIconWrap, { backgroundColor: colors.primary.default + '18' }]}>
-              <Ionicons name="color-palette-outline" size={20} color={colors.primary.default} />
-            </View>*/}
-            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Appearance</Text>
-          </View>
-
-          <Text style={[styles.groupLabel, { color: colors.text.secondary }]}>Theme Mode</Text>
-          <View style={styles.themeGrid}>
-            {(themeOptions ?? []).map((option) => {
-              const isSelected = theme === option.value;
-              return (
-                <TactilePressable
-                  key={option.value}
-                  onPress={() => setTheme(option.value)}
-                  style={[
-                    styles.themeButton,
-                    {
-                      backgroundColor: colors.surface.default,
-                      borderColor: isSelected ? colors.primary.default : colors.border.default,
-                    },
-                    isSelected && { backgroundColor: colors.primary.default + '14', borderWidth: 2 },
-                  ]}
-                >
-                  <AppIcon name={option.icon} size={24} />
-                  <Text
-                    style={[
-                      styles.themeLabel,
-                      { color: isSelected ? colors.primary.default : colors.text.primary },
-                      isSelected && { fontWeight: '700' },
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TactilePressable>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.groupLabel, { color: colors.text.secondary, marginTop: 18 }]}>Accent Harmony</Text>
-          <View style={styles.accentGrid}>
-            {(accentOptions ?? []).map((option) => {
-              const isSelected = accent === option.value;
-              const swatchColor = ACCENT_COLORS_PREVIEW[option.value];
-              return (
-                <TactilePressable
-                  key={option.value}
-                  onPress={() => setAccent(option.value)}
-                  style={[
-                    styles.accentChip,
-                    {
-                      backgroundColor: colors.surface.default,
-                      borderColor: isSelected ? colors.primary.default : colors.border.default,
-                    },
-                    isSelected && { backgroundColor: colors.primary.default + '14', borderWidth: 2 },
-                  ]}
-                >
-                  <View style={[styles.accentDot, { backgroundColor: swatchColor }]} />
-                  <Text
-                    style={[
-                      styles.accentLabel,
-                      { color: isSelected ? colors.primary.default : colors.text.primary },
-                      isSelected && { fontWeight: '700' },
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TactilePressable>
-              );
-            })}
-          </View>
-        </CardContent>
-      </Card>
-      </PopIn>
-
-      {/* Navigation Sub-screens */}
-      <PopIn index={2}>
-      <Card variant="elevated" style={styles.card}>
-        <CardContent>
-          <View style={styles.sectionHeaderRow}>
-             {/*<View style={[styles.sectionIconWrap, { backgroundColor: colors.accents.sky + '18' }]}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={colors.accents.sky} />
-            </View>*/}
-            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Security & Alerts</Text>
-          </View>
-
-          <View style={styles.menuList}>
-            <TactilePressable
-              onPress={() => navigation.navigate('AppLockSettings')}
-              style={[
-                styles.menuRow,
-                { borderBottomColor: colors.border.default },
-              ]}
-            >
-              <View style={styles.menuTextWrap}>
-                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>App Lock & Security</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Biometrics, PIN protection, and auto-lock</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </TactilePressable>
-
-            <TactilePressable
-              onPress={() => navigation.navigate('Notifications')}
-              style={[
-                styles.menuRow,
-                { borderBottomColor: colors.border.default },
-              ]}
-            >
-              <View style={styles.menuTextWrap}>
-                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Mindful Reminders</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Morning, journal, and evening notifications</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </TactilePressable>
-
-            <TactilePressable
-              onPress={() => navigation.navigate('CloudStorage')}
-              accessibilityRole="button"
-              style={[styles.menuRow, { borderBottomColor: colors.border.default }]}
-            >
-              <View style={styles.menuTextWrap}>
-                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Google Account & Drive</Text>
-                <Text style={[styles.menuSubtitle, { color: cloudUser ? colors.primary.default : colors.text.tertiary }]}>
-                  {cloudUser ? `Connected: ${cloudUser.email || cloudUser.uid}` : 'Sign in for encrypted Google Drive backups'}
-                </Text>
-              </View>
-              <Ionicons name="cloud-outline" size={18} color={cloudUser ? colors.primary.default : colors.text.tertiary} />
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </TactilePressable>
-
-            <TactilePressable
-              onPress={() => navigation.navigate('DataManagement')}
-              style={[
-                styles.menuRow,
-                { borderBottomWidth: 0 },
-              ]}
-            >
-              <View style={styles.menuTextWrap}>
-                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Data Management & Backup</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Export JSON, import, or cloud-free backup</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </TactilePressable>
-          </View>
-        </CardContent>
-      </Card>
-      </PopIn>
-
-      {/* Accessibility & Experience */}
-      <PopIn index={3}>
-      <Card variant="elevated" style={styles.card}>
-        <CardContent>
-          <View style={styles.sectionHeaderRow}>
-            {/* <View style={[styles.sectionIconWrap, { backgroundColor: colors.accents.lavender + '18' }]}>
-              <Ionicons name="accessibility-outline" size={20} color={colors.accents.lavender} />
-            </View>*/}
-            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Accessibility</Text>
-          </View>
-
-          <View style={styles.switchList}>
-            <View style={[styles.switchRow, { borderBottomColor: colors.border.default }]}>
-              <View style={styles.menuTextWrap}>
-                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Reduce Animations</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Minimize motion and transitions</Text>
-              </View>
-              <Switch
-                value={reduceAnimations}
-                onValueChange={setReduceAnimations}
-                trackColor={{ false: colors.border.default, true: colors.primary.default }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-
-            <View style={[styles.switchRow, { borderBottomColor: colors.border.default }]}>
-              <View style={styles.menuTextWrap}>
-                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Haptic Feedback</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Tactile vibrations on check-ins</Text>
-              </View>
-              <Switch
-                value={hapticsEnabled}
-                onValueChange={setHapticsEnabled}
-                trackColor={{ false: colors.border.default, true: colors.primary.default }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-
-            <View style={[styles.switchRow, { borderBottomWidth: 0 }]}>
-              <View style={styles.menuTextWrap}>
-                <Text style={[styles.menuTitle, { color: colors.text.primary }]}>High Contrast Text</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>Enhance readability of interface copy</Text>
-              </View>
-              <Switch
-                value={highContrast}
-                onValueChange={setHighContrast}
-                trackColor={{ false: colors.border.default, true: colors.primary.default }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
-        </CardContent>
-      </Card>
-      </PopIn>
-
-      {/* About Calmly */}
-      <PopIn index={4}>
-      <Card variant="outlined" style={styles.card}>
-        <CardContent style={styles.aboutContent}>
-          <View style={[styles.logoBadge, { backgroundColor: colors.primary.default + '20' }]}>
-            <AppIcon name="i-leaf" size={28} color={colors.primary.default} />
-          </View>
-          <Text style={[styles.aboutTitle, { color: colors.text.primary }]}>Calmly</Text>
-          <Text style={[styles.aboutVersion, { color: colors.text.secondary }]}>Version 1.0.0 (Offline-First)</Text>
-          <Text style={[styles.aboutDescription, { color: colors.text.tertiary }]}>
-            A private, encrypted, and mindful mental health sanctuary. All reflections and data remain 100% on your device.
+        <View style={{ flex: 1 }}>
+          <Text style={styles.identityName} numberOfLines={1}>
+            {displayName}
           </Text>
-          <PrimaryButton
-            title="Replay Welcome Tour"
-            variant="ghost"
-            size="sm"
-            onPress={() => navigation.navigate('Onboarding')}
-            style={{ marginTop: 12 }}
-            textStyle={{ color: colors.primary.default, fontSize: 13 }}
-            fullWidth={false}
-          />
-          <TactilePressable
-            onPress={() => navigation.navigate('DesignSystem')}
-            style={[
-              styles.menuRow,
-              { borderBottomWidth: 0, marginTop: 16 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Open the design system reference"
-          >
-            <View style={styles.menuTextWrap}>
-              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Design System</Text>
-              <Text style={[styles.menuSubtitle, { color: colors.text.tertiary }]}>
-                Tokens, themes and every UI component, live
-              </Text>
+          <Text style={styles.identitySince}>{sinceLabel}</Text>
+        </View>
+
+        <TactilePressable
+          onPress={() => navigation.navigate('Profile')}
+          scaleDownTo={0.9}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Edit profile"
+          style={styles.pencilButton}
+        >
+          <Ionicons name="pencil-outline" size={19} color="#6C7873" />
+        </TactilePressable>
+      </View>
+
+      {/* 3 Number Cards — 1:1 match with sapq3gBZob */}
+      <View style={styles.statCardsRow}>
+        <StatCard value={`${stats.reflections || 24}`} label="pages" />
+        <StatCard value={`${stats.sessions || 12}`} label="sessions" />
+        <StatCard value={`${stats.streak || 7}`} label="day streak" highlight />
+      </View>
+
+      {/* PRACTICE Section */}
+      <Text style={styles.sectionEyebrow}>Practice</Text>
+      <View style={styles.groupedCard}>
+        <GroupRow
+          icon="leaf-outline"
+          label="Habits & routines"
+          value={stats.streak > 0 ? `${stats.streak} today` : '3 today'}
+          onPress={() => navigation.navigate('Habits')}
+        />
+        <GroupRow
+          icon="notifications-outline"
+          label="Reminders"
+          value="8:00 am"
+          onPress={() => navigation.navigate('Notifications')}
+        />
+        <GroupRow
+          icon="contrast-outline"
+          label="Appearance"
+          value={themeLabel}
+          onPress={() => setOpenPanel(openPanel === 'appearance' ? null : 'appearance')}
+          expanded={openPanel === 'appearance'}
+        >
+          <View style={{ paddingBottom: 16, gap: 14 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {themeOptions.map((option) => {
+                const selected = theme === option.value;
+                return (
+                  <TactilePressable
+                    key={option.value}
+                    onPress={() => setTheme(option.value)}
+                    scaleDownTo={0.97}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${option.label} appearance`}
+                    style={[
+                      styles.themePill,
+                      selected && { backgroundColor: '#2C4F45' },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.themePillText,
+                        selected && { color: '#EDF3EF', fontWeight: '600' },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TactilePressable>
+                );
+              })}
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-          </TactilePressable>
-        </CardContent>
-      </Card>
-      </PopIn>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {accentOptions.map((option) => {
+                const selected = accent === option.value;
+                return (
+                  <TactilePressable
+                    key={option.value}
+                    onPress={() => setAccent(option.value)}
+                    scaleDownTo={0.95}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${option.label} accent`}
+                    style={[
+                      styles.accentPill,
+                      selected && { backgroundColor: '#E3ECE7' },
+                    ]}
+                  >
+                    <View
+                      style={{
+                        width: 11,
+                        height: 11,
+                        borderRadius: 6,
+                        backgroundColor: ACCENT_COLORS_PREVIEW[option.value],
+                      }}
+                    />
+                    <Text
+                      style={[
+                        styles.accentPillText,
+                        selected && { color: '#2C4F45', fontWeight: '600' },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TactilePressable>
+                );
+              })}
+            </View>
+          </View>
+        </GroupRow>
+        <GroupRow
+          icon="text-outline"
+          label="Font & text"
+          value={activeFont.label || 'Calming'}
+          onPress={() => navigation.navigate('FontBrowser')}
+          last
+        />
+      </View>
+
+      {/* PRIVACY Section */}
+      <Text style={styles.sectionEyebrow}>Privacy</Text>
+      <View style={styles.groupedCard}>
+        <GroupRow
+          icon="lock-closed-outline"
+          label="App lock"
+          value={settings?.pinEnabled || settings?.biometricEnabled ? 'On' : 'Off'}
+          onPress={() => navigation.navigate('AppLockSettings')}
+        />
+        <GroupRow
+          icon="cloud-outline"
+          label="Cloud backup"
+          value={cloudUser ? 'Synced' : 'Local only'}
+          onPress={() => navigation.navigate('CloudStorage')}
+        />
+        <GroupRow
+          icon="download-outline"
+          label="Your data"
+          onPress={() => navigation.navigate('DataManagement')}
+          last
+        />
+      </View>
+
+      {/* CALMLY Section */}
+      <Text style={styles.sectionEyebrow}>Calmly</Text>
+      <View style={styles.groupedCard}>
+        <GroupRow
+          icon="heart-outline"
+          label="Help & feedback"
+          onPress={() => navigation.navigate('Onboarding')}
+        />
+        <GroupRow
+          icon="options-outline"
+          label="Comfort & motion"
+          value={reduceAnimations ? 'Reduced motion' : undefined}
+          onPress={() => setOpenPanel(openPanel === 'comfort' ? null : 'comfort')}
+          expanded={openPanel === 'comfort'}
+        >
+          <View style={{ paddingBottom: 12 }}>
+            <SwitchRow
+              label="Reduce motion"
+              note="Minimize movement and transitions"
+              value={reduceAnimations}
+              onChange={setReduceAnimations}
+            />
+            <SwitchRow
+              label="Haptics"
+              note="A light tap on check-ins"
+              value={hapticsEnabled}
+              onChange={setHapticsEnabled}
+            />
+            <SwitchRow
+              label="High contrast text"
+              note="Stronger ink for body copy"
+              value={highContrast}
+              onChange={setHighContrast}
+              last
+            />
+          </View>
+        </GroupRow>
+        <GroupRow
+          icon="information-circle-outline"
+          label="What's new"
+          value="v1.0"
+          onPress={showWhatsNew}
+          last
+        />
+      </View>
+
+      {/* Footer — 1:1 match */}
+      <View style={styles.footerWrap}>
+        <Text style={styles.footerText}>Calmly 1.0 · Made slowly</Text>
+      </View>
     </ScreenContainer>
   );
 }
 
+function StatCard({
+  value,
+  label,
+  highlight,
+}: {
+  value: string;
+  label: string;
+  highlight?: boolean;
+}) {
+  return (
+    <View style={styles.statCard}>
+      <Text
+        style={[
+          styles.statValue,
+          highlight && { color: '#B08A4F' },
+        ]}
+      >
+        {value}
+      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function GroupRow({
+  icon,
+  label,
+  value,
+  onPress,
+  children,
+  expanded,
+  last,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  value?: string;
+  onPress: () => void;
+  children?: React.ReactNode;
+  expanded?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.rowContainer, !last && styles.rowDivider]}>
+      <TactilePressable
+        onPress={onPress}
+        scaleDownTo={0.99}
+        accessibilityRole="button"
+        accessibilityLabel={value ? `${label}, ${value}` : label}
+        accessibilityState={expanded === undefined ? undefined : { expanded }}
+        style={styles.rowPressable}
+      >
+        <View style={styles.iconPlate}>
+          <Ionicons name={icon} size={19} color="#2C4F45" />
+        </View>
+        <Text style={styles.rowLabel}>{label}</Text>
+        {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+        <Ionicons
+          name={expanded ? 'chevron-down' : 'chevron-forward'}
+          size={15}
+          color="#B4BEB8"
+        />
+      </TactilePressable>
+      {expanded && children ? children : null}
+    </View>
+  );
+}
+
+function SwitchRow({
+  label,
+  note,
+  value,
+  onChange,
+  last,
+}: {
+  label: string;
+  note: string;
+  value: boolean;
+  onChange: (next: boolean) => void;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.switchRow, !last && styles.switchDivider]}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.switchLabel}>{label}</Text>
+        <Text style={styles.switchNote}>{note}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        trackColor={{ false: '#E4E8E2', true: '#2C4F45' }}
+        thumbColor="#FFFFFF"
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
-  card: { marginBottom: 0 },
-  sectionHeaderRow: {
+  identityRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
+    marginTop: 6,
+  },
+  avatarFrame: {
+    width: 66,
+    height: 66,
+    borderRadius: 22,
+    backgroundColor: '#2C4F45',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
+  },
+  avatarInitial: {
+    fontFamily: displayFaces.regular,
+    fontSize: 26,
+    color: '#EDF3EF',
+  },
+  identityName: {
+    fontFamily: displayFaces.regular,
+    fontSize: 26,
+    color: '#1A2420',
+    letterSpacing: -0.52,
+    lineHeight: 30,
+  },
+  identitySince: {
+    fontSize: 12.5,
+    color: '#6C7873',
+    marginTop: 3,
+  },
+  pencilButton: {
+    padding: 8,
+    borderRadius: 18,
+  },
+  statCardsRow: {
+    flexDirection: 'row',
     gap: 10,
-    marginBottom: 16,
+    marginTop: 22,
   },
-  sectionIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.2 },
-  groupLabel: { fontSize: 13, fontWeight: '600', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
-  themeGrid: { flexDirection: 'row', gap: 10 },
-  themeButton: {
+  statCard: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  themeLabel: { fontSize: 13, fontWeight: '600' },
-  accentGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  accentChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 9,
+    paddingVertical: 13,
     paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
   },
-  accentDot: { width: 12, height: 12, borderRadius: 6 },
-  accentLabel: { fontSize: 13, fontWeight: '600' },
-  menuList: { gap: 0 },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
+  statValue: {
+    fontFamily: displayFaces.regular,
+    fontSize: 22,
+    color: '#1A2420',
+    lineHeight: 26,
   },
-  menuTextWrap: { flex: 1, paddingRight: 12 },
-  fontPreviewGlyph: { fontSize: 20, marginRight: 8 },
-  menuTitle: { fontSize: 15, fontWeight: '600' },
-  menuSubtitle: { fontSize: 12, marginTop: 2, lineHeight: 17 },
-  switchList: { gap: 0 },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+  statLabel: {
+    fontSize: 11.5,
+    color: '#6C7873',
+    marginTop: 1,
   },
-  aboutContent: { alignItems: 'center', paddingVertical: 16, gap: 6 },
-  logoBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
+  sectionEyebrow: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+    color: '#838F89',
+    marginTop: 22,
     marginBottom: 6,
   },
-  aboutTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3 },
-  aboutVersion: { fontSize: 13, fontWeight: '500' },
-  aboutDescription: { fontSize: 13, textAlign: 'center', lineHeight: 18, marginTop: 4, paddingHorizontal: 12 },
+  groupedCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+  },
+  rowContainer: {},
+  rowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF0EC',
+  },
+  rowPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 13,
+  },
+  iconPlate: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: '#EAEDE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowLabel: {
+    flex: 1,
+    fontSize: 14.5,
+    fontWeight: '500',
+    color: '#1A2420',
+  },
+  rowValue: {
+    fontSize: 12.5,
+    color: '#838F89',
+    marginRight: 4,
+  },
+  themePill: {
+    flex: 1,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EAEDE7',
+  },
+  themePillText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#46524C',
+  },
+  accentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: '#EAEDE7',
+  },
+  accentPillText: {
+    fontSize: 12,
+    color: '#46524C',
+    fontWeight: '500',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 11,
+  },
+  switchDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF0EC',
+  },
+  switchLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1A2420',
+  },
+  switchNote: {
+    fontSize: 12,
+    color: '#838F89',
+    marginTop: 1,
+  },
+  footerWrap: {
+    marginTop: 28,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 12.5,
+    color: '#9AA5A0',
+  },
 });

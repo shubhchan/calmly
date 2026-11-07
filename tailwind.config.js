@@ -6,9 +6,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['OddlyCalming', 'PatrickHand_400Regular', 'sans-serif'],
-        serif: ['OddlyCalming', 'PatrickHand_400Regular', 'serif'],
-        calming: ['OddlyCalming', 'PatrickHand_400Regular', 'casual'],
+        sans: ['PlusJakartaSans_400Regular', 'system-ui', 'sans-serif'],
+        serif: ['Newsreader_400Regular', 'Georgia', 'serif'],
       },
       fontSize: {
         'display-sm': ['28px', { lineHeight: '34px' }],

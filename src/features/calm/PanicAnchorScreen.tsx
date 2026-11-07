@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, PanicAnchorIllustration, ScreenHeader, TactilePressable } from '../../components';
+import { AppText, Button, PanicAnchorIllustration, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { soundService } from '../../services/soundService';
-import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { useTabBarOffset } from '../../utils/useTabBarOffset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
-import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
+/**
+ * Panic anchor — three body-first steps, in order.
+ *
+ * The page stays quiet: one illustration, one explanation, three short
+ * instructions, one way to add rain, one way out.
+ */
 export function PanicAnchorScreen() {
   const navigation = useNavigation();
   const { colors } = useAppTheme();
@@ -36,301 +38,189 @@ export function PanicAnchorScreen() {
 
   return (
     <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
-      <ScreenHeader title="Acute Panic Anchor" subtitle="Biological SOS Aid" bordered />
+      <ScreenHeader title="Panic anchor" subtitle="In the moment" />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]} showsVerticalScrollIndicator={false}>
-        {/* Hero Card with SVG Illustration */}
-        <Card variant="elevated" style={[styles.heroCard, { borderColor: (colors.accents.rose) + '50' }]}>
-          <CardContent style={styles.heroCardContent}>
-            <View style={[styles.heroAuraGlow, { backgroundColor: (colors.accents.rose) + '12' }]}>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.calmHero('panic')}
-                sharedTransitionStyle={sharedElementStyle}
-              >
-                <PanicAnchorIllustration width={190} height={155} />
-              </Animated.View>
-            </View>
-            <View style={styles.heroBadgeRow}>
-              <View
-                style={[
-                  styles.heroBadge,
-                  { backgroundColor: (colors.accents.rose) + '15', borderColor: (colors.accents.rose) + '40' },
-                ]}
-              >
-                <Ionicons name="heart" size={12} color={colors.accents.rose} />
-                <Text style={[styles.heroBadgeText, { color: colors.accents.rose }]}>You Are Safe</Text>
-              </View>
-              <Text style={[styles.heroEstText, { color: colors.text.tertiary }]}>Surge will pass shortly</Text>
-            </View>
-          </CardContent>
-        </Card>
-
-        {/* Value Proposition */}
-        <View style={styles.section}>
-          <Text style={[styles.headline, { color: colors.text.primary }]}>
-            This physiological surge will pass in minutes
-          </Text>
-          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
-            Panic is a temporary surge of adrenaline that feels terrifying but is biologically harmless. You cannot stay in panic indefinitely—your body is already working to metabolize it.
-          </Text>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ alignItems: 'center' }}>
+          <View
+            style={{
+              width: '100%',
+              paddingVertical: 18,
+              borderRadius: 20,
+              backgroundColor: colors.primary.subtle,
+              alignItems: 'center',
+            }}
+          >
+            <PanicAnchorIllustration width={180} height={140} />
+          </View>
         </View>
 
-        {/* Step 1: Interactive Physiological Sigh */}
-        <Card variant="elevated" style={styles.stepCard}>
-          <CardContent style={styles.stepContent}>
-            <View style={styles.stepHeaderRow}>
-              <View style={[styles.stepNumOrb, { backgroundColor: colors.primary.default }]}>
-                <Text style={styles.stepNumText}>1</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.stepTitle, { color: colors.text.primary }]}>
-                  Double Inhale Physiological Sigh
-                </Text>
-                <Text style={[styles.stepSubtitle, { color: colors.primary.default }]}>
-                  Fastest way to reinflate collapsed alveoli & dump CO₂
-                </Text>
-              </View>
-            </View>
-            <Text style={[styles.stepBody, { color: colors.text.secondary }]}>
-              Take two consecutive deep inhales through your nose back-to-back without exhaling, then one long, audible, slow exhale through open mouth.
-            </Text>
-            <TactilePressable
-              onPress={handleSighPress}
-              scaleDownTo={0.97}
-              hapticStyle="medium"
-              style={[
-                styles.sighButton,
-                {
-                  backgroundColor: colors.primary.subtle,
-                  borderColor: colors.primary.subtleBorder,
-                },
-              ]}
-            >
-              <Ionicons name="sparkles" size={18} color={colors.primary.default} />
-              <Text style={[styles.sighButtonText, { color: colors.primary.default }]}>
-                {sighCount === 0
-                  ? 'Tap to complete 1st sigh (Target: 3)'
-                  : sighCount < 3
-                    ? `Completed ${sighCount} of 3 sighs — Tap for next`
-                    : '✓ 3 Sighs completed! Heart rate dropping.'}
-              </Text>
-            </TactilePressable>
-          </CardContent>
-        </Card>
+        <View style={{ marginTop: 24 }}>
+          <AppText variant="h3">This will pass</AppText>
+          <AppText variant="body" tone="secondary" style={{ marginTop: 8 }}>
+            A panic surge feels enormous, but it is temporary and not dangerous. Your body is
+            already working to clear it.
+          </AppText>
+        </View>
 
-        {/* Step 2: Mammalian Dive Reflex */}
-        <Card variant="outlined" style={styles.stepCard}>
-          <CardContent style={styles.stepContent}>
-            <View style={styles.stepHeaderRow}>
-              <View style={[styles.stepNumOrb, { backgroundColor: colors.accents.sky }]}>
-                <Text style={styles.stepNumText}>2</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.stepTitle, { color: colors.text.primary }]}>
-                  Cold Water Shock Reflex
-                </Text>
-                <Text style={[styles.stepSubtitle, { color: colors.accents.sky }]}>
-                  Activates the mammalian dive reflex
-                </Text>
-              </View>
-            </View>
-            <Text style={[styles.stepBody, { color: colors.text.secondary }]}>
-              Splash ice-cold water onto your eyelids, cheeks, and forehead, or hold a cold beverage can to your neck. This reflex biochemically forces heart rate downward in 10 seconds.
-            </Text>
-          </CardContent>
-        </Card>
+        <View style={{ marginTop: 32 }}>
+          <Step number={1} title="Two inhales, one long exhale">
+            Breathe in through your nose, add a second short inhale, then exhale slowly through
+            your mouth.
+          </Step>
+          <TactilePressable
+            onPress={handleSighPress}
+            scaleDownTo={0.98}
+            hapticStyle="medium"
+            accessibilityRole="button"
+            accessibilityLabel="Record a completed sigh"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              paddingVertical: 13,
+              paddingHorizontal: 14,
+              borderRadius: 16,
+              backgroundColor: colors.primary.subtle,
+              marginTop: 12,
+            }}
+          >
+            <Ionicons name="leaf-outline" size={16} color={colors.primary.default} />
+            <AppText variant="label" tone="link">
+              {sighCount === 0
+                ? 'Tap after each sigh · target 3'
+                : sighCount < 3
+                  ? `${sighCount} of 3 sighs`
+                  : 'Three sighs done'}
+            </AppText>
+          </TactilePressable>
 
-        {/* Step 3: Somatic Hand-on-Heart Anchor */}
-        <Card variant="outlined" style={styles.stepCard}>
-          <CardContent style={styles.stepContent}>
-            <View style={styles.stepHeaderRow}>
-              <View style={[styles.stepNumOrb, { backgroundColor: colors.accents.peach }]}>
-                <Text style={styles.stepNumText}>3</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.stepTitle, { color: colors.text.primary }]}>
-                  Tactile Hand-on-Heart
-                </Text>
-                <Text style={[styles.stepSubtitle, { color: colors.accents.peach }]}>
-                  Releases soothing oxytocin
-                </Text>
-              </View>
-            </View>
-            <Text style={[styles.stepBody, { color: colors.text.secondary }]}>
-              Place one firm, warm palm directly over the center of your chest. Feel the solid weight of your hand. Whisper silently: “I am safe in this room. My body knows how to handle this.”
-            </Text>
-          </CardContent>
-        </Card>
+          <Step number={2} title="Cool your face">
+            Splash cold water on your cheeks and forehead, or hold something cold against your
+            neck. This slows your heart within seconds.
+          </Step>
 
-        {/* Instant Nature Soundscape Anchor */}
+          <Step number={3} title="Hand on heart">
+            Rest one palm on your chest. Feel its weight. Say silently, “I am safe in this room.”
+          </Step>
+        </View>
+
         <View
-          style={[
-            styles.soundRow,
-            {
-              backgroundColor: colors.surface.default,
-              borderColor: colors.border.default,
-            },
-          ]}
+          style={{
+            marginTop: 32,
+            paddingTop: 20,
+            borderTopWidth: 1,
+            borderTopColor: colors.border.default,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+          }}
         >
-          <Text style={[styles.soundPromptText, { color: colors.text.secondary }]}>
-            Need soothing acoustics right now?
-          </Text>
+          <AppText variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
+            Add gentle rain
+          </AppText>
           <TactilePressable
             onPress={handleToggleRain}
             scaleDownTo={0.96}
-            style={[
-              styles.soundToggleBtn,
-              {
-                backgroundColor: isPlayingRain ? colors.primary.default : colors.primary.subtle,
-                borderColor: isPlayingRain ? colors.primary.default : colors.primary.subtleBorder,
-              },
-            ]}
+            accessibilityRole="button"
+            accessibilityLabel={isPlayingRain ? 'Pause rain' : 'Play rain'}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 7,
+              paddingHorizontal: 15,
+              paddingVertical: 10,
+              borderRadius: 999,
+              backgroundColor: isPlayingRain ? colors.primary.default : colors.surface.muted,
+            }}
           >
             <Ionicons
-              name={isPlayingRain ? 'pause' : 'volume-medium'}
-              size={18}
-              color={isPlayingRain ? '#FFFFFF' : colors.primary.default}
+              name={isPlayingRain ? 'pause' : 'play'}
+              size={14}
+              color={isPlayingRain ? colors.primary.foreground : colors.text.secondary}
             />
-            <Text style={[styles.soundToggleBtnText, { color: isPlayingRain ? '#FFFFFF' : colors.primary.default }]}>
-              {isPlayingRain ? 'Pause Rain' : 'Play Gentle Rain'}
-            </Text>
+            <AppText variant="caption" tone={isPlayingRain ? 'onPrimary' : 'secondary'}>
+              {isPlayingRain ? 'Pause' : 'Play'}
+            </AppText>
           </TactilePressable>
         </View>
       </ScrollView>
 
-      {/* Floating Bottom Action */}
       <View
         style={[
           styles.bottomBar,
           {
-            paddingBottom: Math.max(insets.bottom + 14, 24),
+            paddingBottom: Math.max(insets.bottom + 12, 24),
             backgroundColor: colors.background.default,
             borderTopColor: colors.border.default,
           },
         ]}
       >
-        <PrimaryButton
-          title="Return to Calm Sanctuary"
+        <Button
+          title="Back to calm"
           variant="secondary"
           size="lg"
           onPress={() => navigation.goBack()}
-          leftIcon={<Ionicons name="checkmark-circle-outline" size={20} color={colors.primary.default} />}
+          leftIcon={(color) => <Ionicons name="arrow-back-outline" size={18} color={color} />}
         />
       </View>
     </ScreenContainer>
   );
 }
 
+function Step({ number, title, children }: { number: number; title: string; children: React.ReactNode }) {
+  const { colors } = useAppTheme();
+  return (
+    <View
+      style={{
+        paddingVertical: 18,
+        borderTopWidth: 1,
+        borderTopColor: colors.border.default,
+        flexDirection: 'row',
+        gap: 12,
+      }}
+    >
+      <View
+        style={{
+          width: 26,
+          height: 26,
+          borderRadius: 13,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.surface.muted,
+        }}
+      >
+        <AppText variant="caption" tone="secondary">
+          {number}
+        </AppText>
+      </View>
+      <View style={{ flex: 1 }}>
+        <AppText variant="bodyLarge">{title}</AppText>
+        <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
+          {children}
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: 24,
+    paddingTop: 10,
     paddingBottom: 110,
-    gap: 18,
   },
-  heroCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-  },
-  heroCardContent: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  heroAuraGlow: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 14,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
-  heroBadgeText: { fontFamily: fontFamilies.sans.bold, fontSize: 12, fontWeight: '700' },
-  heroEstText: { fontFamily: fontFamilies.sans.semiBold, fontSize: 13, fontWeight: '600' },
-  section: { gap: 8 },
-  headline: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    lineHeight: 30,
-  },
-  subheadline: {
-    fontFamily: fontFamilies.sans.regular,
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  stepCard: { borderRadius: 20 },
-  stepContent: { padding: 16, gap: 10 },
-  stepHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  stepNumOrb: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepNumText: { fontFamily: fontFamilies.sans.bold, color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  stepTitle: { fontFamily: fontFamilies.serif.semiBold, fontSize: 16, fontWeight: '700' },
-  stepSubtitle: { fontFamily: fontFamilies.sans.semiBold, fontSize: 12, fontWeight: '600', marginTop: 2 },
-  stepBody: { fontFamily: fontFamilies.sans.regular, fontSize: 13, lineHeight: 19 },
-  sighButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginTop: 4,
-  },
-  sighButtonText: { fontFamily: fontFamilies.sans.bold, fontSize: 13, fontWeight: '700' },
-  soundRow: {
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginTop: 6,
-    gap: 12,
-  },
-  soundPromptText: { fontFamily: fontFamilies.sans.medium, fontSize: 13.5, fontWeight: '500' },
-  soundToggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  soundToggleBtnText: { fontFamily: fontFamilies.sans.bold, fontSize: 13, fontWeight: '700' },
   bottomBar: {
     position: 'absolute',
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1,
+    bottom: 0,
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

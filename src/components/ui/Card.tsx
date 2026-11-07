@@ -28,8 +28,8 @@ export const Card = forwardRef<View, CardProps>(
     const baseCardStyle: ViewStyle = {
       backgroundColor: tint ? tint.bg : c.surface.default,
       borderRadius: variant === 'elevated' ? radius['3xl'] : radius['2xl'],
-      borderWidth: borderWidths.thin,
-      borderColor: tint ? tint.border : c.border.default,
+      borderWidth: variant === 'outlined' ? borderWidths.thin : borderWidths.none,
+      borderColor: tint ? tint.border : variant === 'outlined' ? c.border.default : 'transparent',
     };
 
     const flatCombinedStyle = [baseCardStyle, style];

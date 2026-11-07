@@ -28,7 +28,7 @@ export function createAppTheme(raw: ResolvedColors): AppTheme {
       pressed: raw.accentPrimaryHover,
       // Dark-mode accents are bright (e.g. #62C27F); dark ink reads better
       // than white and keeps the 4.5:1 contrast bar.
-      foreground: isDark ? raw.bgPrimary : '#FFFFFF',
+      foreground: isDark ? raw.bgPrimary : '#F7F9F6',
       subtle: raw.accentBg,
       subtleBorder: raw.accentBorder,
       disabled: withAlpha(raw.accentPrimary, 0.45),
@@ -88,8 +88,8 @@ export function createAppTheme(raw: ResolvedColors): AppTheme {
       selection: raw.accentBg,
     },
     overlay: {
-      scrim: isDark ? 'rgba(2, 6, 16, 0.62)' : 'rgba(15, 23, 42, 0.5)',
-      backdrop: isDark ? 'rgba(2, 6, 16, 0.4)' : 'rgba(15, 23, 42, 0.28)',
+      scrim: isDark ? 'rgba(4, 8, 6, 0.66)' : 'rgba(15, 21, 19, 0.46)',
+      backdrop: isDark ? 'rgba(4, 8, 6, 0.44)' : 'rgba(15, 21, 19, 0.26)',
     },
     disabled: {
       background: raw.bgSecondary,

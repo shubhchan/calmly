@@ -10,6 +10,7 @@ export { StaggeredEntry } from './interactive/StaggeredEntry';
 export { CelebratoryCheckbox } from './interactive/CelebratoryCheckbox';
 export { Skeleton, SkeletonText, SkeletonCard } from './interactive/Skeleton';
 export * from './illustrations';
+export { MoodFace } from './mood/MoodFace';
 
 // Design system primitives (src/components/ui). Card/CardHeader/CardContent/
 // CardFooter above already point at the design-system implementation.

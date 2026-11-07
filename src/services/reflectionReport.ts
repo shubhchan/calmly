@@ -43,6 +43,8 @@ const top = (values: string[]) => {
   values.filter(Boolean).forEach(v => map.set(v, (map.get(v) || 0) + 1));
   return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 };
+/** A saved check-in can hold several feelings in one comma-separated field. */
+const moodParts = (value: string) => String(value || '').split(',').map(v => v.trim()).filter(Boolean);
 const getStart = (days: number) => {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -83,7 +85,7 @@ export function buildReflectionReport(moodValues: any[], journalValues: any[], p
   const moods = moodsAll.filter(x => x.createdAt >= start && x.createdAt <= end);
   const notes = notesAll.filter(x => x.createdAt >= start && x.createdAt <= end);
   const prev = moodsAll.filter(x => x.createdAt >= priorStart.getTime() && x.createdAt < start);
-  const moodDistribution = top(moods.map(m => m.mood)).map(([name, count]) => ({ name, count }));
+  const moodDistribution = top(moods.flatMap(m => moodParts(m.mood))).map(([name, count]) => ({ name, count }));
   const daily: DailyPoint[] = Array.from({ length: days }, (_, index) => {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + index);
@@ -95,7 +97,7 @@ export function buildReflectionReport(moodValues: any[], journalValues: any[], p
       moods: dayMoods.length, notes: dayNotes.length,
       averageStress: avg(dayMoods.map(x => x.stress).filter(x => x > 0)),
       averageIntensity: avg(dayMoods.map(x => x.intensity).filter(x => x > 0)),
-      dominantMood: top(dayMoods.map(x => x.mood))[0]?.[0] || null,
+      dominantMood: top(dayMoods.flatMap(x => moodParts(x.mood)))[0]?.[0] || null,
     };
   });
   const wordsByDay = new Map<string, Set<string>>();
@@ -115,7 +117,7 @@ export function buildReflectionReport(moodValues: any[], journalValues: any[], p
   ];
   const links: MindLink[] = [];
   moodDistribution.slice(0, 6).forEach(m => themeWords.forEach(([word]) => {
-    const datesWithMood = new Set(moods.filter(x => x.mood === m.name).map(x => dayKey(x.createdAt)));
+    const datesWithMood = new Set(moods.filter(x => moodParts(x.mood).includes(m.name)).map(x => dayKey(x.createdAt)));
     const weight = [...datesWithMood].filter(d => wordsByDay.get(d)?.has(word)).length;
     if (weight > 0) links.push({ from: `m:${m.name}`, to: `t:${word}`, weight });
   }));

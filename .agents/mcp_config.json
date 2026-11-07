@@ -4,6 +4,13 @@
       "type": "streamable-http",
       "url": "https://mcp.iconscout.com/mcp",
       "serverUrl": "https://mcp.iconscout.com/mcp"
+    },
+    "doop": {
+      "type": "http",
+      "url": "https://doop.staticvar.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer dpk_q5p0ydIri3RUuwrubFfT0EDyUBKqFOvk"
+      }
     }
   }
 }

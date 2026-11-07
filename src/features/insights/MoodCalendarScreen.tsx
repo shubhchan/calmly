@@ -1,36 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { insightsRepository } from '../../database/repositories/insightsRepository';
 import { MoodEntry } from '../../database/models';
-import { Card, CardContent, AppIcon, moodIcon, ScreenHeader, TactilePressable } from '../../components';
+import { AppText, AppIcon, moodIcon, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
 import { GridSkeleton } from '../../components/interactive/LoadingState';
-import { resolveTint } from '../../theme/tints';
-
-const MOOD_COLORS: Record<string, string> = {
-  happy: '#5A955A',
-  peaceful: '#6B9BCD',
-  grateful: '#EB876D',
-  stressed: '#EB697F',
-  overwhelmed: '#EF8799',
-  anxious: '#EF8799',
-  sad: '#877FC5',
-  angry: '#EB697F',
-  exhausted: '#74AC74',
-  excited: '#EB876D',
-  content: '#5A955A',
-  hopeful: '#6B9BCD',
-};
 
 type NavigationProp = NativeStackScreenProps<RootStackParamList, 'MoodCalendar'>['navigation'];
+
+/** Split a stored mood field that may hold several feelings. */
+function moodLabels(value: unknown): string[] {
+  return String(value ?? '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .map((name) => name.charAt(0).toUpperCase() + name.slice(1));
+}
 
 interface DayMoodData {
   mood: string;
@@ -42,11 +34,15 @@ interface DayMoodData {
   habitsTotal: number;
 }
 
+/**
+ * Mood calendar — one month at a glance.
+ *
+ * A day with a check-in carries a small pine dot. The selected day fills with
+ * pine. Everything else stays on the ground so the pattern is easy to read.
+ */
 export function MoodCalendarScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors, isDark } = useAppTheme();
-  const sageTint = resolveTint(!!isDark, 'sage');
-  const lilacTint = resolveTint(!!isDark, 'lilac');
+  const { colors } = useAppTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [moodData, setMoodData] = useState<Record<number, DayMoodData>>({});
@@ -148,21 +144,17 @@ export function MoodCalendarScreen() {
   const renderDay = (day: number) => {
     const isSelected = selectedDay === day;
     const hasData = !!(moodData ?? {})?.[day];
-    let todayStr = '';
-    let thisDayStr = '';
     let isTodayDay = false;
     try {
-      todayStr = format(new Date(), 'yyyy-MM-dd') ?? '';
-      thisDayStr = format(new Date(year, month, day), 'yyyy-MM-dd') ?? '';
+      const todayStr = format(new Date(), 'yyyy-MM-dd') ?? '';
+      const thisDayStr = format(new Date(year, month, day), 'yyyy-MM-dd') ?? '';
       isTodayDay = !!todayStr && todayStr === thisDayStr;
     } catch {
       isTodayDay = false;
     }
 
     const dayData = hasData ? (moodData ?? {})[day] ?? null : null;
-    const moodKey = (dayData as any)?.mood ?? '';
-    const moodColor = hasData ? MOOD_COLORS[moodKey] || colors.primary.default : colors.primary.default;
-    const moodIconName = hasData ? moodIcon(moodKey) : moodIcon(null);
+    const moodKey = String((dayData as any)?.mood ?? '').split(',')[0].trim();
 
     return (
       <View key={day} style={styles.dayCellContainer}>
@@ -171,28 +163,32 @@ export function MoodCalendarScreen() {
           disabled={!hasData}
           scaleDownTo={0.92}
           hapticStyle="selection"
+          accessibilityRole="button"
+          accessibilityLabel={`Day ${day}${hasData ? ', has a check-in' : ''}`}
           style={[
             styles.dayCell,
-            isSelected && { backgroundColor: sageTint.accent },
-            isTodayDay && !isSelected && { borderWidth: 2, borderColor: sageTint.accent },
-            !hasData && { opacity: 0.35 },
+            isSelected && { backgroundColor: colors.primary.default },
+            isTodayDay && !isSelected && { borderWidth: 1.5, borderColor: colors.primary.default },
           ]}
         >
-          <Text
-            style={[
-              styles.dayText,
-              { color: sageTint.text },
-              isSelected && { color: '#FFFFFF', fontWeight: '700' },
-              isTodayDay && !isSelected && { color: sageTint.accent, fontWeight: '700' },
-            ]}
+          <AppText
+            variant="label"
+            tone={isSelected ? 'onPrimary' : hasData ? 'primary' : 'tertiary'}
           >
             {day}
-          </Text>
-          {hasData && (
-            <View style={[styles.moodIndicator, { backgroundColor: moodColor }]}>
-              <AppIcon name={moodIconName} size={10} loop={false} />
+          </AppText>
+          {hasData ? (
+            <View
+              style={[
+                styles.moodDot,
+                {
+                  backgroundColor: isSelected ? colors.primary.foreground : colors.primary.default,
+                },
+              ]}
+            >
+              <AppIcon name={moodIcon(moodKey)} size={8} loop={false} />
             </View>
-          )}
+          ) : null}
         </TactilePressable>
       </View>
     );
@@ -207,7 +203,7 @@ export function MoodCalendarScreen() {
       <ScreenContainer
         scroll={false}
         backgroundColor={colors.background.default}
-        style={{ paddingHorizontal: 20, paddingTop: 16 }}
+        style={{ paddingHorizontal: 24, paddingTop: 16 }}
       >
         <GridSkeleton cells={12} columns={3} />
       </ScreenContainer>
@@ -216,165 +212,146 @@ export function MoodCalendarScreen() {
 
   return (
     <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
-      <ScreenHeader
-        center={
-          <View style={styles.monthNav}>
-            <TactilePressable
-              onPress={handlePrevMonth}
-              scaleDownTo={0.92}
-              hitSlop={10}
-              style={styles.arrowButton}
-            >
-              <Ionicons name="chevron-back" size={22} color={colors.text.primary} />
-            </TactilePressable>
-            <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
-              {monthName} {year}
-            </Text>
-            <TactilePressable
-              onPress={handleNextMonth}
-              scaleDownTo={0.92}
-              hitSlop={10}
-              style={styles.arrowButton}
-            >
-              <Ionicons name="chevron-forward" size={22} color={colors.text.primary} />
-            </TactilePressable>
-          </View>
-        }
-      />
+      <ScreenHeader title="Mood calendar" />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <PopIn index={0}>
-        <Card variant="elevated" tone="sage" style={styles.calendarCard}>
-          <View style={styles.weekdays}>
-            {(weekDays ?? []).map((day, index) => (
-              <Text key={day ?? 'ph-' + index} style={[styles.weekday, { color: sageTint.muted }]}>
-                {day ?? ''}
-              </Text>
-            ))}
-          </View>
+        <View style={styles.monthNav}>
+          <TactilePressable
+            onPress={handlePrevMonth}
+            scaleDownTo={0.92}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Previous month"
+            style={styles.arrowButton}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.text.secondary} />
+          </TactilePressable>
+          <AppText variant="h3" style={{ flex: 1, textAlign: 'center' }}>
+            {monthName} {year}
+          </AppText>
+          <TactilePressable
+            onPress={handleNextMonth}
+            scaleDownTo={0.92}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Next month"
+            style={styles.arrowButton}
+          >
+            <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+          </TactilePressable>
+        </View>
 
-          <View style={styles.calendarGrid}>
-            {[...Array(Math.max(0, firstDay ?? 0))].map((_, i) => (
-              <View key={`empty-${i}`} style={styles.dayCellContainer}>
-                <View style={styles.dayCellEmpty} />
-              </View>
-            ))}
-            {[...Array(Math.max(0, daysInMonth ?? 0))].map((_, i) => renderDay(i + 1))}
+        <PopIn index={0}>
+          <View style={{ marginTop: 20 }}>
+            <View style={styles.weekdays}>
+              {(weekDays ?? []).map((day, index) => (
+                <AppText key={day ?? 'ph-' + index} variant="caption" tone="tertiary" style={styles.weekday}>
+                  {day ?? ''}
+                </AppText>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {[...Array(Math.max(0, firstDay ?? 0))].map((_, i) => (
+                <View key={`empty-${i}`} style={styles.dayCellContainer}>
+                  <View style={styles.dayCellEmpty} />
+                </View>
+              ))}
+              {[...Array(Math.max(0, daysInMonth ?? 0))].map((_, i) => renderDay(i + 1))}
+            </View>
           </View>
-        </Card>
         </PopIn>
 
-        {selectedDayData && (
+        {selectedDayData ? (
           <PopIn index={1}>
-          <Card variant="elevated" tone="lilac" style={styles.detailCard}>
-            <CardContent>
-              <Text style={[styles.detailDate, { color: lilacTint.text }]}>
+            <View style={[styles.detailCard, { backgroundColor: colors.surface.default }]}>
+              <AppText variant="overline" tone="tertiary" center>
                 {selectedDay ?? ''} {monthName ?? ''} {year ?? ''}
-              </Text>
+              </AppText>
               <View style={styles.detailMoodRow}>
-                <View
-                  style={[
-                    styles.moodCircle,
-                    {
-                      backgroundColor:
-                        ((MOOD_COLORS[(selectedDayData as any)?.mood] || colors.primary.default) + '22'),
-                    },
-                  ]}
-                >
-                  <AppIcon name={moodIcon((selectedDayData as any)?.mood)} size={32} />
+                <View style={[styles.moodCircle, { backgroundColor: colors.primary.subtle }]}>
+                  <AppIcon
+                    name={moodIcon(String((selectedDayData as any)?.mood ?? '').split(',')[0].trim())}
+                    size={28}
+                  />
                 </View>
-                <View style={styles.detailMoodInfo}>
-                  <Text style={[styles.detailMoodLabel, { color: lilacTint.text }]}>
-                    {typeof (selectedDayData as any)?.mood === 'string' && (selectedDayData as any).mood.length > 0
-                      ? (selectedDayData as any).mood.charAt(0).toUpperCase() + (selectedDayData as any).mood.slice(1)
-                      : 'Unknown'}
-                  </Text>
-                  <Text style={[styles.detailMoodMeta, { color: lilacTint.muted }]}>
-                    Intensity: {(selectedDayData as any)?.intensity ?? 0}/10 · Stress: {(selectedDayData as any)?.stress ?? 0}/10
-                  </Text>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="title">
+                    {moodLabels((selectedDayData as any)?.mood).join(' · ') || 'Unknown'}
+                  </AppText>
+                  <AppText variant="caption" tone="tertiary" style={{ marginTop: 3 }}>
+                    Intensity {(selectedDayData as any)?.intensity ?? 0}/10 · Stress{' '}
+                    {(selectedDayData as any)?.stress ?? 0}/10
+                  </AppText>
                 </View>
               </View>
 
-              <View style={[styles.detailStats, { borderTopColor: lilacTint.border }]}>
-                <View style={styles.detailStat}>
-                  <Text style={[styles.detailStatLabel, { color: lilacTint.muted }]}>Journal Entry</Text>
-                  <Text style={[styles.detailStatValue, { color: lilacTint.text }]}>
+              <View style={[styles.detailStats, { borderTopColor: colors.border.default }]}>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="caption" tone="tertiary">
+                    Journal entry
+                  </AppText>
+                  <AppText variant="body" style={{ marginTop: 2 }}>
                     {(selectedDayData as any)?.hasJournal ? 'Recorded' : 'None'}
-                  </Text>
+                  </AppText>
                 </View>
-                <View style={styles.detailStat}>
-                  <Text style={[styles.detailStatLabel, { color: lilacTint.muted }]}>Habits Done</Text>
-                  <Text style={[styles.detailStatValue, { color: lilacTint.text }]}>
-                    {(selectedDayData as any)?.habitsCompleted ?? 0}/{(selectedDayData as any)?.habitsTotal ?? 0}
-                  </Text>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="caption" tone="tertiary">
+                    Habits done
+                  </AppText>
+                  <AppText variant="body" style={{ marginTop: 2 }}>
+                    {(selectedDayData as any)?.habitsCompleted ?? 0}/
+                    {(selectedDayData as any)?.habitsTotal ?? 0}
+                  </AppText>
                 </View>
               </View>
-            </CardContent>
-          </Card>
+            </View>
+          </PopIn>
+        ) : (
+          <PopIn index={1}>
+            <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+              <Ionicons name="calendar-outline" size={26} color={colors.text.tertiary} />
+              <AppText variant="body" center style={{ marginTop: 12 }}>
+                Tap a marked day
+              </AppText>
+              <AppText variant="bodySmall" tone="tertiary" center style={{ marginTop: 4, maxWidth: 270 }}>
+                Days with a check-in carry a dot. Tap one to read the details.
+              </AppText>
+            </View>
           </PopIn>
         )}
 
-        {!selectedDayData && (
-          <PopIn index={1}>
-          <Card variant="outlined" style={styles.emptyCard}>
-            <CardContent style={styles.emptyCardContent}>
-              <Ionicons name="calendar-outline" size={36} color={colors.text.tertiary} />
-              <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>Tap an entry date</Text>
-              <Text style={[styles.emptyText, { color: colors.text.tertiary }]}>
-                Days with logged moods have colored badges. Tap any highlighted date to inspect your state.
-              </Text>
-            </CardContent>
-          </Card>
-          </PopIn>
-        )}
-        <Card variant="outlined">
-          <CardContent style={{ padding: 16 }}>
-            <Text style={{ fontSize: 12, lineHeight: 18, color: colors.text.tertiary }}>{DISCLAIMER}</Text>
-          </CardContent>
-        </Card>
+        <AppText variant="caption" tone="tertiary" style={{ marginTop: 24, lineHeight: 18 }}>
+          {DISCLAIMER}
+        </AppText>
       </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollContent: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 48 },
   monthNav: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
+    paddingVertical: 4,
   },
   arrowButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerTitle: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 110, gap: 16 },
-  calendarCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 14,
   },
   weekdays: {
     flexDirection: 'row',
     width: '100%',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   weekday: {
     width: '14.285%',
     textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: fontFamilies.sans.semiBold,
   },
   calendarGrid: {
     flexDirection: 'row',
@@ -385,76 +362,45 @@ const styles = StyleSheet.create({
     width: '14.285%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 3,
+    marginVertical: 2,
   },
   dayCell: {
-    width: 38,
-    height: 44,
+    width: 40,
+    height: 48,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayCellEmpty: {
-    width: 38,
-    height: 44,
+    width: 40,
+    height: 48,
   },
-  dayText: {
-    fontFamily: fontFamilies.sans.medium,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  moodIndicator: {
-    marginTop: 2,
-    width: 14,
-    height: 14,
+  moodDot: {
+    marginTop: 3,
+    width: 13,
+    height: 13,
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  detailCard: { marginTop: 0 },
-  detailDate: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 14,
-    textAlign: 'center',
+  detailCard: {
+    marginTop: 28,
+    borderRadius: 20,
+    padding: 20,
   },
-  detailMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 },
-  moodCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  detailMoodInfo: { flex: 1, gap: 4 },
-  detailMoodLabel: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 18,
-    fontWeight: '700',
+  detailMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 12 },
+  moodCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  detailMoodMeta: {
-    fontFamily: fontFamilies.sans.regular,
-    fontSize: 13,
-  },
-  detailStats: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 12, borderTopWidth: 1 },
-  detailStat: { alignItems: 'center', gap: 4 },
-  detailStatLabel: {
-    fontFamily: fontFamilies.sans.medium,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  detailStatValue: {
-    fontFamily: fontFamilies.sans.bold,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  emptyCard: { marginTop: 0 },
-  emptyCardContent: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  emptyTitle: {
-    fontFamily: fontFamilies.serif.bold,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emptyText: {
-    fontFamily: fontFamilies.sans.regular,
-    fontSize: 13,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    lineHeight: 18,
+  detailStats: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 18,
+    paddingTop: 14,
+    borderTopWidth: 1,
   },
 });

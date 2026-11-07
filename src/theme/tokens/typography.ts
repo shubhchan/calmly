@@ -1,8 +1,9 @@
 /**
  * Typography scale — semantic text styles resolved from the ACTIVE font.
  *
- * Styles are produced by a function (not a frozen module-level object) so the
- * in-app font browser takes effect immediately without remounting the app.
+ * Every style, including display type, follows the user's chosen font.
+ * Styles are produced by a function so a font change takes effect immediately
+ * without remounting the app.
  */
 
 import type { TextStyle } from 'react-native';
@@ -43,31 +44,31 @@ export const textVariants: TextVariant[] = [
 export function resolveTextStyle(variant: TextVariant): TextStyle {
   switch (variant) {
     case 'display':
-      return { fontFamily: fontFamilies.calming.bold, fontSize: 34, lineHeight: 42, letterSpacing: 0.1, fontWeight: '700' };
+      return { fontFamily: fontFamilies.sans.regular, fontSize: 48, lineHeight: 60, letterSpacing: -0.96, paddingBottom: 4 };
     case 'h1':
-      return { fontFamily: fontFamilies.calming.semiBold, fontSize: 28, lineHeight: 36, letterSpacing: 0, fontWeight: '600' };
+      return { fontFamily: fontFamilies.sans.regular, fontSize: 40, lineHeight: 52, letterSpacing: -0.8, paddingBottom: 4 };
     case 'h2':
-      return { fontFamily: fontFamilies.calming.medium, fontSize: 23, lineHeight: 30, letterSpacing: 0.1, fontWeight: '500' };
+      return { fontFamily: fontFamilies.sans.regular, fontSize: 32, lineHeight: 44, letterSpacing: -0.64, paddingBottom: 3 };
     case 'h3':
-      return { fontFamily: fontFamilies.sans.bold, fontSize: 20, lineHeight: 28, letterSpacing: -0.2, fontWeight: '700' };
+      return { fontFamily: fontFamilies.sans.regular, fontSize: 24, lineHeight: 36, letterSpacing: -0.48, paddingBottom: 3 };
     case 'title':
-      return { fontFamily: fontFamilies.sans.semiBold, fontSize: 18, lineHeight: 24, letterSpacing: 0.1, fontWeight: '600' };
+      return { fontFamily: fontFamilies.sans.semiBold, fontSize: 17, lineHeight: 25, letterSpacing: 0, fontWeight: '600', paddingBottom: 2 };
     case 'bodyLarge':
-      return { fontFamily: fontFamilies.sans.regular, fontSize: 17, lineHeight: 25, letterSpacing: 0.15 };
+      return { fontFamily: fontFamilies.sans.regular, fontSize: 17, lineHeight: 26, letterSpacing: 0, paddingBottom: 1 };
     case 'body':
-      return { fontFamily: fontFamilies.sans.regular, fontSize: 15, lineHeight: 22, letterSpacing: 0.15 };
+      return { fontFamily: fontFamilies.sans.regular, fontSize: 15, lineHeight: 23, letterSpacing: 0 };
     case 'bodySmall':
-      return { fontFamily: fontFamilies.sans.regular, fontSize: 13, lineHeight: 19, letterSpacing: 0.15 };
+      return { fontFamily: fontFamilies.sans.regular, fontSize: 13, lineHeight: 20, letterSpacing: 0 };
     case 'label':
-      return { fontFamily: fontFamilies.sans.semiBold, fontSize: 13, lineHeight: 18, letterSpacing: 0.2, fontWeight: '600' };
+      return { fontFamily: fontFamilies.sans.semiBold, fontSize: 12, lineHeight: 17, letterSpacing: 0.2, fontWeight: '600' };
     case 'labelSmall':
-      return { fontFamily: fontFamilies.sans.bold, fontSize: 12, lineHeight: 16, letterSpacing: 0.3, fontWeight: '700' };
+      return { fontFamily: fontFamilies.sans.semiBold, fontSize: 11, lineHeight: 15, letterSpacing: 0.4, fontWeight: '600' };
     case 'caption':
-      return { fontFamily: fontFamilies.sans.regular, fontSize: 11, lineHeight: 15, letterSpacing: 0.3 };
+      return { fontFamily: fontFamilies.sans.regular, fontSize: 12, lineHeight: 17, letterSpacing: 0.1 };
     case 'overline':
-      return { fontFamily: fontFamilies.sans.bold, fontSize: 11, lineHeight: 14, letterSpacing: 1.2, fontWeight: '700', textTransform: 'uppercase' };
+      return { fontFamily: fontFamilies.sans.semiBold, fontSize: 11, lineHeight: 15, letterSpacing: 1.2, fontWeight: '600', textTransform: 'uppercase' };
     case 'button':
-      return { fontFamily: fontFamilies.sans.semiBold, fontSize: 16, lineHeight: 20, letterSpacing: 0.2, fontWeight: '600' };
+      return { fontFamily: fontFamilies.sans.semiBold, fontSize: 15, lineHeight: 21, letterSpacing: 0.1, fontWeight: '600' };
   }
 }
 

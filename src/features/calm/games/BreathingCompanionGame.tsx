@@ -186,9 +186,7 @@ export function BreathingCompanionGame() {
                 { color: companion === 'lettuce' ? colors.primary.default : colors.text.secondary },
                 companion === 'lettuce' && { fontWeight: '700' },
               ]}
-            >
-              🐱 Lettuce
-            </Text>
+            >Lettuce</Text>
           </TactilePressable>
 
           <TactilePressable
@@ -206,9 +204,7 @@ export function BreathingCompanionGame() {
                 { color: companion === 'cloud' ? colors.primary.default : colors.text.secondary },
                 companion === 'cloud' && { fontWeight: '700' },
               ]}
-            >
-              ☁️ Mochi
-            </Text>
+            >Mochi</Text>
           </TactilePressable>
 
           <TactilePressable
@@ -226,9 +222,7 @@ export function BreathingCompanionGame() {
                 { color: companion === 'panda' ? colors.primary.default : colors.text.secondary },
                 companion === 'panda' && { fontWeight: '700' },
               ]}
-            >
-              🐼 Bao
-            </Text>
+            >Bao</Text>
           </TactilePressable>
         </View>
 

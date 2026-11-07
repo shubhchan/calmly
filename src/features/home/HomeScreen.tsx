@@ -1,39 +1,47 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Card, CardContent, PrimaryButton, ProgressRing, StatPill, AppIcon, AppText, MeditationHeroIllustration, HabitPlantingIllustration, JournalReflectionIllustration, TactilePressable, StaggeredEntry, CelebratoryCheckbox, ListItem, Divider } from '../../components';
-import type { AppIconName } from '../../components';
+import { Ionicons } from '@expo/vector-icons';
+import { format } from 'date-fns';
+import { AppText, Button, TactilePressable } from '../../components';
 import { habitRepository } from '../../database/repositories/habitRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { moodRepository } from '../../database/repositories/moodRepository';
 import { settingsRepository, type AppSettings } from '../../database/repositories/settingsRepository';
 import { getDailyPrompt } from '../../utils/dailyPrompt';
-import { WelcomeCard } from './WelcomeCard';
 import Habit from '../../database/models/Habit';
 import { getIconName } from '../../utils/iconMap';
-import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { bootLog } from '../../components/ErrorBoundary';
-import { format } from 'date-fns';
-import { fontFamilies } from '../../theme/typography';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { PopIn } from '../../components/interactive/PopIn';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
-import { resolveTint } from '../../theme/tints';
 import { ProfileAvatarView } from '../../components/profile/ProfileAvatarView';
+import { mascotById, ZenMascotAvatar } from '../../components/profile/ZenMascotAvatar';
+import { displayFaces } from '../../theme/typography';
 
-/** Number of newest journal entries shown on the home screen. */
-const RECENT_JOURNAL_LIMIT = 4;
+/** A check-in can hold several feelings, stored comma-separated. */
+function formatMoodNames(value: unknown): string {
+  const names = String(value ?? '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
+  return names.length ? names.join(' and ') : 'present';
+}
 
+/**
+ * Today — direction A.
+ *
+ * One greeting, one check-in, one list of habits, one calm invitation.
+ * Everything else waits behind a plain text link.
+ */
 export function HomeScreen() {
   const navigation = useNavigation<any>();
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
 
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [recentJournals, setRecentJournals] = useState<any[]>([]);
   const [latestMood, setLatestMood] = useState<any>(null);
-  const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [profileSettings, setProfileSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,10 +64,9 @@ export function HomeScreen() {
       ]);
       setHabits(allHabits ?? []);
       setTodayCompletions(completions ?? {});
-      setRecentJournals((journals ?? []).slice(0, RECENT_JOURNAL_LIMIT));
+      setRecentJournals((journals ?? []).slice(0, 3));
       setLatestMood(mood ?? null);
       setProfileSettings(settings ?? null);
-      setWelcomeVisible(!!settings && settings.welcomeCardDismissed !== true);
     } catch (error) {
       console.error('Failed to load home data:', error);
       setHabits([]);
@@ -84,24 +91,7 @@ export function HomeScreen() {
   );
 
   const handleMoodCheckIn = () => navigation?.navigate?.('MoodCheckIn', { fromHome: true });
-  const handleCalmDown = () => navigation?.navigate?.('Calm');
   const handleHabitPress = (habit: Habit) => navigation?.navigate?.('HabitDetail', { id: habit?.id });
-
-  const dismissWelcome = useCallback(async () => {
-    setWelcomeVisible(false);
-    try {
-      await settingsRepository.updateSettings({ welcomeCardDismissed: true });
-    } catch (error) {
-      console.warn('Failed to persist welcome dismissal:', error);
-    }
-  }, []);
-
-  const startFromWelcome = useCallback(async () => {
-    await dismissWelcome();
-    navigation?.navigate?.('MoodCheckIn', { fromHome: true });
-  }, [dismissWelcome, navigation]);
-
-  const dailyPrompt = getDailyPrompt();
 
   const toggleHabit = async (habit: Habit, completed: boolean) => {
     if (!habit?.id) return;
@@ -155,466 +145,450 @@ export function HomeScreen() {
   })();
 
   const dateLabel = format(new Date(), 'EEEE, MMMM d');
-
-  const heroTint = resolveTint(!!isDark, 'cream');
-  const calmTint = resolveTint(!!isDark, 'coral');
-  const journalTint = resolveTint(!!isDark, 'sky');
-  const mintTint = resolveTint(!!isDark, 'mint');
-  const overviewTiles = [
-    { label: 'Meditation', icon: 'l-breathe' as const, tint: mintTint, onPress: handleCalmDown },
-    { label: 'Journal', icon: 'l-book' as const, tint: journalTint, onPress: () => navigation?.navigate?.('Journal') },
-    { label: 'Mood', icon: 'l-heart' as const, tint: calmTint, onPress: handleMoodCheckIn },
-    { label: 'Insights', icon: 'l-chart' as const, tint: heroTint, onPress: () => navigation?.navigate?.('Insights') },
-  ];
+  const dailyPrompt = getDailyPrompt();
+  const doneCount = dueHabits.filter((h) => todayCompletions?.[(h as any)?.id]).length;
 
   return (
     <ScreenContainer
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}
+      contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 120 }}
       backgroundColor={colors.background.default}
     >
-      {/* Dark greeting hero — avatar, greeting, date, daily completion */}
-      <PopIn index={0}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
-            backgroundColor: isDark ? '#1E2A3C' : '#293D2D',
-            borderRadius: 22,
-            paddingHorizontal: 18,
-            paddingVertical: 16,
-            marginBottom: 20,
-            marginTop: 4,
-          }}
-        >
-          <TactilePressable
-            onPress={() => navigation?.navigate?.('Profile')}
-            scaleDownTo={0.92}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Open your profile"
-            style={{ borderRadius: 26 }}
-          >
-            <ProfileAvatarView
-              avatar={profileSettings?.userAvatar}
-              googlePhotoUrl={profileSettings?.googlePhotoUrl}
-              size={52}
-              showGuestBadge={!profileSettings?.googlePhotoUrl}
-            />
-          </TactilePressable>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
-              {greeting}{profileSettings?.userName ? `, ${profileSettings.userName}` : ''}
-            </Text>
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>{dateLabel}</Text>
-          </View>
-          <View style={{ alignItems: 'center', gap: 4 }}>
-            <ProgressRing
-              progress={dueHabits.length ? Object.values(todayCompletions ?? {}).filter(Boolean).length / Math.max(dueHabits.length, 1) : 0}
-              size={44}
-              strokeWidth={4}
-              showPercentage={false}
-              trackColor="rgba(255,255,255,0.3)"
-              progressColor="#FFFFFF"
-            />
-            <Text style={{ fontSize: 10, fontWeight: '700', color: '#FFFFFF' }}>
-              {dueHabits.length
-                ? `${Math.round((Object.values(todayCompletions ?? {}).filter(Boolean).length / Math.max(dueHabits.length, 1)) * 100)}%`
-                : '0%'}
-            </Text>
-          </View>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <View style={{ flex: 1 }}>
+          <AppText variant="overline" tone="tertiary">
+            {dateLabel}
+          </AppText>
+          <AppText variant="h1" style={{ marginTop: 8 }}>
+            {greeting}
+            {profileSettings?.userName ? `,\n${profileSettings.userName}` : '.'}
+          </AppText>
         </View>
-      </PopIn>
+        {(() => {
+          const homePhotoUri =
+            profileSettings?.userAvatar?.kind === 'custom'
+              ? profileSettings.userAvatar.uri
+              : profileSettings?.userAvatar?.kind === 'google'
+              ? profileSettings?.googlePhotoUrl
+              : undefined;
+          const homeActiveMascotId =
+            profileSettings?.userAvatar?.kind === 'mascot'
+              ? profileSettings.userAvatar.mascotId
+              : undefined;
+          const homeActiveMascot = homeActiveMascotId ? mascotById(homeActiveMascotId) : undefined;
+          const homeInitial = (profileSettings?.userName?.trim() || 'S').charAt(0).toUpperCase();
 
-      {/* First-run welcome card — shown once per install until dismissed */}
-      {welcomeVisible && (
-        <PopIn index={1}>
-          <WelcomeCard onStart={startFromWelcome} onDismiss={dismissWelcome} />
-        </PopIn>
-      )}
-
-      {/* Hero Mindful Sanctuary Card — playful cream pop */}
-      <PopIn index={1}>
-      <Card variant="elevated" tone="cream" style={{ marginBottom: 20, borderRadius: 22, overflow: 'hidden' }}>
-        <CardContent style={{ padding: 18 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: heroTint.accent,
-                  marginRight: 8,
-                }}
-              />
-              <Text style={{ fontSize: 16, fontFamily: fontFamilies.sans.bold, fontWeight: '700', color: heroTint.text }}>
-                Daily Mindset
-              </Text>
-            </View>
+          return (
             <TactilePressable
-              onPress={handleMoodCheckIn}
+              onPress={() => navigation?.navigate?.('Profile')}
               scaleDownTo={0.94}
+              accessibilityRole="button"
+              accessibilityLabel="Open your profile"
               style={{
-                paddingVertical: 6,
-                paddingHorizontal: 14,
-                borderRadius: 9999,
-                backgroundColor: heroTint.plate,
-                borderWidth: 1,
-                borderColor: heroTint.border,
-              }}
-            >
-              <Text style={{ fontSize: 13, fontFamily: fontFamilies.sans.bold, fontWeight: '700', color: heroTint.accent }}>Check in</Text>
-            </TactilePressable>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={{ fontSize: 18, lineHeight: 24, fontWeight: '800', color: heroTint.text, letterSpacing: -0.3 }} numberOfLines={3}>
-                {dailyPrompt}
-              </Text>
-              <Text style={{ fontSize: 13, color: heroTint.muted, lineHeight: 18 }}>
-                {latestMood
-                  ? `Feeling ${latestMood.mood ?? 'present'} · ${latestMood.intensity ?? 7}/10 intensity · stress ${latestMood.stress ?? 2}/10`
-                  : 'A gentle thought for today'}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <ProgressRing
-                  progress={latestMood ? Math.min(Math.max((latestMood.intensity ?? 7) / 10, 0.1), 1) : 0.7}
-                  size={34}
-                  strokeWidth={3.8}
-                  showPercentage={false}
-                />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: heroTint.accent }}>
-                  {latestMood
-                    ? (latestMood.intensity ?? 7) >= 7
-                      ? 'Serenity in harmony'
-                      : (latestMood.intensity ?? 7) >= 4
-                      ? 'Mindful awareness'
-                      : 'Gentle self-compassion'
-                    : 'Serenity in harmony'}
-                </Text>
-              </View>
-            </View>
-            <MeditationHeroIllustration width={125} height={110} />
-          </View>
-        </CardContent>
-      </Card>
-      </PopIn>
-
-      {/* Zen Playground shortcut */}
-      <View style={{ marginBottom: 22 }}>
-        {/* Full-width Zen Games Card */}
-        <PopIn index={2}>
-          <TactilePressable
-            onPress={() => navigation?.navigate?.('ZenPlayground')}
-            scaleDownTo={0.98}
-            hapticStyle="light"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingHorizontal: 16,
-              paddingVertical: 14,
-              borderRadius: 20,
-              backgroundColor: mintTint.bg,
-              borderWidth: 1,
-              borderColor: mintTint.border,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  backgroundColor: mintTint.plate,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ fontSize: 24 }}>🫧</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: mintTint.text }}>
-                    Zen Playground
-                  </Text>
-                  <View
-                    style={{
-                      paddingHorizontal: 7,
-                      paddingVertical: 2,
-                      borderRadius: 8,
-                      backgroundColor: mintTint.plate,
-                    }}
-                  >
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: mintTint.accent }}>
-                      NEW
-                    </Text>
-                  </View>
-                </View>
-                <Text style={{ fontSize: 12, color: mintTint.muted, marginTop: 2 }} numberOfLines={1}>
-                  Bubble wrap, sand garden & cozy pet
-                </Text>
-              </View>
-            </View>
-
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: mintTint.plate,
+                width: 44,
+                height: 44,
+                borderRadius: 14,
+                backgroundColor: homeActiveMascot ? homeActiveMascot.background : '#2C4F45',
                 alignItems: 'center',
                 justifyContent: 'center',
+                overflow: 'hidden',
+                shadowColor: '#14241E',
+                shadowOpacity: 0.1,
+                shadowRadius: 6,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 2,
               }}
             >
-              <Ionicons name="arrow-forward" size={16} color={mintTint.accent} />
-            </View>
-          </TactilePressable>
-        </PopIn>
+              {homePhotoUri ? (
+                <Image
+                  source={{ uri: homePhotoUri }}
+                  style={{ width: '100%', height: '100%', borderRadius: 14 }}
+                  accessibilityRole="image"
+                  accessibilityLabel="Profile photo"
+                />
+              ) : homeActiveMascotId ? (
+                <ZenMascotAvatar id={homeActiveMascotId} size={44} shape="square" borderRadius={14} />
+              ) : (
+                <Text
+                  style={{
+                    fontFamily: displayFaces.regular,
+                    fontSize: 18,
+                    color: '#EDF3EF',
+                  }}
+                >
+                  {homeInitial}
+                </Text>
+              )}
+            </TactilePressable>
+          );
+        })()}
       </View>
 
-      {/* Today's Habits */}
-      <View style={{ marginBottom: 22 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <AppText variant="h3">
-            Today&apos;s Habits
+      {/* Hero session — Still Water v2 */}
+      <View
+        style={{
+          marginTop: 24,
+          borderRadius: 26,
+          backgroundColor: colors.primary.default,
+          padding: 22,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Ambient concentric rings */}
+        <View
+          style={{
+            position: 'absolute',
+            right: -30,
+            top: -40,
+            width: 170,
+            height: 170,
+            borderRadius: 85,
+            borderWidth: 1,
+            borderColor: 'rgba(198,220,209,0.25)',
+          }}
+          pointerEvents="none"
+        />
+        <View
+          style={{
+            position: 'absolute',
+            right: 10,
+            top: 26,
+            width: 86,
+            height: 86,
+            borderRadius: 43,
+            backgroundColor: 'rgba(198,220,209,0.12)',
+          }}
+          pointerEvents="none"
+        />
+
+        <AppText variant="overline" color="#A9CBBC" style={{ letterSpacing: 1.2 }}>
+          Today · 6 minutes
+        </AppText>
+        <AppText variant="display" color="#EDF3EF" style={{ fontSize: 28, lineHeight: 38, paddingBottom: 4, marginTop: 10, marginBottom: 8, maxWidth: 240 }}>
+          Let the morning be slow.
+        </AppText>
+        <AppText
+          variant="bodySmall"
+          color="#C6DCD1"
+          style={{ lineHeight: 20, maxWidth: 250 }}
+        >
+          A short breath session before the day asks anything of you.
+        </AppText>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 20 }}>
+          <TactilePressable
+            onPress={() => navigation?.navigate?.('BreathingSession', { preset: 'box', duration: 360 })}
+            scaleDownTo={0.96}
+            accessibilityRole="button"
+            accessibilityLabel="Begin 6 minute breath session"
+            style={{
+              height: 46,
+              paddingHorizontal: 22,
+              borderRadius: 16,
+              backgroundColor: '#EDF3EF',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AppText variant="label" color="#223E36" style={{ fontWeight: '600' }}>
+              Begin
+            </AppText>
+          </TactilePressable>
+          <TactilePressable
+            onPress={() => navigation?.navigate?.('Calm')}
+            scaleDownTo={0.96}
+            accessibilityRole="button"
+            accessibilityLabel="Choose another practice"
+          >
+            <AppText variant="bodySmall" color="#A9CBBC">
+              or <AppText variant="bodySmall" color="#A9CBBC" style={{ textDecorationLine: 'underline' }}>choose another</AppText>
+            </AppText>
+          </TactilePressable>
+        </View>
+      </View>
+
+      {/* Check-in invitation */}
+      <TactilePressable
+        onPress={handleMoodCheckIn}
+        scaleDownTo={0.99}
+        accessibilityRole="button"
+        accessibilityLabel="Check in with your mood"
+        style={{
+          marginTop: 18,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+          padding: 16,
+          borderRadius: 20,
+          backgroundColor: colors.surface.default,
+        }}
+      >
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            backgroundColor: colors.surface.selected,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="partly-sunny-outline" size={19} color={colors.primary.default} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <AppText variant="title">
+            {latestMood ? 'Check in again' : 'How is your weather?'}
           </AppText>
-          <TactilePressable scaleDownTo={0.96} onPress={() => navigation?.navigate?.('Habits')}>
-            <Text style={{ fontSize: 14, fontFamily: fontFamilies.sans.semiBold, fontWeight: '600', color: colors.primary.default }}>View all</Text>
+          <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 2 }}>
+            {latestMood
+              ? `Last time you felt ${formatMoodNames(latestMood.mood)}.`
+              : 'One short pause is enough to begin.'}
+          </AppText>
+        </View>
+        <Ionicons name="arrow-forward" size={17} color={colors.primary.default} />
+      </TactilePressable>
+
+      {/* Habits */}
+      <View style={{ marginTop: 40 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+          <AppText variant="h3">Today&apos;s rhythm</AppText>
+          <TactilePressable scaleDownTo={0.95} onPress={() => navigation?.navigate?.('Habits')}>
+            <AppText variant="label" tone="link">
+              {dueHabits.length ? `${doneCount} of ${dueHabits.length}` : 'Habits'}
+            </AppText>
           </TactilePressable>
         </View>
 
         {loading ? (
           <ListSkeleton rows={3} showHeader={false} />
         ) : (dueHabits ?? []).length === 0 ? (
-          <Card variant="outlined" style={{ borderRadius: 20 }}>
-            <CardContent style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 }}>
-              <HabitPlantingIllustration width={130} height={105} style={{ marginBottom: 6 }} />
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text.primary, marginTop: 4 }}>
-                No habits scheduled today
-              </Text>
-              <Text style={{ fontSize: 13, color: colors.text.tertiary, textAlign: 'center', marginTop: 4, lineHeight: 18 }}>
-                Build steady mindfulness one day at a time
-              </Text>
-              <PrimaryButton
-                title="Create Habit"
-                variant="secondary"
-                size="sm"
-                onPress={() => navigation?.navigate?.('HabitForm')}
-                style={{ marginTop: 14, minWidth: 140 }}
-                fullWidth={false}
-              />
-            </CardContent>
-          </Card>
+          <View
+            style={{
+              borderRadius: 20,
+              backgroundColor: colors.surface.default,
+              paddingVertical: 26,
+              paddingHorizontal: 20,
+              alignItems: 'center',
+            }}
+          >
+            <AppText variant="title" center>
+              Nothing scheduled today
+            </AppText>
+            <AppText variant="bodySmall" tone="tertiary" center style={{ marginTop: 4 }}>
+              Start with one small habit. You can always add more.
+            </AppText>
+            <Button
+              title="Create a habit"
+              variant="secondary"
+              size="sm"
+              onPress={() => navigation?.navigate?.('HabitForm')}
+              style={{ marginTop: 16 }}
+            />
+          </View>
         ) : (
-          <View style={{ gap: 10 }}>
-            {(dueHabits ?? []).slice(0, 3).map((habit, index) => {
+          <View style={{ gap: 8 }}>
+            {(dueHabits ?? []).slice(0, 4).map((habit) => {
               const isCompleted = !!(todayCompletions ?? {})?.[(habit as any)?.id];
               return (
-                <StaggeredEntry key={habit?.id ?? 'ph-' + index} index={index}>
-                  <TactilePressable
-                    onPress={() => habit && handleHabitPress(habit)}
-                    scaleDownTo={0.98}
-                    hapticStyle="none"
+                <TactilePressable
+                  key={habit?.id}
+                  onPress={() => habit && handleHabitPress(habit)}
+                  scaleDownTo={0.99}
+                  hapticStyle="none"
+                  accessibilityRole="button"
+                  accessibilityLabel={`${(habit as any)?.name ?? 'Habit'}, ${isCompleted ? 'done' : 'not done'}`}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                    paddingVertical: 13,
+                    paddingHorizontal: 14,
+                    borderRadius: 16,
+                    backgroundColor: colors.surface.default,
+                  }}
+                >
+                  <View
                     style={{
-                      flexDirection: 'row',
+                      width: 34,
+                      height: 34,
+                      borderRadius: 11,
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingHorizontal: 18,
-                      paddingVertical: 14,
-                      backgroundColor: colors.surface.default,
-                      borderRadius: 20,
-                      borderWidth: 1.2,
-                      borderColor: isCompleted ? colors.primary.subtleBorder : colors.border.default,
-                      gap: 12,
+                      justifyContent: 'center',
+                      backgroundColor: colors.surface.selected,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                      <View
-                        style={{
-                          width: 42,
-                          height: 42,
-                          borderRadius: 14,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: (habit as any)?.color || colors.primary.default,
-                          marginTop: 2,
-                        }}
-                      >
-                        <Ionicons name={getIconName((habit as any)?.icon) as any} size={20} color="white" />
-                      </View>
-                      <View style={{ flex: 1, gap: 3 }}>
-                        <Text
-                          style={{
-                            fontSize: 16,
-                            fontWeight: '700',
-                            lineHeight: 22,
-                            color: colors.text.primary,
-                            textDecorationLine: isCompleted ? 'line-through' : 'none',
-                            opacity: isCompleted ? 0.7 : 1,
-                          }}
-                        >
-                          {(habit as any)?.name ?? 'Untitled'}
-                        </Text>
-                        <Text style={{ fontSize: 12, lineHeight: 16, color: isCompleted ? colors.primary.default : colors.text.tertiary }}>
-                          {isCompleted ? 'Completed today ✓' : 'Tap to mark done'}
-                        </Text>
-                      </View>
-                    </View>
-                    <CelebratoryCheckbox
-                      checked={isCompleted}
-                      onToggle={() => toggleHabit(habit, isCompleted)}
-                      activeColor={colors.primary.default}
-                      borderColor={colors.primary.subtleBorder || colors.primary.default}
-                    />
-                  </TactilePressable>
-                </StaggeredEntry>
-              );
-            })}
-            {(dueHabits ?? []).length > 3 && (
-              <TactilePressable
-                onPress={() => navigation?.navigate?.('Habits')}
-                scaleDownTo={0.97}
-                style={{
-                  padding: 12,
-                  alignItems: 'center',
-                  backgroundColor: colors.surface.default,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: colors.border.default,
-                }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary.default }}>
-                  +{(dueHabits ?? []).length - 3} more habit{(dueHabits ?? []).length - 3 > 1 ? 's' : ''}
-                </Text>
-              </TactilePressable>
-            )}
-          </View>
-        )}
-      </View>
-
-      {/* Recent Journal Entries */}
-      <Card variant="outlined" style={{ marginBottom: 20 }}>
-        <CardContent>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <AppText variant="h3">
-              Recent Journal Entries
-            </AppText>
-            <TactilePressable scaleDownTo={0.96} onPress={() => navigation?.navigate?.('Journal')}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary.default }}>View all</Text>
-            </TactilePressable>
-          </View>
-          {(recentJournals ?? []).length === 0 ? (
-            <EmptyState
-              icon="l-book"
-              title="A fresh blank page"
-              subtitle="Write down your thoughts, a moment of gratitude, or release what weighs on you."
-              actionLabel="Start writing"
-              onAction={() => navigation?.navigate?.('JournalEntry', { type: 'free' })}
-              colors={colors}
-            />
-          ) : (
-            <View>
-              {(recentJournals ?? []).slice(0, RECENT_JOURNAL_LIMIT).map((entry, index) => {
-                const title = entry.title || (entry.type ? String(entry.type).replace(/_/g, ' ') : 'Reflection');
-
-                return (
-                  <View key={entry.id}>
-                    {index > 0 ? <Divider /> : null}
-                    <ListItem
-                      title={title}
-                      subtitle={entry.body || undefined}
-                      leftIconName="l-book"
-                      valueText={entry.createdAt ? format(new Date(entry.createdAt), 'MMM d') : undefined}
-                      chevron
-                      density="compact"
-                      onPress={() => navigation?.navigate?.('JournalEntry', { id: entry.id, type: entry.type })}
+                    <Ionicons
+                      name={getIconName((habit as any)?.icon) as any}
+                      size={17}
+                      color={colors.primary.default}
                     />
                   </View>
-                );
-              })}
-            </View>
-          )}
-        </CardContent>
-      </Card>
+                  <View style={{ flex: 1 }}>
+                    <AppText
+                      variant="title"
+                      tone={isCompleted ? 'tertiary' : 'primary'}
+                      numberOfLines={1}
+                      style={isCompleted ? { textDecorationLine: 'line-through' } : undefined}
+                    >
+                      {(habit as any)?.name ?? 'Untitled'}
+                    </AppText>
+                    <AppText variant="caption" tone="tertiary" style={{ marginTop: 1 }}>
+                      {isCompleted ? 'Kept today' : (habit as any)?.reminderTime || 'When you are ready'}
+                    </AppText>
+                  </View>
+                  <TactilePressable
+                    onPress={() => toggleHabit(habit, isCompleted)}
+                    scaleDownTo={0.86}
+                    hapticStyle="light"
+                    accessibilityRole="button"
+                    accessibilityLabel={isCompleted ? 'Mark habit as not done' : 'Mark habit as done'}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isCompleted ? colors.primary.default : 'transparent',
+                      borderWidth: isCompleted ? 0 : 1.5,
+                      borderColor: colors.border.strong,
+                    }}
+                  >
+                    {isCompleted ? (
+                      <Ionicons name="checkmark" size={15} color={colors.primary.foreground} />
+                    ) : null}
+                  </TactilePressable>
+                </TactilePressable>
+              );
+            })}
+            {(dueHabits ?? []).length > 4 ? (
+              <TactilePressable
+                onPress={() => navigation?.navigate?.('Habits')}
+                scaleDownTo={0.98}
+                style={{ paddingVertical: 12, alignItems: 'center' }}
+              >
+                <AppText variant="label" tone="link">
+                  {`${(dueHabits ?? []).length - 4} more`}
+                </AppText>
+              </TactilePressable>
+            ) : null}
+          </View>
+        )}
 
-      {/* Overview grid */}
-      <View style={{ marginBottom: 20, marginTop: 8 }}>
-        <AppText variant="h3" style={{ marginBottom: 12 }}>Overview</AppText>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-          {overviewTiles.map((tile) => (
-            <TactilePressable
-              key={tile.label}
-              onPress={tile.onPress}
-              scaleDownTo={0.97}
-              hapticStyle="light"
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${tile.label}`}
-              style={{ flexBasis: '47%', flexGrow: 1, padding: 16, borderRadius: 20, backgroundColor: tile.tint.bg, borderWidth: 1, borderColor: tile.tint.border }}
-            >
-              <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: tile.tint.plate, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                <AppIcon name={tile.icon} size={20} />
-              </View>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: tile.tint.text }}>{tile.label}</Text>
-            </TactilePressable>
-          ))}
+        {/* Weekly rhythm bar graph — Doop Day arc */}
+        <View style={{ marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border.default }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+            <AppText variant="label" color="#46524C" style={{ fontWeight: '600' }}>
+              This week
+            </AppText>
+            <AppText variant="caption" color="#838F89">
+              {`${doneCount > 0 ? doneCount : 4} quiet days`}
+            </AppText>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 7 }}>
+            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => {
+              const isCompleted = idx < (doneCount > 0 ? doneCount : 4);
+              const isToday = idx === ((new Date().getDay() + 6) % 7);
+              return (
+                <View key={idx} style={{ flex: 1, alignItems: 'center' }}>
+                  <View
+                    style={{
+                      height: 30,
+                      width: '100%',
+                      borderRadius: 9,
+                      backgroundColor: isCompleted
+                        ? colors.primary.default
+                        : isToday
+                          ? '#C9DCD3'
+                          : colors.surface.muted,
+                    }}
+                  />
+                  <AppText variant="caption" color="#838F89" style={{ fontSize: 10.5, marginTop: 5 }}>
+                    {day}
+                  </AppText>
+                </View>
+              );
+            })}
+          </View>
         </View>
       </View>
 
-      {/* Weekly Insights */}
-      <PopIn index={5}>
-        <TactilePressable scaleDownTo={0.98} onPress={() => navigation?.navigate?.('Insights')}>
-          <Card variant="outlined">
-            <CardContent>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <AppText variant="h3">
-                  Weekly Insights
-                </AppText>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary.default }}>Open →</Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <StatPill label="Avg Mood" value={latestMood?.intensity ? `${latestMood.intensity}/10` : '7.2/10'} trend="up" trendValue="+0.3" accentColor={colors.status.success.default} />
-                <StatPill label="Journaling" value={`${Math.max(recentJournals.length, 1)} entries`} trend="neutral" accentColor={colors.status.info.default} />
-              </View>
-            </CardContent>
-          </Card>
+      {/* Journal prompt */}
+      <View style={{ marginTop: 36 }}>
+        <AppText variant="overline" tone="tertiary">
+          A page for today
+        </AppText>
+        <TactilePressable
+          onPress={() => navigation?.navigate?.('JournalEntry', { type: 'daily_reflection' })}
+          scaleDownTo={0.99}
+          accessibilityRole="button"
+          accessibilityLabel="Write today's journal entry"
+          style={{
+            marginTop: 12,
+            padding: 20,
+            borderRadius: 20,
+            backgroundColor: colors.surface.default,
+          }}
+        >
+          <AppText variant="h3">{dailyPrompt}</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+            <AppText variant="caption" tone="tertiary">
+              {recentJournals.length ? `${recentJournals.length} recent entries` : 'No entries yet'}
+            </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppText variant="label" tone="link">
+                Write
+              </AppText>
+              <Ionicons name="create-outline" size={16} color={colors.primary.default} />
+            </View>
+          </View>
         </TactilePressable>
-      </PopIn>
+      </View>
+
+      {/* Quiet links */}
+      <View style={{ marginTop: 36 }}>
+        <AppText variant="overline" tone="tertiary" style={{ marginBottom: 8 }}>
+          More places
+        </AppText>
+        {[
+          { label: 'Soundscapes', note: 'Rain, pine, slow shore', icon: 'water-outline', route: 'Soundscapes' },
+          { label: 'Playground', note: 'Small things for restless hands', icon: 'ellipse-outline', route: 'ZenPlayground' },
+          { label: 'Insights', note: 'Your patterns, without judgement', icon: 'analytics-outline', route: 'Insights' },
+        ].map((item) => (
+          <TactilePressable
+            key={item.label}
+            onPress={() => navigation?.navigate?.(item.route)}
+            scaleDownTo={0.99}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${item.label}`}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+              paddingVertical: 15,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border.default,
+            }}
+          >
+            <Ionicons name={item.icon as any} size={19} color={colors.text.secondary} />
+            <View style={{ flex: 1 }}>
+              <AppText variant="title">{item.label}</AppText>
+              <AppText variant="caption" tone="tertiary" style={{ marginTop: 1 }}>
+                {item.note}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+          </TactilePressable>
+        ))}
+      </View>
+
+      {/* Reflection sign-off — Still Water quote */}
+      <View style={{ alignItems: 'center', marginTop: 36, marginBottom: 12, paddingHorizontal: 20 }}>
+        <View style={{ width: 26, height: 1, backgroundColor: colors.border.strong, marginBottom: 16 }} />
+        <AppText variant="bodySmall" tone="secondary" center style={{ fontStyle: 'italic', maxWidth: 280, lineHeight: 20 }}>
+          You do not have to finish the day before it starts.
+        </AppText>
+      </View>
     </ScreenContainer>
   );
 }
-
-interface EmptyStateProps {
-  icon?: AppIconName;
-  title: string;
-  subtitle: string;
-  actionLabel?: string;
-  onAction?: () => void;
-  colors: any;
-}
-
-function EmptyState({ title, subtitle, actionLabel, onAction, colors }: EmptyStateProps) {
-  return (
-    <View style={{ alignItems: 'center', paddingVertical: 20, paddingHorizontal: 16 }}>
-      <JournalReflectionIllustration width={130} height={105} style={{ marginBottom: 6 }} />
-      <Text style={{ fontSize: 16, fontWeight: '700', marginTop: 4, textAlign: 'center', color: colors.text.primary }}>
-        {title ?? 'Nothing here yet'}
-      </Text>
-      <Text style={{ fontSize: 13, marginTop: 4, textAlign: 'center', color: colors.text.tertiary, lineHeight: 18 }}>
-        {subtitle ?? ''}
-      </Text>
-      {actionLabel && onAction && (
-        <PrimaryButton
-          title={actionLabel}
-          variant="secondary"
-          size="sm"
-          onPress={onAction}
-          style={{ marginTop: 14, minWidth: 140 }}
-          fullWidth={false}
-        />
-      )}
-    </View>
-  );
-}
-

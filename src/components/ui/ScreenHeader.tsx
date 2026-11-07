@@ -2,9 +2,9 @@ import React from 'react';
 import { StyleProp, View, ViewStyle, StyleSheet, Platform, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { borderWidths, iconButtonSizes, radius, spacing } from '../../theme/tokens';
-import { AppIcon } from '../AppIcon';
+import { borderWidths, spacing } from '../../theme/tokens';
 import { TactilePressable } from '../interactive/TactilePressable';
 import { AppText } from './AppText';
 
@@ -67,21 +67,15 @@ export function ScreenHeader({
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel="Go back"
-        style={[
-          styles.backChip,
-          {
-            backgroundColor: colors.surface.default,
-            borderColor: colors.border.default,
-          },
-        ]}
+        style={styles.backChip}
       >
-        <AppIcon name="i-arrow-back" size={20} color={colors.text.primary} />
+        <Ionicons name="chevron-back" size={22} color={colors.text.secondary} />
       </TactilePressable>
 
       {center ?? (
         <View style={styles.titleCol}>
           {title ? (
-            <AppText variant="h3" numberOfLines={1}>
+            <AppText variant="h3" numberOfLines={1} style={styles.titleText}>
               {title}
             </AppText>
           ) : null}
@@ -102,26 +96,32 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing[3],
+    gap: spacing[2],
     paddingHorizontal: spacing[5],
-    paddingTop: spacing[3],
-    paddingBottom: spacing[3],
+    paddingTop: spacing[2],
+    paddingBottom: spacing[2],
+    minHeight: 52,
   },
   backChip: {
-    width: iconButtonSizes.md,
-    height: iconButtonSizes.md,
-    borderRadius: radius.full,
-    borderWidth: borderWidths.thin,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: -8,
   },
   titleCol: {
     flex: 1,
+    justifyContent: 'center',
+  },
+  titleText: {
+    paddingBottom: 3,
   },
   subtitle: {
-    marginTop: spacing[1],
+    marginTop: 2,
+    paddingBottom: 1,
   },
   rightSpacer: {
-    width: iconButtonSizes.md,
+    width: 40,
   },
 });

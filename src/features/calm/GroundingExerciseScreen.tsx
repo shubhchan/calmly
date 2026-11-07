@@ -1,73 +1,74 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Platform } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
-import { Card, PrimaryButton, ProgressRing, AppIcon, ScreenHeader } from '../../components';
+import { AppText, Button, ProgressRing, AppIcon, ScreenHeader } from '../../components';
 import type { AppIconName } from '../../components';
 import { RootStackParamList, GroundingType } from '../../types/navigation';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { calmRepository } from '../../database/repositories/calmRepository';
 import { hapticFeedback } from '../../utils/haptics';
-import { BlurView } from 'expo-blur';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { useTabBarOffset } from '../../utils/useTabBarOffset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const groundingSteps: Record<GroundingType, { label: string; instruction: string; icon: AppIconName }[]> = {
   '5-4-3-2-1': [
-    { label: '5 Things You See', instruction: 'Look around and name 5 things you can see right now. Notice their shapes, light, and subtle details.', icon: 'l-eye' },
-    { label: '4 Things You Feel', instruction: 'Notice 4 physical textures or sensations: the fabric of your clothes, chair support, or temperature.', icon: 'l-hands' },
-    { label: '3 Things You Hear', instruction: 'Listen for 3 distinct sounds nearby or in the distance. Simply observe them without judgment.', icon: 'l-ear' },
-    { label: '2 Things You Smell', instruction: 'Notice 2 scents in the air. If scent is faint, notice the fresh coolness of breathing in.', icon: 'i-flower' },
-    { label: '1 Thing You Taste', instruction: 'Notice 1 taste: tea, water, or just resting your tongue gently on the palate.', icon: 'i-restaurant' },
+    { label: '5 things you see', instruction: 'Look around and name five things you can see. Notice their shape, light and detail.', icon: 'l-eye' },
+    { label: '4 things you feel', instruction: 'Notice four physical textures or sensations: fabric, the chair, temperature.', icon: 'l-hands' },
+    { label: '3 things you hear', instruction: 'Listen for three distinct sounds, near or far. Let them be there.', icon: 'l-ear' },
+    { label: '2 things you smell', instruction: 'Notice two scents. If they are faint, feel the cool air as you breathe in.', icon: 'i-flower' },
+    { label: '1 thing you taste', instruction: 'Notice one taste: tea, water, or simply your tongue resting.', icon: 'i-restaurant' },
   ],
   'body-scan': [
-    { label: 'Feet & Legs', instruction: 'Bring gentle awareness to your feet. Notice any tingling or pressure. Allow your calf muscles to uncoil.', icon: 'l-pin' },
-    { label: 'Hips & Core', instruction: 'Sense where your body meets the seat. Let your lower abdomen soften and expand freely.', icon: 'l-calm' },
-    { label: 'Chest & Breath', instruction: 'Notice the quiet rhythm of your heart and ribcage. Breathe into any tight spaces.', icon: 'l-pulse' },
-    { label: 'Shoulders & Hands', instruction: 'Unclench your fingers. Let your shoulders drop away from your ears. Release held effort.', icon: 'i-hand-l' },
-    { label: 'Neck & Face', instruction: 'Unclench your jaw. Smooth the brow between your eyes. Let your expression rest in peaceful stillness.', icon: 'm-peaceful' },
+    { label: 'Feet and legs', instruction: 'Bring attention to your feet. Notice tingling or pressure. Let your calves uncoil.', icon: 'l-pin' },
+    { label: 'Hips and core', instruction: 'Sense where your body meets the seat. Let your lower abdomen soften.', icon: 'l-calm' },
+    { label: 'Chest and breath', instruction: 'Notice the quiet rhythm of your heart. Breathe into any tight space.', icon: 'l-pulse' },
+    { label: 'Shoulders and hands', instruction: 'Unclench your fingers. Let your shoulders drop away from your ears.', icon: 'i-hand-l' },
+    { label: 'Neck and face', instruction: 'Unclench your jaw, smooth your brow, and let your expression rest.', icon: 'm-peaceful' },
   ],
   cognitive: [
-    { label: 'Orient Time & Place', instruction: 'State today\'s date, day of week, and your present physical room out loud or in your mind.', icon: 'i-calendar' },
-    { label: 'Physical Anchor', instruction: 'Look around and identify 3 concrete facts about this space: "I am sitting here, the room is quiet."', icon: 'i-loc' },
-    { label: 'Grounding Mantra', instruction: 'Silently repeat: "I am safe in this present moment. This discomfort is temporary and will pass."', icon: 'l-lock' },
-    { label: 'What I Control', instruction: 'Acknowledge what is in your hands right now: only this next breath and this current step.', icon: 'i-bulb' },
-    { label: 'Warm Horizon', instruction: 'Recall one small, simple comfort you enjoy—a warm cup of tea, a cozy blanket, a kind smile.', icon: 'l-star' },
+    { label: 'Orient time and place', instruction: 'State today\'s date, the day of the week, and the room you are in.', icon: 'i-calendar' },
+    { label: 'Physical anchor', instruction: 'Name three facts about this space. “I am sitting here. The room is quiet.”', icon: 'i-loc' },
+    { label: 'Grounding phrase', instruction: 'Silently repeat: “I am safe in this moment. This will pass.”', icon: 'l-lock' },
+    { label: 'What I control', instruction: 'Name what is in your hands now: this breath and this step.', icon: 'i-bulb' },
+    { label: 'Warm horizon', instruction: 'Recall one small comfort: a warm cup, a blanket, a kind face.', icon: 'l-star' },
   ],
   physical: [
-    { label: 'Firm Footing', instruction: 'Press both soles firmly into the ground. Feel the solid earth supporting your full weight.', icon: 'l-pin' },
-    { label: 'Tense & Release', instruction: 'Squeeze your hands into tight fists for 5 seconds. Now release completely. Notice the contrast of relief.', icon: 'i-hand-l' },
-    { label: 'Gentle Reach', instruction: 'Raise both arms toward the sky, lengthening your spine. Inhale deeply, then lower softly.', icon: 'l-expand' },
-    { label: 'Tactile Grounding', instruction: 'Touch an object near you. Trace its edges, texture, and coolness with deliberate curiosity.', icon: 'i-hand-r' },
-    { label: 'Slow March', instruction: 'Take 10 slow, deliberate steps in place. Feel each heel lift and settle securely.', icon: 'l-walk' },
+    { label: 'Firm footing', instruction: 'Press both soles into the ground. Feel it hold your full weight.', icon: 'l-pin' },
+    { label: 'Tense and release', instruction: 'Squeeze your hands into fists for five seconds, then release completely.', icon: 'i-hand-l' },
+    { label: 'Gentle reach', instruction: 'Raise both arms, lengthen your spine, inhale, then lower softly.', icon: 'l-expand' },
+    { label: 'Tactile grounding', instruction: 'Touch something near you. Trace its edge, texture and coolness.', icon: 'i-hand-r' },
+    { label: 'Slow march', instruction: 'Take ten slow steps in place. Feel each heel lift and settle.', icon: 'l-walk' },
   ],
 };
 
 const groundingTitles: Record<GroundingType, string> = {
-  '5-4-3-2-1': '5-4-3-2-1 Senses',
-  'body-scan': 'Body Scan Relaxation',
-  cognitive: 'Cognitive Reset',
-  physical: 'Physical Grounding',
+  '5-4-3-2-1': 'Senses',
+  'body-scan': 'Body scan',
+  cognitive: 'Cognitive reset',
+  physical: 'Physical grounding',
 };
 
+/**
+ * Grounding exercise — one instruction at a time, one action to continue.
+ */
 export function GroundingExerciseScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'GroundingExercise'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { type = '5-4-3-2-1' } = (route?.params ?? {}) as { type?: GroundingType };
 
-  const safeType: GroundingType = (type && groundingSteps[type] ? type : '5-4-3-2-1');
+  const safeType: GroundingType = type && groundingSteps[type] ? type : '5-4-3-2-1';
   const steps = groundingSteps[safeType] ?? groundingSteps['5-4-3-2-1'] ?? [];
   const safeSteps = Array.isArray(steps) ? steps : [];
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
 
   const safeCurrentStep = Math.max(0, Math.min(currentStep, Math.max(0, safeSteps.length - 1)));
   const current = safeSteps[safeCurrentStep] ?? safeSteps[0];
   const progress = safeSteps.length > 0 ? (safeCurrentStep + 1) / safeSteps.length : 0;
-  const safeTitle = groundingTitles[safeType] ?? 'Grounding Exercise';
+  const safeTitle = groundingTitles[safeType] ?? 'Grounding';
 
   const handleNext = () => {
     if (currentStep < safeSteps.length - 1) {
@@ -92,38 +93,33 @@ export function GroundingExerciseScreen() {
     }
   };
 
-  const androidBarFallback = isDark ? 'rgba(24, 33, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)';
-
   return (
     <ScreenContainer scroll={false} backgroundColor={colors.background.default}>
       <ScreenHeader title={safeTitle} />
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 130 + insets.bottom, alignItems: 'center' }}
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 16,
+          paddingBottom: 140 + insets.bottom,
+          alignItems: 'center',
+        }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ marginBottom: 16, alignItems: 'center' }}>
-          <ProgressRing
-            progress={progress}
-            size={76}
-            strokeWidth={5}
-            showPercentage={false}
-          >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.primary.default }}>
-              {safeCurrentStep + 1}/{safeSteps.length}
-            </Text>
-          </ProgressRing>
-        </View>
+        <ProgressRing progress={progress} size={72} strokeWidth={5} showPercentage={false}>
+          <AppText variant="label" tone="link">
+            {safeCurrentStep + 1}/{safeSteps.length}
+          </AppText>
+        </ProgressRing>
 
-        {/* Step Indicator Pills */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 24 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18, marginBottom: 28 }}>
           {safeSteps.map((_, index) => (
             <View
               key={index}
               style={{
-                width: index === currentStep ? 24 : 8,
-                height: 8,
+                width: index === currentStep ? 22 : 7,
+                height: 7,
                 borderRadius: 4,
                 backgroundColor: index <= currentStep ? colors.primary.default : colors.border.default,
               }}
@@ -131,87 +127,65 @@ export function GroundingExerciseScreen() {
           ))}
         </View>
 
-        {/* Exercise card — the native route transition owns entry motion. */}
-        <View key={safeCurrentStep} style={{ width: '100%', marginBottom: 24 }}>
-          <Card variant="elevated">
-            <View style={{ padding: 22 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <View
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 26,
-                    backgroundColor: colors.primary.subtle,
-                    borderWidth: 1,
-                    borderColor: colors.primary.subtleBorder,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <AppIcon name={current?.icon ?? 'i-leaf'} size={26} color={colors.primary.default} />
-                </View>
-                <View style={{ marginLeft: 14, flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary.default, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    Step {safeCurrentStep + 1}
-                  </Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, marginTop: 2 }}>
-                    {current?.label ?? 'Grounding'}
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={{ fontSize: 16, lineHeight: 26, color: colors.text.secondary }}>
-                {current?.instruction ?? ''}
-              </Text>
+        <View key={safeCurrentStep} style={{ width: '100%' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: colors.surface.muted,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AppIcon name={current?.icon ?? 'i-leaf'} size={22} color={colors.primary.default} />
             </View>
-          </Card>
+            <View style={{ flex: 1 }}>
+              <AppText variant="overline" tone="tertiary">
+                Step {safeCurrentStep + 1}
+              </AppText>
+              <AppText variant="h3" style={{ marginTop: 2 }}>
+                {current?.label ?? 'Grounding'}
+              </AppText>
+            </View>
+          </View>
+
+          <AppText variant="bodyLarge" tone="secondary" style={{ marginTop: 24 }}>
+            {current?.instruction ?? ''}
+          </AppText>
         </View>
       </ScrollView>
 
-      {/* Liquid Glass Bottom Floating Bar */}
       <View
         style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          paddingHorizontal: 20,
-          paddingTop: 12,
-          paddingBottom: Math.max(insets.bottom + 14, 28),
+          paddingHorizontal: 24,
+          paddingTop: 14,
+          paddingBottom: Math.max(insets.bottom + 12, 24),
           borderTopWidth: 1,
-          borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : colors.border.default,
-          overflow: 'hidden',
+          borderTopColor: colors.border.default,
+          backgroundColor: colors.background.default,
           flexDirection: 'row',
           gap: 12,
         }}
       >
-        <BlurView
-          intensity={isDark ? 65 : 85}
-          tint={isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              bottom: 0,
-              left: 0,
-              right: 0,
-              backgroundColor: Platform.OS === 'android' ? androidBarFallback : 'transparent',
-            },
-          ]}
-        />
         {!isComplete ? (
           <>
-            <PrimaryButton
-              title="Previous"
-              variant="outline"
+            <Button
+              title="Back"
+              variant="secondary"
               size="md"
               onPress={handlePrevious}
               disabled={currentStep === 0}
               style={{ flex: 1 }}
               fullWidth={false}
             />
-            <PrimaryButton
-              title={currentStep === safeSteps.length - 1 ? 'Finish' : 'Next Step'}
+            <Button
+              title={currentStep === safeSteps.length - 1 ? 'Finish' : 'Next'}
               variant="primary"
               size="md"
               onPress={handleNext}
@@ -221,15 +195,15 @@ export function GroundingExerciseScreen() {
           </>
         ) : (
           <>
-            <PrimaryButton
+            <Button
               title="Repeat"
-              variant="outline"
+              variant="secondary"
               size="md"
               onPress={() => { setCurrentStep(0); setIsComplete(false); }}
               style={{ flex: 1 }}
               fullWidth={false}
             />
-            <PrimaryButton
+            <Button
               title="Done"
               variant="primary"
               size="md"

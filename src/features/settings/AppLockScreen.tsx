@@ -82,9 +82,9 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked?: () => void }) {
         <AppText tone="secondary" center>Enter your six-digit PIN to return to your space.</AppText>
       </View>
       <Animated.View style={[styles.dots, shakeStyle]} accessibilityLabel={`${pin.length} of 6 PIN digits entered`}>
-        {Array.from({ length: 6 }, (_, i) => <View key={i} style={[styles.dot, { borderColor: error ? colors.accents.rose : colors.primary.default, backgroundColor: i < pin.length ? (error ? colors.accents.rose : colors.primary.default) : 'transparent' }]} />)}
+        {Array.from({ length: 6 }, (_, i) => <View key={i} style={[styles.dot, { borderColor: error ? colors.status.error.default : colors.primary.default, backgroundColor: i < pin.length ? (error ? colors.status.error.default : colors.primary.default) : 'transparent' }]} />)}
       </Animated.View>
-      <AppText variant="bodySmall" center color={error ? colors.accents.rose : colors.text.tertiary}>{error ? 'That PIN did not match. Try again.' : busy ? 'Checking your PIN…' : 'Your entries stay private on this device'}</AppText>
+      <AppText variant="bodySmall" center color={error ? colors.status.error.default : colors.text.tertiary}>{error ? 'That PIN did not match. Try again.' : busy ? 'Checking your PIN…' : 'Your entries stay private on this device'}</AppText>
       <View style={[styles.keypad, { maxWidth: 312 }]}>
         {['1','2','3','4','5','6','7','8','9','bio','0','delete'].map(key => {
           if (key === 'bio' && !biometricAvailable) return <View key={key} style={styles.key} />;
@@ -100,11 +100,11 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked?: () => void }) {
 const styles = StyleSheet.create({
   layout: { flex: 1, alignItems: 'center', justifyContent: 'space-between', paddingBottom: 30, paddingHorizontal: 22 },
   header: { alignItems: 'center', gap: 10, maxWidth: 330 },
-  iconOuter: { width: 88, height: 88, borderRadius: 28, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  iconInner: { width: 66, height: 66, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  iconOuter: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  iconInner: { width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center' },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 15, paddingVertical: 7 },
-  dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 2 },
+  dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5 },
   keypad: { width: '100%', flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 10 },
-  key: { width: '30%', height: 62, borderWidth: 1, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  key: { width: '30%', height: 62, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   footer: { flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
 });

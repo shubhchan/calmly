@@ -89,9 +89,9 @@ function Action({ label, icon, onPress, color }: { label: string; icon: React.Co
 }
 const styles = StyleSheet.create({
   page: { paddingHorizontal: 20, gap: 18, paddingBottom: 130 },
-  card: { padding: 18, borderRadius: 20, borderWidth: 1, gap: 13 },
+  card: { padding: 18, borderRadius: 20, gap: 13, backgroundColor: '#FFFFFF' },
   row: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   action: { minHeight: 50, borderRadius: 14, flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
-  input: { borderWidth: 1, borderRadius: 13, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15 },
+  input: { borderRadius: 13, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, backgroundColor: '#EAEDE7' },
   fileRow: { flexDirection: 'row', paddingVertical: 15, gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, alignItems: 'center' },
 });

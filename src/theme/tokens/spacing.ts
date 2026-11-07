@@ -2,8 +2,7 @@
  * Spacing scale — the single source of truth for all layout rhythm.
  *
  * Base unit: 4pt. Every gap, pad and inset in the app must come from this
- * scale; arbitrary numbers are a bug. Values follow a 4pt grid, extending to
- * 40/48/64 for section-level whitespace.
+ * scale; arbitrary numbers are a bug.
  */
 
 export const spacing = {
@@ -18,13 +17,15 @@ export const spacing = {
   8: 32,
   10: 40,
   12: 48,
+  14: 56,
   16: 64,
+  18: 72,
 } as const;
 
 export type SpacingToken = keyof typeof spacing;
 
 /** Standard horizontal screen gutter used by every ScreenContainer. */
-export const screenGutter = spacing[5];
+export const screenGutter = spacing[6];
 
 /** Typed accessor: space(4) === 16. */
 export function space(token: SpacingToken): number {
@@ -38,15 +39,15 @@ export const layout = {
   /** Padding inside a standard card. */
   cardPadding: spacing[5],
   /** Vertical gap between sections on a screen. */
-  sectionGap: spacing[4],
+  sectionGap: spacing[10],
   /** Gap between items in a vertical list. */
-  listGap: spacing[3],
+  listGap: spacing[4],
   /** Gap between label and input. */
   fieldGap: spacing[2],
   /** Gap between a control's icon and its label. */
   inlineGap: spacing[2],
   /** Padding inside modal / bottom sheet bodies. */
-  modalPadding: spacing[5],
+  modalPadding: spacing[6],
   /** Default bottom clearance above the floating tab bar. */
   screenBottomClearance: 110,
 } as const;

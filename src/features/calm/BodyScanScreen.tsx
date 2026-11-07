@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { Card, CardContent, PrimaryButton, BodyScanIllustration, ScreenHeader, TactilePressable } from '../../components';
+import { AppText, BodyScanIllustration, Button, ScreenHeader, TactilePressable } from '../../components';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { useTabBarOffset } from '../../utils/useTabBarOffset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
-import { sharedElementStyle, sharedTransitionTags } from '../../theme/sharedTransitions';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -19,54 +16,50 @@ interface ZoneConfig {
   name: string;
   cue: string;
   somaticBenefit: string;
-  icon: string;
 }
 
 const BODY_ZONES: ZoneConfig[] = [
   {
     id: 'head',
-    name: 'Crown, Forehead & Jaw',
-    cue: 'Unclench your teeth. Let your tongue drop gently from the roof of your mouth. Soften the tiny muscles around your temples and eyelids.',
-    somaticBenefit: 'Eases cranial tension headaches and suboccipital tightness',
-    icon: 'i-sun',
+    name: 'Head and jaw',
+    cue: 'Unclench your teeth. Let your tongue drop from the roof of your mouth. Soften the muscles around your temples and eyes.',
+    somaticBenefit: 'Eases tension in the face and jaw',
   },
   {
     id: 'shoulders',
-    name: 'Neck & Shoulders',
-    cue: 'Inhale and gently draw shoulders toward ears, then exhale with a deep sigh and let them drop down heavily. Notice the release.',
-    somaticBenefit: 'Releases chronic upper-trapezius postural guarding',
-    icon: 'l-expand',
+    name: 'Neck and shoulders',
+    cue: 'Inhale and draw your shoulders toward your ears. Exhale with a sigh and let them drop heavily.',
+    somaticBenefit: 'Releases the shoulders',
   },
   {
     id: 'chest',
-    name: 'Chest & Diaphragm',
-    cue: 'Place a warm hand over your sternum. Feel the gentle rise and fall of your ribcage. Allow the breath to expand downward into belly.',
-    somaticBenefit: 'Expands thoracic breathing capacity and soothes cardiac flutter',
-    icon: 'l-heart',
+    name: 'Chest',
+    cue: 'Place a warm hand on your sternum. Feel the ribcage rise and fall. Let the breath move lower.',
+    somaticBenefit: 'Slows the breath',
   },
   {
     id: 'belly',
-    name: 'Solar Plexus & Abdomen',
-    cue: 'Release unconscious gut-tightening. Allow your belly to become soft, round, and receptive as you exhale.',
-    somaticBenefit: 'Activates enteric nervous system and digestive equilibrium',
-    icon: 'l-calm',
+    name: 'Belly',
+    cue: 'Let your belly become soft and round as you exhale. Stop holding it in.',
+    somaticBenefit: 'Settles the gut',
   },
   {
     id: 'back',
-    name: 'Spine & Lower Back',
-    cue: 'Visualize warm honey flowing down each vertebra from upper spine to tailbone. Feel the chair supporting your entire body.',
-    somaticBenefit: 'Alleviates lumbar stiffness and chronic postural compression',
-    icon: 'l-pulse',
+    name: 'Spine',
+    cue: 'Imagine warmth moving down each vertebra. Feel the chair holding your whole body.',
+    somaticBenefit: 'Softens the lower back',
   },
   {
     id: 'limbs',
-    name: 'Legs, Ankles & Feet',
-    cue: 'Feel gravity anchoring your feet securely to the earth. Notice the warmth and heavy, relaxed stillness in your legs.',
-    somaticBenefit: 'Provides tactile groundedness and relieves restless leg tension',
-    icon: 'l-walk',
+    name: 'Legs and feet',
+    cue: 'Feel your feet resting on the ground. Notice their weight and warmth.',
+    somaticBenefit: 'Grounds the body',
   },
 ];
 
+/**
+ * Body scan — pick a zone, read one cue, or start the full scan.
+ */
 export function BodyScanScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useAppTheme();
@@ -81,120 +74,106 @@ export function BodyScanScreen() {
 
   return (
     <ScreenContainer animate={false} scroll={false} backgroundColor={colors.background.default}>
-      <ScreenHeader title="Somatic Body Scan" subtitle="Muscle Tension Reliever" bordered />
+      <ScreenHeader title="Body scan" />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]} showsVerticalScrollIndicator={false}>
-        {/* Hero Card with SVG Illustration */}
-        <Card variant="elevated" style={styles.heroCard}>
-          <CardContent style={styles.heroCardContent}>
-            <View style={[styles.heroAuraGlow, { backgroundColor: colors.primary.subtle }]}>
-              <Animated.View
-                sharedTransitionTag={sharedTransitionTags.calmHero('bodyScan')}
-                sharedTransitionStyle={sharedElementStyle}
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ alignItems: 'center' }}>
+          <View
+            style={{
+              width: '100%',
+              paddingVertical: 16,
+              borderRadius: 20,
+              backgroundColor: colors.primary.subtle,
+              alignItems: 'center',
+            }}
+          >
+            <BodyScanIllustration width={180} height={140} />
+          </View>
+        </View>
+
+        <View style={{ marginTop: 24 }}>
+          <AppText variant="h3">Where is the tension?</AppText>
+          <AppText variant="body" tone="secondary" style={{ marginTop: 8 }}>
+            Choose a area, then follow one short cue. Move slowly.
+          </AppText>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingVertical: 20 }}
+        >
+          {BODY_ZONES.map((zone) => {
+            const isSelected = selectedZone === zone.id;
+            return (
+              <TactilePressable
+                key={zone.id}
+                onPress={() => setSelectedZone(zone.id)}
+                scaleDownTo={0.95}
+                hapticStyle="selection"
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 9,
+                  borderRadius: 999,
+                  backgroundColor: isSelected ? colors.primary.default : colors.surface.muted,
+                }}
               >
-                <BodyScanIllustration width={190} height={155} />
-              </Animated.View>
-            </View>
-            <View style={styles.heroBadgeRow}>
-              <View style={[styles.heroBadge, { backgroundColor: colors.primary.subtle, borderColor: colors.primary.subtleBorder }]}>
-                <Ionicons name="fitness-outline" size={12} color={colors.primary.default} />
-                <Text style={[styles.heroBadgeText, { color: colors.primary.default }]}>Somatic Biofeedback</Text>
-              </View>
-              <Text style={[styles.heroEstText, { color: colors.text.tertiary }]}>8 min guided scan</Text>
-            </View>
-          </CardContent>
-        </Card>
+                <AppText variant="caption" tone={isSelected ? 'onPrimary' : 'secondary'}>
+                  {zone.name}
+                </AppText>
+              </TactilePressable>
+            );
+          })}
+        </ScrollView>
 
-        {/* Header Cue */}
-        <View style={{ marginBottom: 4 }}>
-          <Text style={[styles.headline, { color: colors.text.primary }]}>
-            Release Stored Tension
-          </Text>
-          <Text style={[styles.subheadline, { color: colors.text.secondary }]}>
-            Gently focus your attention to soothe each muscle group.
-          </Text>
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.border.default, paddingTop: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surface.muted,
+              }}
+            >
+              <Ionicons name="leaf-outline" size={18} color={colors.primary.default} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="bodyLarge">{activeZone.name}</AppText>
+              <AppText variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
+                {activeZone.somaticBenefit}
+              </AppText>
+            </View>
+          </View>
+          <AppText variant="body" tone="secondary" style={{ marginTop: 16 }}>
+            {activeZone.cue}
+          </AppText>
         </View>
-
-        {/* Anatomy Zones Carousel */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Target Anatomy Zone
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.zonesScroll}>
-            {BODY_ZONES.map((zone) => {
-              const isSelected = selectedZone === zone.id;
-              return (
-                <TactilePressable
-                  key={zone.id}
-                  onPress={() => setSelectedZone(zone.id)}
-                  scaleDownTo={0.94}
-                  hapticStyle="selection"
-                  style={[
-                    styles.zoneChip,
-                    {
-                      backgroundColor: isSelected ? colors.primary.default : colors.surface.default,
-                      borderColor: isSelected ? colors.primary.default : colors.border.default,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.zoneChipText,
-                      { color: isSelected ? '#FFFFFF' : colors.text.primary },
-                      isSelected && { fontWeight: '700' },
-                    ]}
-                  >
-                    {zone.name}
-                  </Text>
-                </TactilePressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Active Zone Guidance Box */}
-        <Card variant="outlined" style={styles.activeZoneCard}>
-          <CardContent style={styles.activeZoneContent}>
-            <View style={styles.activeZoneHeader}>
-              <View style={[styles.activeZoneOrb, { backgroundColor: colors.primary.subtle }]}>
-                <Ionicons name="leaf" size={20} color={colors.primary.default} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.activeZoneTitle, { color: colors.text.primary }]}>
-                  {activeZone.name}
-                </Text>
-                <Text style={[styles.activeZoneBenefit, { color: colors.primary.default }]}>
-                  {activeZone.somaticBenefit}
-                </Text>
-              </View>
-            </View>
-            <View style={[styles.cueBox, { backgroundColor: colors.background.secondary }]}>
-              <Text style={[styles.cueLabel, { color: colors.text.tertiary }]}>Somatic Release Cue:</Text>
-              <Text style={[styles.cueText, { color: colors.text.primary }]}>
-                {activeZone.cue}
-              </Text>
-            </View>
-          </CardContent>
-        </Card>
       </ScrollView>
 
-      {/* Floating Bottom Primary Action Bar */}
       <View
         style={[
           styles.bottomBar,
           {
-            paddingBottom: Math.max(insets.bottom + 14, 24),
+            paddingBottom: Math.max(insets.bottom + 12, 24),
             backgroundColor: colors.background.default,
             borderTopColor: colors.border.default,
           },
         ]}
       >
-        <PrimaryButton
-          title="Start Full 8-Minute Body Scan"
+        <Button
+          title="Start full body scan"
           variant="primary"
           size="lg"
           onPress={handleStartFullScan}
-          leftIcon={<Ionicons name="play" size={20} color="#FFFFFF" />}
+          leftIcon={(color) => <Ionicons name="play" size={18} color={color} />}
         />
       </View>
     </ScreenContainer>
@@ -202,109 +181,18 @@ export function BodyScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: 24,
+    paddingTop: 10,
     paddingBottom: 110,
-    gap: 20,
   },
-  heroCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-  },
-  heroCardContent: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  heroAuraGlow: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 14,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
-  heroBadgeText: { fontSize: 12, fontWeight: '700' },
-  heroEstText: { fontSize: 13, fontWeight: '600' },
-  section: { gap: 10 },
-  headline: {
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-    lineHeight: 30,
-  },
-  subheadline: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  metricRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  metricChip: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 2,
-  },
-  metricVal: { fontSize: 14, fontWeight: '800' },
-  metricDesc: { fontSize: 11, fontWeight: '500' },
-  sectionTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  zonesScroll: { gap: 8, paddingRight: 4 },
-  zoneChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  zoneChipText: { fontSize: 13, fontWeight: '600' },
-  activeZoneCard: { borderRadius: 20 },
-  activeZoneContent: { padding: 16, gap: 14 },
-  activeZoneHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  activeZoneOrb: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeZoneTitle: { fontSize: 16, fontWeight: '700' },
-  activeZoneBenefit: { fontSize: 12, fontWeight: '600', marginTop: 2 },
-  cueBox: {
-    padding: 14,
-    borderRadius: 14,
-    gap: 4,
-  },
-  cueLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
-  cueText: { fontSize: 14, lineHeight: 21 },
   bottomBar: {
     position: 'absolute',
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1,
+    bottom: 0,
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

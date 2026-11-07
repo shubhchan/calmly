@@ -250,6 +250,7 @@ export const journalRepository = {
   async update(
     id: string,
     data: Partial<{
+      type: string;
       title: string;
       body: string;
       mood: string;
@@ -275,6 +276,7 @@ export const journalRepository = {
       await database.write(async () => {
         const entry = await journalCollection.find(id);
         await entry.update((e) => {
+          if (data.type !== undefined) e.type = data.type;
           if (data.title !== undefined) e.title = data.title;
           if (data.body !== undefined) e.body = data.body;
           if (data.mood !== undefined) e.mood = data.mood;

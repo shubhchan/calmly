@@ -1,36 +1,37 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Share } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Share } from 'react-native';
 import { Alert } from '../../services/appAlert';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from '../../components/Card';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
-import { ScreenHeader, TactilePressable } from '../../components';
+import { AppText, Button, ScreenHeader, TactilePressable } from '../../components';
 import { PopIn } from '../../components/interactive/PopIn';
-import { resolveTint } from '../../theme/tints';
 import { deleteSettingsFileStore } from '../../database/repositories/settingsRepository';
 import { moodRepository } from '../../database/repositories/moodRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
 
-const DATA_TYPES = [
-  { key: 'moods', label: 'Mood Check-ins', icon: 'happy-outline' },
-  { key: 'journals', label: 'Journal Reflections', icon: 'book-outline' },
-  { key: 'habits', label: 'Habits & Routines', icon: 'checkbox-outline' },
-  { key: 'completions', label: 'Habit Streaks & Logs', icon: 'checkmark-circle-outline' },
-  { key: 'gratitude', label: 'Gratitude Entries', icon: 'heart-outline' },
-  { key: 'positiveMoments', label: 'Good Things & Wins', icon: 'sparkles-outline' },
-  { key: 'calm', label: 'Calm & Grounding Logs', icon: 'flower-outline' },
-  { key: 'breathing', label: 'Breathing Sessions', icon: 'leaf-outline' },
+const DATA_TYPES: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'moods', label: 'Mood check-ins', icon: 'happy-outline' },
+  { key: 'journals', label: 'Journal reflections', icon: 'book-outline' },
+  { key: 'habits', label: 'Habits and routines', icon: 'checkbox-outline' },
+  { key: 'completions', label: 'Habit streaks and logs', icon: 'checkmark-circle-outline' },
+  { key: 'gratitude', label: 'Gratitude entries', icon: 'heart-outline' },
+  { key: 'positiveMoments', label: 'Good things and wins', icon: 'sparkles-outline' },
+  { key: 'calm', label: 'Calm and grounding logs', icon: 'flower-outline' },
+  { key: 'breathing', label: 'Breathing sessions', icon: 'leaf-outline' },
 ];
 
+/**
+ * Data and backup — take a copy, or clear one category at a time.
+ *
+ * Export is the first and largest action. Categories read as hairline rows so
+ * the page stays calm even though every row can delete something.
+ */
 export function DataManagementScreen() {
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const creamTint = resolveTint(!!isDark, 'cream');
-  const blushTint = resolveTint(!!isDark, 'blush');
 
   const handleExportAll = useCallback(async () => {
     setExporting(true);
@@ -231,104 +232,135 @@ export function DataManagementScreen() {
 
   return (
     <ScreenContainer contentContainerStyle={styles.content}>
-      <ScreenHeader title="Data & Backup" />
+      <ScreenHeader title="Data & backup" />
 
       <PopIn index={0}>
-        <Card tone="cream" style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: creamTint.text }]}>Export Sanctuary</Text>
-          <Text style={[styles.sectionDesc, { color: creamTint.text }]}>
-            Download a complete portable backup of your reflections, habits, and check-ins formatted as JSON.
-          </Text>
-          <PrimaryButton
-            onPress={handleExportAll}
-            loading={exporting}
-            title={exporting ? 'Packaging data...' : 'Export Complete Backup'}
-            leftIcon={<Ionicons name="download-outline" size={20} color="#FFFFFF" />}
-            fullWidth
-          />
-        </Card>
+        <View style={[styles.exportPlate, { backgroundColor: colors.primary.subtle }]}>
+          <Ionicons name="download-outline" size={22} color={colors.primary.default} />
+          <View style={{ flex: 1 }}>
+            <AppText variant="title">Export everything</AppText>
+            <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
+              A complete, portable JSON copy of your reflections, habits and check-ins.
+            </AppText>
+          </View>
+        </View>
+        <Button
+          onPress={handleExportAll}
+          loading={exporting}
+          title={exporting ? 'Packaging data…' : 'Export backup'}
+          variant="primary"
+          size="lg"
+          fullWidth
+          style={{ marginTop: 14 }}
+          leftIcon={(color) => <Ionicons name="download-outline" size={18} color={color} />}
+        />
       </PopIn>
 
       <PopIn index={1}>
-        <Card style={styles.card}>
-        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Category Management</Text>
-        <Text style={[styles.sectionDesc, { color: colors.text.secondary }]}>
-          Selectively erase individual categories without affecting the rest of your history.
-        </Text>
-        <View style={styles.typeList}>
-          {(DATA_TYPES ?? []).map((type) => (
-            <TactilePressable
-              key={type.key}
-              onPress={() => handleDeleteType(type.key)}
-              disabled={!!deleting}
-              style={[
-                styles.typeItem,
-                { backgroundColor: colors.background.secondary, borderColor: colors.border.default },
-              ]}
-            >
-              <View style={[styles.typeIcon, { backgroundColor: colors.primary.default + '14' }]}>
-                <Ionicons name={type.icon as any} size={20} color={colors.primary.default} />
+        <View style={{ marginTop: 32 }}>
+          <AppText variant="overline" tone="tertiary">
+            Clear one category
+          </AppText>
+          <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
+            Remove a single kind of history. Everything else stays as it is.
+          </AppText>
+
+          <View style={{ marginTop: 8 }}>
+            {(DATA_TYPES ?? []).map((type, index) => (
+              <View
+                key={type.key}
+                style={[
+                  styles.typeRow,
+                  { borderTopColor: colors.border.default, borderTopWidth: index === 0 ? 0 : StyleSheet.hairlineWidth },
+                ]}
+              >
+                <TactilePressable
+                  onPress={() => handleDeleteType(type.key)}
+                  disabled={!!deleting}
+                  scaleDownTo={0.99}
+                  hapticStyle="light"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete all ${type.label}`}
+                  style={styles.typeRowInner}
+                >
+                  <Ionicons name={type.icon} size={19} color={colors.text.secondary} />
+                  <AppText variant="body" style={{ flex: 1 }}>
+                    {type.label}
+                  </AppText>
+                  {deleting === type.key ? (
+                    <ActivityIndicator size="small" color={colors.primary.default} />
+                  ) : (
+                    <Ionicons name="trash-outline" size={17} color={colors.text.tertiary} />
+                  )}
+                </TactilePressable>
               </View>
-              <Text style={[styles.typeLabel, { color: colors.text.primary }]}>{type.label}</Text>
-              <View style={{ marginTop: 2 }}>
-                {deleting === type.key ? (
-                  <ActivityIndicator size="small" color={colors.primary.default} />
-                ) : (
-                  <Ionicons name="trash-outline" size={18} color={colors.text.tertiary} />
-                )}
-              </View>
-            </TactilePressable>
-          ))}
+            ))}
+          </View>
         </View>
-        </Card>
       </PopIn>
 
       <PopIn index={2}>
-        <Card variant="outlined" tone="blush" style={styles.dangerCard}>
-          <View style={styles.dangerContent}>
-            <Ionicons name="warning-outline" size={28} color={blushTint.accent} />
-            <View style={styles.dangerText}>
-              <Text style={[styles.dangerTitle, { color: blushTint.accent }]}>Danger Zone</Text>
-              <Text style={[styles.dangerDesc, { color: blushTint.text }]}>
-                Permanent deletion. Once erased, your private local records cannot be restored.
-              </Text>
+        <View style={{ marginTop: 32 }}>
+          <AppText variant="overline" tone="tertiary">
+            Danger zone
+          </AppText>
+          <View
+            style={[
+              styles.dangerPlate,
+              { backgroundColor: colors.status.error.subtle, borderColor: colors.status.error.border },
+            ]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+              <Ionicons name="warning-outline" size={20} color={colors.status.error.default} style={{ marginTop: 1 }} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="body" color={colors.status.error.default}>
+                  Wipe all data
+                </AppText>
+                <AppText variant="caption" tone="secondary" style={{ marginTop: 3 }}>
+                  Permanent. Once erased, your local records cannot be restored.
+                </AppText>
+              </View>
             </View>
+            <TactilePressable
+              onPress={handleDeleteAll}
+              disabled={deleting === 'all'}
+              accessibilityRole="button"
+              accessibilityLabel="Wipe all data permanently"
+              scaleDownTo={0.98}
+              style={{ paddingVertical: 10, marginTop: 8 }}
+            >
+              <AppText variant="label" color={colors.status.error.default}>
+                {deleting === 'all' ? 'Erasing…' : 'Wipe all data permanently'}
+              </AppText>
+            </TactilePressable>
           </View>
-          <PrimaryButton
-            onPress={handleDeleteAll}
-            loading={deleting === 'all'}
-            title={deleting === 'all' ? 'Erasing...' : 'Wipe All Data Permanently'}
-            variant="outline"
-            style={{ borderColor: colors.accents.rose }}
-            textStyle={{ color: colors.accents.rose }}
-            fullWidth
-          />
-        </Card>
+        </View>
       </PopIn>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110, gap: 16 },
-  card: { padding: 18, borderRadius: 20, gap: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
-  sectionDesc: { fontSize: 14, lineHeight: 20 },
-  typeList: { gap: 10, marginTop: 4 },
-  typeItem: {
+  content: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 56 },
+  exportPlate: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
+    gap: 14,
+    padding: 18,
+    borderRadius: 20,
+    marginTop: 8,
   },
-  typeIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  typeLabel: { fontSize: 15, fontWeight: '600', flex: 1, lineHeight: 22 },
-  dangerCard: { padding: 18, borderRadius: 20, gap: 14, borderWidth: 1 },
-  dangerContent: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  dangerText: { flex: 1, gap: 2 },
-  dangerTitle: { fontSize: 16, fontWeight: '700' },
-  dangerDesc: { fontSize: 13, lineHeight: 18 },
+  typeRow: { paddingVertical: 2 },
+  typeRowInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+  },
+  dangerPlate: {
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 18,
+    marginTop: 10,
+  },
 });

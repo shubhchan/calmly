@@ -171,7 +171,7 @@ export function SkeletonCard({
         style,
       ]}
     >
-      {showAvatar && <Skeleton width={44} height={44} radius={14} shimmer={shimmer} />}
+      {showAvatar && <Skeleton width={44} height={44} radius={22} shimmer={shimmer} />}
       <SkeletonText lines={rows} style={{ flex: 1 }} lineHeight={rows > 1 ? 14 : 16} lastLineWidth="48%" shimmer={shimmer} />
       {showTrailing && <Skeleton width={38} height={38} radius={19} shimmer={shimmer} />}
     </View>

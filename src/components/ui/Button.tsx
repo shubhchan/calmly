@@ -6,8 +6,8 @@ import {
   buttonSizes,
   opacity,
   pressScale,
-  radius,
   resolveShadow,
+  shape,
   sizes,
   type ControlSize,
 } from '../../theme/tokens';
@@ -89,8 +89,8 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
       break;
     case 'secondary':
       background = c.primary.subtle;
-      borderColor = c.primary.subtleBorder;
-      borderWidth = borderWidths.thin;
+      borderColor = 'transparent';
+      borderWidth = borderWidths.none;
       ink = isDisabled ? c.text.disabled : c.primary.default;
       break;
     case 'outline':
@@ -109,10 +109,8 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
 
   const shadow =
     variant === 'primary' && !isDisabled
-      ? resolveShadow('md', theme.isDark, c.primary.default)
-      : variant === 'destructive' && !isDisabled
-        ? resolveShadow('sm', theme.isDark, c.status.error.default)
-        : undefined;
+      ? resolveShadow('xs', theme.isDark, c.primary.default)
+      : undefined;
 
   const wrapperOpacity =
     isDisabled && (variant === 'secondary' || variant === 'destructive') ? opacity.disabled : 1;
@@ -134,7 +132,7 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: radius.full,
+          borderRadius: shape.button,
           minHeight: sizeSpec.height,
           minWidth: sizes.touchTarget,
           paddingHorizontal: sizeSpec.paddingHorizontal,

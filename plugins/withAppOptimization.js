@@ -103,3 +103,4 @@ module.exports = function withAppOptimization(config) {
   config = withOptimizationAppBuildGradle(config);
   return config;
 };
+
