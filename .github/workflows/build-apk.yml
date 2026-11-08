@@ -69,6 +69,23 @@ jobs:
           echo "reactNativeArchitectures=arm64-v8a" >> android/gradle.properties
           echo "expo.useLegacyPackaging=true" >> android/gradle.properties
 
+      # Avoid services.gradle.org 504 Gateway Timeout by pre-fetching from official GitHub releases with retry
+      - name: Pre-fetch Gradle Distribution & Configure Wrapper
+        run: |
+          mkdir -p /tmp/gradle-dist
+          if curl -fSL --retry 5 --retry-delay 3 --connect-timeout 15 -o /tmp/gradle-dist/gradle-9.3.1-bin.zip https://github.com/gradle/gradle-distributions/releases/download/v9.3.1/gradle-9.3.1-bin.zip; then
+            echo "Pre-fetched Gradle 9.3.1 from GitHub releases"
+            sed -i 's|distributionUrl=.*|distributionUrl=file\\:///tmp/gradle-dist/gradle-9.3.1-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties
+          else
+            echo "Falling back to direct GitHub release URL"
+            sed -i 's|services.gradle.org/distributions|github.com/gradle/gradle-distributions/releases/download/v9.3.1|' android/gradle/wrapper/gradle-wrapper.properties
+          fi
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: android
+
       - name: Apply App Signing Key
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
