@@ -8,6 +8,7 @@
     "@expo-google-fonts/newsreader": "^0.4.1",
     "@expo-google-fonts/patrick-hand": "^0.4.1",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
+    "@expo/metro-runtime": "~57.0.18",
     "@expo/vector-icons": "^15.1.1",
     "@noble/ciphers": "^2.0.0",
     "@noble/hashes": "^2.0.0",
@@ -42,6 +43,7 @@
     "lottie-react-native": "~7.3.8",
     "nativewind": "^4.2.7",
     "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-css-interop": "0.2.7",
     "react-native-gesture-handler": "2.32.0",
@@ -50,6 +52,7 @@
     "react-native-safe-area-context": "5.7.0",
     "react-native-screens": "4.26.0",
     "react-native-svg": "15.15.4",
+    "react-native-web": "^0.21.2",
     "react-native-worklets": "0.10.1",
     "tailwindcss": "^3.4.0",
     "zustand": "^5.0.15"

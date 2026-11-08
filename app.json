@@ -33,7 +33,18 @@
       "backgroundColor": "#FBF9F5"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "name": "Calmly — Mindful Habit & Mood Tracker",
+      "shortName": "Calmly",
+      "lang": "en",
+      "display": "standalone",
+      "orientation": "portrait",
+      "startUrl": "/",
+      "themeColor": "#2C4F45",
+      "backgroundColor": "#F8F6F1",
+      "description": "Mindful habit, mood, and reflection tracker designed for inner stillness."
     },
     "extra": {
       "eas": {
