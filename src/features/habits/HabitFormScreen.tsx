@@ -328,7 +328,7 @@ export function HabitFormScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name={getIconName(icon) as any} size={26} color={colors.primary.foreground} />
+                <Ionicons name={getIconName(icon) as any} size={26} color="#FFFFFF" />
               </View>
               <AppText variant="caption" tone="secondary">
                 Icon

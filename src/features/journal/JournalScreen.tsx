@@ -4,8 +4,16 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  FadeOutDown,
+  LinearTransition,
+} from 'react-native-reanimated';
 import { AppText, Modal, TactilePressable } from '../../components';
 import { useAppTheme } from '../../theme/ThemeContext';
+import { useAppReducedMotion } from '../../theme/motion';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { format } from 'date-fns';
 import { hapticFeedback } from '../../utils/haptics';
@@ -39,8 +47,9 @@ const TAB_BAR_BASE_HEIGHT = 60;
  */
 export function JournalScreen() {
   const navigation = useNavigation<any>();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useAppReducedMotion();
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [templatesVisible, setTemplatesVisible] = useState(false);
@@ -112,6 +121,23 @@ export function JournalScreen() {
 
   const showEmptyState = !loading && entries.length === 0;
   const showNoResults = !loading && entries.length > 0 && filteredEntries.length === 0;
+
+  /** In-place reveal animations for conditional blocks. Shared so the whole
+   *  screen uses one motion vocabulary: fade + short rise in, quick fade out.
+   *  With reduce-motion on they collapse to undefined (instant swap). */
+  const fadeEnter = useMemo(
+    () =>
+      reducedMotion
+        ? undefined
+        : FadeInDown.springify().mass(0.45).damping(18).stiffness(210),
+    [reducedMotion]
+  );
+  const fadeExit = useMemo(
+    () => (reducedMotion ? undefined : FadeOut.duration(150)),
+    [reducedMotion]
+  );
+  /** Rows reflow (height/position) smoothly when filtering, exit on removal. */
+  const rowLayout = reducedMotion ? undefined : LinearTransition;
 
   return (
     <ScreenContainer scroll={false} bottomPadding={0} style={{ flex: 1 }}>
@@ -193,119 +219,6 @@ export function JournalScreen() {
           })}
         </View>
 
-        {/* Quick entry shortcuts */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
-          style={{ marginTop: 12 }}
-        >
-          <TactilePressable
-            onPress={() => openEntry('gratitude')}
-            scaleDownTo={0.94}
-            accessibilityRole="button"
-            accessibilityLabel="Write Gratitude entry"
-            style={{
-              height: 32,
-              paddingHorizontal: 12,
-              borderRadius: 999,
-              backgroundColor: '#F4EDE2',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            <Ionicons name="heart-outline" size={14} color="#B08A4F" />
-            <AppText variant="caption" style={{ color: '#B08A4F', fontWeight: '600', fontSize: 12 }}>
-              + Gratitude
-            </AppText>
-          </TactilePressable>
-
-          <TactilePressable
-            onPress={() => openEntry('daily_reflection')}
-            scaleDownTo={0.94}
-            accessibilityRole="button"
-            accessibilityLabel="Write Reflection entry"
-            style={{
-              height: 32,
-              paddingHorizontal: 12,
-              borderRadius: 999,
-              backgroundColor: colors.primary.subtle,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            <Ionicons name="sunny-outline" size={14} color={colors.primary.default} />
-            <AppText variant="caption" style={{ color: colors.primary.default, fontWeight: '600', fontSize: 12 }}>
-              + Reflection
-            </AppText>
-          </TactilePressable>
-
-          <TactilePressable
-            onPress={() => openEntry('stress')}
-            scaleDownTo={0.94}
-            accessibilityRole="button"
-            accessibilityLabel="Write Stress release entry"
-            style={{
-              height: 32,
-              paddingHorizontal: 12,
-              borderRadius: 999,
-              backgroundColor: colors.surface.muted,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            <Ionicons name="leaf-outline" size={14} color={colors.text.secondary} />
-            <AppText variant="caption" style={{ color: colors.text.secondary, fontWeight: '600', fontSize: 12 }}>
-              + Stress release
-            </AppText>
-          </TactilePressable>
-
-          <TactilePressable
-            onPress={() => openEntry('free')}
-            scaleDownTo={0.94}
-            accessibilityRole="button"
-            accessibilityLabel="Write Free write entry"
-            style={{
-              height: 32,
-              paddingHorizontal: 12,
-              borderRadius: 999,
-              backgroundColor: colors.surface.muted,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            <Ionicons name="create-outline" size={14} color={colors.text.secondary} />
-            <AppText variant="caption" style={{ color: colors.text.secondary, fontWeight: '600', fontSize: 12 }}>
-              + Free write
-            </AppText>
-          </TactilePressable>
-
-          <TactilePressable
-            onPress={() => setTemplatesVisible(true)}
-            scaleDownTo={0.94}
-            accessibilityRole="button"
-            accessibilityLabel="Browse more journal templates"
-            style={{
-              height: 32,
-              paddingHorizontal: 12,
-              borderRadius: 999,
-              backgroundColor: colors.surface.muted,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 5,
-            }}
-          >
-            <Ionicons name="ellipsis-horizontal" size={14} color={colors.text.tertiary} />
-            <AppText variant="caption" tone="tertiary" style={{ fontWeight: '500', fontSize: 12 }}>
-              More...
-            </AppText>
-          </TactilePressable>
-        </ScrollView>
-
         {/* Search */}
         <View
           style={{
@@ -329,7 +242,12 @@ export function JournalScreen() {
             accessibilityLabel="Search journal entries"
             returnKeyType="search"
           />
-          {searchQuery ? (
+        {/* Clear search: fades in only while text exists */}
+        {searchQuery ? (
+          <Animated.View
+            entering={FadeIn.duration(140)}
+            exiting={FadeOut.duration(100)}
+          >
             <TactilePressable
               onPress={() => setSearchQuery('')}
               scaleDownTo={0.88}
@@ -339,27 +257,35 @@ export function JournalScreen() {
             >
               <Ionicons name="close-circle" size={17} color={colors.text.tertiary} />
             </TactilePressable>
-          ) : null}
-        </View>
+          </Animated.View>
+        ) : null}
+      </View>
 
-        {/* Entries list */}
-        <View style={{ marginTop: 20 }}>
-          {loading && entries.length === 0 ? (
+      {/* Entries list */}
+      <View style={{ marginTop: 20 }}>
+        {loading && entries.length === 0 ? (
+          <Animated.View key="skeleton" entering={fadeEnter} exiting={fadeExit}>
             <ListSkeleton rows={4} showHeader={false} />
-          ) : showEmptyState ? (
-            <View style={{ alignItems: 'center', paddingVertical: 28, paddingHorizontal: 16 }}>
+          </Animated.View>
+        ) : showEmptyState ? (
+          <Animated.View
+            key="empty"
+            entering={fadeEnter}
+            exiting={fadeExit}
+            style={{ alignItems: 'center', paddingVertical: 28, paddingHorizontal: 16 }}
+          >
               {/* "A page waiting" illustration from Doop */}
               <View style={{ width: 180, height: 160, alignItems: 'center', justifyContent: 'center' }}>
                 <Svg viewBox="0 0 360 320" width={180} height={160}>
-                  <Path d="M66 104h102v138c-28-9-70-9-102 0z" fill="#F4F5F1" />
-                  <Path d="M294 104H192v138c28-9 70-9 102 0z" fill="#F4F5F1" />
-                  <Path d="M180 104v138" stroke="#DEE3DC" strokeWidth="2" />
-                  <Path d="M104 128h38M104 146h50M104 164h30" stroke="#C9DCD3" strokeWidth="4" strokeLinecap="round" />
-                  <Path d="M232 240c-3-26 4-46 4-46" stroke="#2C4F45" strokeWidth="3" fill="none" strokeLinecap="round" />
-                  <Path d="M237 196c12-11 27-9 27-9-2 15-13 23-27 23z" fill="#2C4F45" />
-                  <Path d="M235 214c-10-9-21-7-21-7 2 11 9 17 21 17z" fill="#2C4F45" opacity="0.55" />
-                  <Circle cx="238" cy="184" r="6" fill="#B08A4F" opacity="0.85" />
-                  <Path d="M66 242h228" stroke="#DEE3DC" strokeWidth="2" />
+                  <Path d="M66 104h102v138c-28-9-70-9-102 0z" fill={colors.surface.default} />
+                  <Path d="M294 104H192v138c28-9 70-9 102 0z" fill={colors.surface.default} />
+                  <Path d="M180 104v138" stroke={colors.border.subtle} strokeWidth="2" />
+                  <Path d="M104 128h38M104 146h50M104 164h30" stroke={isDark ? colors.border.strong : '#C9DCD3'} strokeWidth="4" strokeLinecap="round" />
+                  <Path d="M232 240c-3-26 4-46 4-46" stroke={colors.primary.default} strokeWidth="3" fill="none" strokeLinecap="round" />
+                  <Path d="M237 196c12-11 27-9 27-9-2 15-13 23-27 23z" fill={colors.primary.default} />
+                  <Path d="M235 214c-10-9-21-7-21-7 2 11 9 17 21 17z" fill={colors.primary.default} opacity={0.55} />
+                  <Circle cx="238" cy="184" r="6" fill="#B08A4F" opacity={0.85} />
+                  <Path d="M66 242h228" stroke={colors.border.subtle} strokeWidth="2" />
                 </Svg>
               </View>
               <AppText variant="h3" center style={{ marginTop: 12 }}>
@@ -378,21 +304,26 @@ export function JournalScreen() {
                   borderRadius: 16,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: '#E3ECE7',
+                  backgroundColor: colors.surface.selected,
                 }}
               >
-                <AppText variant="button">Write something</AppText>
+                <AppText variant="button" style={{ color: colors.primary.default }}>Write something</AppText>
               </TactilePressable>
-            </View>
-          ) : showNoResults ? (
-            <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+          </Animated.View>
+        ) : showNoResults ? (
+          <Animated.View
+            key="no-results"
+            entering={fadeEnter}
+            exiting={fadeExit}
+            style={{ alignItems: 'center', paddingVertical: 32 }}
+          >
               <AppText variant="title" center>
                 Nothing matches that
               </AppText>
               <AppText variant="bodySmall" tone="tertiary" center style={{ marginTop: 4 }}>
                 Try a different word.
               </AppText>
-            </View>
+          </Animated.View>
           ) : (
             (filteredEntries ?? []).map((entry, index) => {
               const typeConfig = journalTypes.find((t) => t.id === entry.type) ?? journalTypes[0];
@@ -405,8 +336,12 @@ export function JournalScreen() {
               const isLast = index === (filteredEntries ?? []).length - 1;
 
               return (
-                <TactilePressable
+                <Animated.View
                   key={entry.id ?? `entry-${index}`}
+                  exiting={reducedMotion ? undefined : FadeOutDown.duration(160)}
+                  layout={rowLayout}
+                >
+                <TactilePressable
                   onPress={() =>
                     navigation.navigate('JournalEntry', {
                       id: entry.id,
@@ -454,7 +389,7 @@ export function JournalScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                         <AppText
                           variant="overline"
-                          color={isGratitude ? '#B08A4F' : '#838F89'}
+                          color={isGratitude ? (isDark ? '#D2B078' : '#B08A4F') : colors.text.tertiary}
                           style={{ letterSpacing: 1.1, fontSize: 10.5 }}
                         >
                           {typeConfig.label}
@@ -496,6 +431,7 @@ export function JournalScreen() {
                     </View>
                   </View>
                 </TactilePressable>
+                </Animated.View>
               );
             })
           )}

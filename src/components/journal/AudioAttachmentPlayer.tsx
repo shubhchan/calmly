@@ -47,7 +47,7 @@ export function AudioAttachmentPlayer({
       style={[
         styles.card,
         {
-          backgroundColor: isDark ? '#1E293B' : colors.surface.default,
+          backgroundColor: colors.surface.default,
           borderColor: colors.border.default,
         },
       ]}
@@ -62,7 +62,7 @@ export function AudioAttachmentPlayer({
           <Ionicons
             name={isPlaying ? 'pause' : 'play'}
             size={18}
-            color="#FFFFFF"
+            color={colors.primary.foreground}
             style={!isPlaying ? { marginLeft: 2 } : undefined}
           />
         </TactilePressable>
@@ -81,7 +81,7 @@ export function AudioAttachmentPlayer({
           </View>
 
           {/* Progress Bar */}
-          <View style={[styles.progressBarTrack, { backgroundColor: isDark ? '#334155' : '#E2E8F0' }]}>
+          <View style={[styles.progressBarTrack, { backgroundColor: colors.border.subtle }]}>
             <View
               style={[
                 styles.progressBarFill,

@@ -85,7 +85,14 @@ export function CloudStorageScreen({ navigation }: any) {
   </ScreenContainer>;
 }
 function Action({ label, icon, onPress, color }: { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; onPress: () => void; color: string }) {
-  return <TactilePressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[styles.action, { backgroundColor: color }]}><Ionicons name={icon} size={20} color="#FFFFFF" /><AppText variant="button" color="#FFFFFF">{label}</AppText></TactilePressable>;
+  const { colors, isDark } = useAppTheme();
+  const textColor = isDark ? colors.primary.foreground : '#FFFFFF';
+  return (
+    <TactilePressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[styles.action, { backgroundColor: color }]}>
+      <Ionicons name={icon} size={20} color={textColor} />
+      <AppText variant="button" color={textColor}>{label}</AppText>
+    </TactilePressable>
+  );
 }
 const styles = StyleSheet.create({
   page: { paddingHorizontal: 20, gap: 18, paddingBottom: 130 },

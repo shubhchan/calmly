@@ -13,6 +13,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -89,7 +90,7 @@ export function Modal({
       progress.value = 1;
     } else {
       progress.value = 0;
-      progress.value = withTiming(1, motionPresets.modal);
+      progress.value = withSpring(1, motionPresets.modalSpring);
     }
   }, [visible, reducedMotion, progress]);
 

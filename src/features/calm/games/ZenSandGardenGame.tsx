@@ -1,6 +1,6 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, LayoutChangeEvent } from 'react-native';
-import Svg, { Path, Circle, G } from 'react-native-svg';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, Dimensions, ViewStyle, LayoutChangeEvent } from 'react-native';
+import Svg, { Path, Circle, Ellipse, G } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,6 +30,19 @@ interface ZenItem {
 
 type ToolMode = 'rake' | 'stone' | 'petal';
 
+/** Apply an alpha to a #RRGGBB hex for accent-tinted sand artwork. */
+function withAlpha(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '');
+  const full = raw.length === 3
+    ? raw.split('').map((c) => c + c).join('')
+    : raw;
+  if (full.length !== 6) return hex;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function generateRakeD(points: { x: number; y: number }[], offset: number = 0): string {
   if (!points || points.length === 0) return '';
   if (points.length === 1) return `M ${points[0].x} ${points[0].y + offset} L ${points[0].x + 0.1} ${points[0].y + offset}`;
@@ -41,7 +54,7 @@ function generateRakeD(points: { x: number; y: number }[], offset: number = 0): 
   return d;
 }
 
-export function ZenSandGardenGame() {
+export function ZenSandGardenGame({ onExit }: { onExit?: () => void }) {
   const { colors, isDark } = useAppTheme();
   const [tool, setTool] = useState<ToolMode>('rake');
   const toolRef = useRef<ToolMode>('rake');
@@ -53,17 +66,95 @@ export function ZenSandGardenGame() {
   const [currentPoints, setCurrentPoints] = useState<{ x: number; y: number }[]>([]);
   const currentPointsRef = useRef<{ x: number; y: number }[]>([]);
 
-  const [items, setItems] = useState<ZenItem[]>([
-    { id: 'stone-init-1', type: 'stone', x: 90, y: 110, size: 36, rotation: 12 },
-    { id: 'stone-init-2', type: 'stone', x: 230, y: 220, size: 28, rotation: -24 },
-  ]);
+  const [items, setItems] = useState<ZenItem[]>([]);
 
   const [canvasDim, setCanvasDim] = useState({ width: 330, height: 380 });
+  /** The tide washes away the template composition too, so the sweep leaves
+   *  bare sand. Returning to the garden re-forms it. */
+  const [decorCleared, setDecorCleared] = useState(false);
   const tideWaveAnim = useSharedValue(-400);
 
-  const sandColor = isDark ? '#231E18' : '#F6EEDF';
-  const grooveDark = isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(180, 150, 115, 0.5)';
-  const grooveLight = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.65)';
+  /** Sand-garden tones follow the current accent: the applied accent color
+   *  drives groove lines, shadows, stones and petals alike. */
+  const tint = colors.primary.default;
+  const accentAlpha = useCallback((alpha: number) => withAlpha(tint, alpha), [tint]);
+  const sandColor = isDark ? '#201B14' : '#EFEAE0';
+  const grooveDark = isDark ? accentAlpha(0.4) : accentAlpha(0.3);
+  const grooveLight = isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.5)';
+  const stoneBody = tint;
+  const stoneEdge = 'rgba(0, 0, 0, 0.25)';
+  const stoneShadow = isDark ? accentAlpha(0.35) : accentAlpha(0.2);
+
+  /** The template's exact composition (Doop frame spqYVK99ad, 390×620):
+   *  five top rake waves, a concentric raked-ring cluster, three stones of
+   *  different sizes with cast-shadow ellipses, a pebble and five bottom
+   *  waves — rendered in one uniformly scaled group so aspect is preserved,
+   *  with every stroke, shadow and stone following the current accent. */
+  const overlay = useMemo(() => {
+    const { width, height } = canvasDim;
+    if (width <= 0 || height <= 0) return null;
+    const s = width / 390;
+    // Bottom-anchor the scaled template so its lower edge sits on the canvas
+    // bottom edge; x-scale derives from width, keeping proportions exact.
+    const ty = height - 620 * s;
+    const groove = grooveDark;
+    const shadow = stoneShadow;
+    const body = stoneBody;
+
+    const topWave = (k: number) =>
+      `M-20 ${90 + k * 40}c90 -16 180 16 300 4s120 -8 140 -2`;
+    const bottomWave = (k: number) =>
+      `M-20 ${430 + k * 40}c80 10 150 -14 250 -6s120 14 180 6`;
+
+    return (
+      <G transform={`translate(0, ${ty.toFixed(1)}) scale(${s.toFixed(3)})`}>
+        {[0, 1, 2, 3, 4].map((k) => (
+          <Path key={`tw-${k}`} d={topWave(k)} stroke={groove} strokeWidth="2" fill="none" strokeLinecap="round" />
+        ))}
+        {[0, 1, 2, 3, 4].map((k) => (
+          <Path key={`bw-${k}`} d={bottomWave(k)} stroke={groove} strokeWidth="2" fill="none" strokeLinecap="round" />
+        ))}
+        {[52, 68, 84].map((r, i) => (
+          <Circle key={`ring-${i}`} cx="150" cy="330" r={r} stroke={groove} strokeWidth="2" fill="none" />
+        ))}
+        {/* Big stone — full ellipse body like the template, not a half-dome */}
+        <Ellipse cx="262" cy="318" rx="46" ry="15" fill={shadow} opacity="0.55" />
+        <Ellipse cx="253" cy="316" rx="25" ry="26" fill={body} />
+        <Ellipse
+          cx="250"
+          cy="308"
+          rx="12"
+          ry="14"
+          fill={isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.22)'}
+          opacity="0.5"
+        />
+        {/* Pebble */}
+        <Ellipse cx="316" cy="352" rx="17" ry="9" fill={accentAlpha(0.35)} />
+        {/* Medium stone */}
+        <Ellipse cx="122" cy="466" rx="34" ry="12" fill={shadow} opacity="0.5" />
+        <Ellipse cx="114" cy="452" rx="17" ry="14" fill={body} opacity="0.85" />
+        <Ellipse
+          cx="110"
+          cy="447"
+          rx="8"
+          ry="7"
+          fill={isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.12)'}
+          opacity="0.5"
+        />
+        {/* Tiny stone in the ring center */}
+        <Ellipse cx="150" cy="336" rx="16" ry="7" fill={shadow} opacity="0.8" />
+        <Ellipse cx="149" cy="330" rx="10" ry="8" fill={body} opacity="0.55" />
+        <Ellipse
+          cx="146"
+          cy="327"
+          rx="4.5"
+          ry="4"
+          fill={isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.12)'}
+          opacity="0.5"
+        />
+      </G>
+    );
+  }, [canvasDim, grooveDark, stoneBody, stoneShadow, accentAlpha, isDark]);
 
   const onTouchStart = useCallback((x: number, y: number) => {
     const currentTool = toolRef.current;
@@ -158,6 +249,7 @@ export function ZenSandGardenGame() {
       setItems([]);
       setCurrentPoints([]);
       currentPointsRef.current = [];
+      setDecorCleared(true);
     }, 400);
   };
 
@@ -174,77 +266,7 @@ export function ZenSandGardenGame() {
 
   return (
     <View style={styles.container}>
-      {/* Tool Dock */}
-      <View style={[styles.toolDock, { backgroundColor: colors.surface.default, borderColor: colors.border.default }]}>
-        <TactilePressable
-          onPress={() => setTool('rake')}
-          scaleDownTo={0.92}
-          hapticStyle="selection"
-          style={[
-            styles.toolBtn,
-            tool === 'rake' && { backgroundColor: colors.primary.subtle, borderColor: colors.primary.default },
-          ]}
-        >
-          <Ionicons
-            name="git-commit-outline"
-            size={18}
-            color={tool === 'rake' ? colors.primary.default : colors.text.secondary}
-          />
-          <Text style={[styles.toolLabel, { color: tool === 'rake' ? colors.primary.default : colors.text.secondary }]}>
-            Rake
-          </Text>
-        </TactilePressable>
-
-        <TactilePressable
-          onPress={() => setTool('stone')}
-          scaleDownTo={0.92}
-          hapticStyle="selection"
-          style={[
-            styles.toolBtn,
-            tool === 'stone' && { backgroundColor: colors.primary.subtle, borderColor: colors.primary.default },
-          ]}
-        >
-          <Ionicons
-            name="disc-outline"
-            size={18}
-            color={tool === 'stone' ? colors.primary.default : colors.text.secondary}
-          />
-          <Text style={[styles.toolLabel, { color: tool === 'stone' ? colors.primary.default : colors.text.secondary }]}>
-            Stone
-          </Text>
-        </TactilePressable>
-
-        <TactilePressable
-          onPress={() => setTool('petal')}
-          scaleDownTo={0.92}
-          hapticStyle="selection"
-          style={[
-            styles.toolBtn,
-            tool === 'petal' && { backgroundColor: colors.primary.subtle, borderColor: colors.primary.default },
-          ]}
-        >
-          <Ionicons
-            name="flower-outline"
-            size={18}
-            color={tool === 'petal' ? colors.primary.default : colors.text.secondary}
-          />
-          <Text style={[styles.toolLabel, { color: tool === 'petal' ? colors.primary.default : colors.text.secondary }]}>
-            Petal
-          </Text>
-        </TactilePressable>
-
-        <TactilePressable
-          onPress={handleClearTide}
-          scaleDownTo={0.92}
-          hapticStyle="medium"
-          style={[styles.toolBtn, styles.clearBtn, { borderColor: colors.border.default }]}
-        >
-          <Ionicons name="water-outline" size={18} color={colors.accents.sky} />
-          <Text style={[styles.toolLabel, { color: colors.accents.sky }]}>Tide</Text>
-        </TactilePressable>
-      </View>
-
-      {/* Interactive Sand Garden Canvas */}
+      {/* Full-bleed sand canvas */}
       <GestureDetector gesture={panGesture}>
         <View
           onLayout={onLayout}
@@ -257,6 +279,10 @@ export function ZenSandGardenGame() {
           ]}
         >
           <Svg width={canvasDim.width} height={canvasDim.height} style={StyleSheet.absoluteFill}>
+            {/* Template composition (accent-tinted): waves, ring cluster, stones */
+            /* The tide washes this too — hidden once the garden is cleared */ }
+            {decorCleared ? null : overlay}
+
             {/* Committed Strokes: Triple Rake lines (3 parallel tracks for authentic zen rake look) */}
             {strokes.map((s) => {
               const dMid = generateRakeD(s.points, 0);
@@ -286,37 +312,58 @@ export function ZenSandGardenGame() {
               </G>
             ) : null}
 
-            {/* Ripple rings around placed stones */}
-            {items.map((item) => (
-              <G key={`ripple-${item.id}`}>
-                <Circle cx={item.x} cy={item.y} r={item.size * 1.3} stroke={grooveDark} strokeWidth="2" fill="none" opacity={0.35} />
-                <Circle cx={item.x} cy={item.y} r={item.size * 2.0} stroke={grooveDark} strokeWidth="1.5" fill="none" opacity={0.2} />
-              </G>
-            ))}
-
-            {/* Placed Elements (Stones & Petals) */}
+            {/* Placed Elements — template shapes: ellipse-backed stones,
+             *  petals leave only a soft pressed shadow, no ripple rings */}
             {items.map((item) => {
               if (item.type === 'stone') {
                 return (
                   <G key={item.id} transform={`rotate(${item.rotation}, ${item.x}, ${item.y})`}>
-                    <Circle cx={item.x + 3} cy={item.y + 4} r={item.size / 2} fill="rgba(0,0,0,0.22)" />
-                    <Circle
+                    {/* Cast shadow, offset like the template's ellipse shadows */}
+                    <Ellipse
+                      cx={item.x + item.size * 0.34}
+                      cy={item.y + item.size * 0.16}
+                      rx={item.size * 0.62}
+                      ry={item.size * 0.24}
+                      fill={stoneShadow}
+                    />
+                    {/* Stone body: flat ellipse, as in the template */}
+                    <Ellipse
                       cx={item.x}
                       cy={item.y}
-                      r={item.size / 2}
-                      fill={isDark ? '#4A4E54' : '#6A6D75'}
-                      stroke={isDark ? '#2E3238' : '#4C5056'}
+                      rx={item.size * 0.5}
+                      ry={item.size * 0.34}
+                      fill={stoneBody}
+                      stroke={stoneEdge}
                       strokeWidth="1.5"
                     />
-                    <Circle cx={item.x - item.size * 0.14} cy={item.y - item.size * 0.14} r={item.size * 0.16} fill="rgba(255,255,255,0.35)" />
+                    {/* Top-light catch ellipse */}
+                    <Ellipse
+                      cx={item.x - item.size * 0.06}
+                      cy={item.y - item.size * 0.08}
+                      rx={item.size * 0.3}
+                      ry={item.size * 0.18}
+                      fill="rgba(255,255,255,0.16)"
+                    />
                   </G>
                 );
               }
+              // Petal: a pressed mark that reads like the template's soft shadows
               return (
                 <G key={item.id} transform={`rotate(${item.rotation}, ${item.x}, ${item.y})`}>
-                  <Circle cx={item.x + 1} cy={item.y + 2} r="9" fill="rgba(0,0,0,0.12)" />
-                  <Circle cx={item.x} cy={item.y} r="8" fill="#F8BBD0" stroke="#F06292" strokeWidth="1" />
-                  <Circle cx={item.x} cy={item.y} r="3" fill="#FFF59D" />
+                  <Ellipse
+                    cx={item.x + 2}
+                    cy={item.y + 1.5}
+                    rx={10}
+                    ry={4.2}
+                    fill={stoneShadow}
+                  />
+                  <Ellipse
+                    cx={item.x}
+                    cy={item.y}
+                    rx={8.5}
+                    ry={3.4}
+                    fill={accentAlpha(0.45)}
+                  />
                 </G>
               );
             })}
@@ -334,27 +381,124 @@ export function ZenSandGardenGame() {
         </View>
       </GestureDetector>
 
-      {/* Bottom Guidance Card */}
+      {/* Floating hint pill — sits above the canvas, out of the gesture area */}
+      <View pointerEvents="none" style={styles.hintPillWrap}>
+        <View
+          style={[
+            styles.hintPill,
+            { backgroundColor: isDark ? 'rgba(35,30,24,0.86)' : 'rgba(255,255,255,0.86)' },
+          ]}
+        >
+          <Text
+            style={[
+              styles.hintPillText,
+              { color: isDark ? '#C8BFA9' : colors.text.secondary },
+            ]}
+          >
+            Drag anywhere to rake
+          </Text>
+        </View>
+      </View>
+
+      {/* Floating vertical tool dock (right edge) */}
       <View
         style={[
-          styles.bottomInfoCard,
-          {
-            backgroundColor: colors.surface.default,
-            borderColor: colors.border.default,
-          },
+          styles.toolDock,
+          { backgroundColor: isDark ? 'rgba(35,30,24,0.86)' : 'rgba(255,255,255,0.86)' },
         ]}
       >
-        <View style={[styles.bottomIconBadge, { backgroundColor: colors.primary.subtle }]}>
-          <Ionicons name="color-palette-outline" size={18} color={colors.primary.default} />
-        </View>
-        <View style={styles.bottomTextGroup}>
-          <Text style={[styles.bottomInfoTitle, { color: colors.text.primary }]}>
-            Zen Sand Garden
+        <TactilePressable
+          onPress={() => setTool('rake')}
+          scaleDownTo={0.9}
+          hapticStyle="selection"
+          accessibilityRole="button"
+          accessibilityState={{ selected: tool === 'rake' }}
+          accessibilityLabel="Rake tool"
+          style={[
+            styles.dockBtn,
+            tool === 'rake' && { backgroundColor: colors.primary.default },
+          ]}
+        >
+          <Ionicons
+            name="git-commit-outline"
+            size={19}
+            color={tool === 'rake' ? colors.primary.foreground : colors.text.secondary}
+          />
+        </TactilePressable>
+
+        <TactilePressable
+          onPress={() => setTool('stone')}
+          scaleDownTo={0.9}
+          hapticStyle="selection"
+          accessibilityRole="button"
+          accessibilityState={{ selected: tool === 'stone' }}
+          accessibilityLabel="Place a stone"
+          style={[
+            styles.dockBtn,
+            tool === 'stone' && { backgroundColor: colors.primary.default },
+          ]}
+        >
+          <Ionicons
+            name="disc-outline"
+            size={19}
+            color={tool === 'stone' ? colors.primary.foreground : colors.text.secondary}
+          />
+        </TactilePressable>
+
+        <TactilePressable
+          onPress={() => setTool('petal')}
+          scaleDownTo={0.9}
+          hapticStyle="selection"
+          accessibilityRole="button"
+          accessibilityState={{ selected: tool === 'petal' }}
+          accessibilityLabel="Place a petal"
+          style={[
+            styles.dockBtn,
+            tool === 'petal' && { backgroundColor: colors.primary.default },
+          ]}
+        >
+          <Ionicons
+            name="flower-outline"
+            size={19}
+            color={tool === 'petal' ? colors.primary.foreground : colors.text.secondary}
+          />
+        </TactilePressable>
+
+        <TactilePressable
+          onPress={handleClearTide}
+          scaleDownTo={0.9}
+          hapticStyle="medium"
+          accessibilityRole="button"
+          accessibilityLabel="Clear the garden with a tide"
+          style={styles.dockBtn}
+        >
+          <Ionicons name="water-outline" size={19} color={colors.accents.sky} />
+        </TactilePressable>
+      </View>
+
+      {/* Bottom assurance + exit, from the template */}
+      <View style={styles.bottomBar}>
+        <View style={styles.finishNoteRow}>
+          <View
+            style={[styles.finishDot, { backgroundColor: colors.primary.default }]}
+          />
+          <Text style={[styles.finishNote, { color: colors.text.tertiary }]}>
+            Nothing to finish here
           </Text>
-          <Text style={[styles.bottomInfoSub, { color: colors.text.secondary }]}>
-            Drag finger to rake ripples · Tap with Stone or Petal to place serene accents
-          </Text>
         </View>
+        {onExit ? (
+          <TactilePressable
+            onPress={onExit}
+            scaleDownTo={0.97}
+            accessibilityRole="button"
+            accessibilityLabel="Leave the garden as it is"
+            style={[styles.leaveBtn, { backgroundColor: colors.primary.default }]}
+          >
+            <Text style={[styles.leaveBtnText, { color: colors.primary.foreground }]}>
+              Leave it as it is
+            </Text>
+          </TactilePressable>
+        ) : null}
       </View>
     </View>
   );
@@ -363,75 +507,84 @@ export function ZenSandGardenGame() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    paddingVertical: 6,
     width: '100%',
+    paddingVertical: 6,
   },
-  bottomInfoCard: {
-    flexDirection: 'row',
+  canvasFrame: {
+    flex: 1,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  hintPillWrap: {
+    position: 'absolute',
+    top: 70,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
-    marginHorizontal: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
-    borderWidth: 1,
+    pointerEvents: 'none',
+  } as ViewStyle,
+  hintPill: {
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 15,
   },
-  bottomIconBadge: {
+  hintPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  toolDock: {
+    position: 'absolute',
+    right: 16,
+    top: 118,
+    width: 48,
+    paddingTop: 10,
+    paddingBottom: 10,
+    gap: 12,
+    alignItems: 'center',
+    borderRadius: 26,
+    shadowColor: '#5A503C',
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  dockBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bottomTextGroup: {
-    flex: 1,
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingBottom: 6,
   },
-  bottomInfoTitle: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    marginBottom: 2,
-    letterSpacing: -0.2,
+  finishNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 14,
   },
-  bottomInfoSub: {
-    fontSize: 12.5,
-    lineHeight: 17,
+  finishDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  finishNote: {
+    fontSize: 11.5,
     fontWeight: '500',
   },
-  toolDock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 24,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  toolBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  leaveBtn: {
+    height: 52,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  clearBtn: {
-    borderLeftWidth: 1,
-  },
-  toolLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  canvasFrame: {
-    width: '92%',
-    height: 310,
-    borderRadius: 28,
-    borderWidth: 2,
-    overflow: 'hidden',
+  leaveBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   tideWave: {
     position: 'absolute',
@@ -440,10 +593,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(168, 216, 232, 0.45)',
     borderRightWidth: 8,
     borderRightColor: '#FFFFFF',
-  },
-  hintText: {
-    fontSize: 12,
-    marginTop: 12,
-    textAlign: 'center',
   },
 });

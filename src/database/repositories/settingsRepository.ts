@@ -130,7 +130,10 @@ export interface AppSettings {
   hideContentInSwitcher: boolean;
   allowScreenshots: boolean;
   theme: 'light' | 'dark' | 'system';
-  accent: 'sage' | 'lavender' | 'sky' | 'peach' | 'rose' | 'ocean';
+  /** 'sage' | 'lavender' | 'sky' | 'peach' | 'rose' | 'ocean' | 'dynamic' | '#RRGGBB' */
+  accent: string;
+  /** Wallpaper-derived Material You colors override the accent (Android 12+). */
+  dynamicColors?: boolean;
   reducedMotion: boolean;
   hapticsEnabled: boolean;
   notificationsEnabled: boolean;
@@ -171,6 +174,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   allowScreenshots: true,
   theme: 'system',
   accent: 'sage',
+  dynamicColors: true,
   reducedMotion: false,
   hapticsEnabled: true,
   notificationsEnabled: true,

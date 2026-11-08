@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -52,7 +52,8 @@ const QUICK_MASCOTS: { id: AvatarMascotId; label: string }[] = [
  */
 export function ProfileScreen() {
   const navigation = useNavigation<any>();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
+  const styles = useProfileStyles();
 
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [name, setName] = useState('');
@@ -281,7 +282,7 @@ export function ProfileScreen() {
   return (
     <ScreenContainer
       contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 10, paddingBottom: 60 }}
-      backgroundColor="#F4F5F1"
+      backgroundColor={colors.background.default}
     >
       {/* Inner page top bar — 1:1 match with Doop tOFThuXUAM */}
       <View style={styles.topBar}>
@@ -293,7 +294,7 @@ export function ProfileScreen() {
           accessibilityLabel="Back to Me"
           style={styles.backButton}
         >
-          <Ionicons name="chevron-back" size={20} color="#5C6B65" />
+          <Ionicons name="chevron-back" size={20} color={colors.text.secondary} />
           <Text style={styles.backText}>Me</Text>
         </TactilePressable>
 
@@ -309,7 +310,7 @@ export function ProfileScreen() {
           style={styles.saveHeaderButton}
         >
           {savingIdentity ? (
-            <ActivityIndicator size="small" color="#2C4F45" />
+            <ActivityIndicator size="small" color={colors.primary.default} />
           ) : (
             <Text style={styles.saveHeaderText}>Save</Text>
           )}
@@ -360,7 +361,7 @@ export function ProfileScreen() {
             accessibilityLabel="Edit profile photo"
             style={styles.cameraBadge}
           >
-            <Ionicons name="camera" size={14} color="#2C4F45" />
+            <Ionicons name="camera" size={14} color={colors.primary.default} />
           </TactilePressable>
         </View>
 
@@ -432,9 +433,9 @@ export function ProfileScreen() {
               value={mantra}
               onChangeText={setMantra}
               placeholder="Taking it one breath at a time"
-              placeholderTextColor="#9AA5A0"
+              placeholderTextColor={colors.text.tertiary}
               maxLength={90}
-              style={[styles.fieldInput, { color: '#46524C' }]}
+              style={[styles.fieldInput, { color: colors.text.primary }]}
             />
           </View>
         </View>
@@ -447,10 +448,10 @@ export function ProfileScreen() {
               value={bio}
               onChangeText={setBio}
               placeholder="Seeking stillness and gentle mornings."
-              placeholderTextColor="#9AA5A0"
+              placeholderTextColor={colors.text.tertiary}
               maxLength={160}
               multiline
-              style={[styles.fieldInput, { color: '#46524C', textAlignVertical: 'top' }]}
+              style={[styles.fieldInput, { color: colors.text.primary, textAlignVertical: 'top' }]}
             />
           </View>
         </View>
@@ -472,7 +473,7 @@ export function ProfileScreen() {
           style={styles.cloudRow}
         >
           <View style={styles.cloudIconPlate}>
-            <Ionicons name="cloud-outline" size={19} color="#2C4F45" />
+            <Ionicons name="cloud-outline" size={19} color={colors.primary.default} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.cloudTitle}>Google Drive Sync</Text>
@@ -494,11 +495,11 @@ export function ProfileScreen() {
         </TactilePressable>
 
         {isConnected && showCloudDetails ? (
-          <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderColor: '#EDF0EC', gap: 10 }}>
+          <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderColor: colors.border.subtle, gap: 10 }}>
             {settings?.lastDriveSyncAt ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="checkmark-circle-outline" size={16} color="#2C4F45" />
-                <Text style={{ fontSize: 12.5, color: '#6C7873' }}>
+                <Ionicons name="checkmark-circle-outline" size={16} color={colors.primary.default} />
+                <Text style={{ fontSize: 12.5, color: colors.text.tertiary }}>
                   Last backup {format(new Date(settings.lastDriveSyncAt), 'MMM d, h:mm a')}
                 </Text>
               </View>
@@ -549,7 +550,7 @@ export function ProfileScreen() {
         <View style={{ gap: 10 }}>
           {busy ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 2 }}>
-              <ActivityIndicator size="small" color="#2C4F45" />
+              <ActivityIndicator size="small" color={colors.primary.default} />
               <AppText variant="bodySmall" tone="secondary">
                 {busy}…
               </AppText>
@@ -610,7 +611,7 @@ export function ProfileScreen() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: colors.surface.default,
-                  borderColor: selected ? '#2C4F45' : 'transparent',
+                  borderColor: selected ? colors.primary.default : 'transparent',
                   borderWidth: selected ? 2 : 0,
                 }}
               >
@@ -631,10 +632,10 @@ export function ProfileScreen() {
                       borderRadius: 10,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: '#2C4F45',
+                      backgroundColor: colors.primary.default,
                     }}
                   >
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                    <Ionicons name="checkmark" size={12} color={colors.primary.foreground} />
                   </View>
                 ) : null}
               </TactilePressable>
@@ -657,6 +658,8 @@ function SheetAction({
   subtitle: string;
   onPress: () => void;
 }) {
+  const { colors } = useAppTheme();
+  const styles = useProfileStyles();
   return (
     <TactilePressable
       onPress={onPress}
@@ -665,7 +668,7 @@ function SheetAction({
       style={styles.sheetAction}
     >
       <View style={styles.sheetIconBox}>
-        <Ionicons name={icon} size={20} color="#2C4F45" />
+        <Ionicons name={icon} size={20} color={colors.primary.default} />
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <AppText variant="label">{title}</AppText>
@@ -673,262 +676,269 @@ function SheetAction({
           {subtitle}
         </AppText>
       </View>
-      <Ionicons name="chevron-forward" size={18} color="#B4BEB8" />
+      <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
     </TactilePressable>
   );
 }
 
-const styles = StyleSheet.create({
-  topBar: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-    height: 40,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    marginLeft: -4,
-  },
-  backText: {
-    fontSize: 12.5,
-    color: '#6C7873',
-    fontWeight: '500',
-  },
-  pageTitle: {
-    fontSize: 14.5,
-    fontWeight: '600',
-    color: '#1A2420',
-  },
-  saveHeaderButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    marginRight: -4,
-  },
-  saveHeaderText: {
-    fontSize: 14,
-    color: '#2C4F45',
-    fontWeight: '600',
-  },
-  headerBlock: {
-    marginTop: 16,
-  },
-  heroTitle: {
-    fontFamily: displayFaces.regular,
-    fontSize: 28,
-    color: '#1A2420',
-    letterSpacing: -0.56,
-    lineHeight: 33,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    color: '#6C7873',
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-  },
-  avatarWrap: {
-    position: 'relative',
-    width: 80,
-    height: 80,
-  },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 28,
-    backgroundColor: '#2C4F45',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 28,
-  },
-  avatarInitial: {
-    fontFamily: displayFaces.regular,
-    fontSize: 32,
-    color: '#EDF3EF',
-  },
-  cameraBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#14241E',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  mascotPickerFrame: {
-    width: 58,
-    height: 58,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  chooseText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2C4F45',
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 14,
-    flexWrap: 'wrap',
-  },
-  chip: {
-    height: 32,
-    paddingHorizontal: 13,
-    borderRadius: 999,
-    backgroundColor: '#EAEDE7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipOn: {
-    backgroundColor: '#E3ECE7',
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#46524C',
-  },
-  chipTextOn: {
-    color: '#2C4F45',
-    fontWeight: '600',
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.88,
-    textTransform: 'uppercase',
-    color: '#838F89',
-    marginBottom: 6,
-  },
-  fieldBox: {
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: '#F4F5F1',
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-  },
-  fieldInput: {
-    fontSize: 14.5,
-    color: '#1A2420',
-    fontWeight: '500',
-    padding: 0,
-    margin: 0,
-  },
-  cloudRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  cloudIconPlate: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    backgroundColor: '#EAEDE7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cloudTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1A2420',
-  },
-  cloudSubtitle: {
-    fontSize: 12,
-    color: '#6C7873',
-    marginTop: 1,
-  },
-  activePill: {
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: '#E3ECE7',
-  },
-  activePillText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: '#2C4F45',
-  },
-  connectPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#2C4F45',
-  },
-  connectPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#EDF3EF',
-  },
-  cloudActionBtn: {
-    backgroundColor: '#EAEDE7',
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cloudActionBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2C4F45',
-  },
-  cloudSubBtn: {
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: '#EAEDE7',
-  },
-  cloudSubBtnText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6C7873',
-  },
-  bottomSaveBtn: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: '#2C4F45',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomSaveText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#EDF3EF',
-  },
-  sheetAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: '#EAEDE7',
-  },
-  sheetIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EAEDE7',
-  },
-});
+function useProfileStyles() {
+  const { colors, isDark } = useAppTheme();
+  return useMemo(
+    () =>
+      StyleSheet.create({
+        topBar: {
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: 6,
+          height: 40,
+        },
+        backButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+          paddingVertical: 6,
+          paddingHorizontal: 4,
+          marginLeft: -4,
+        },
+        backText: {
+          fontSize: 12.5,
+          color: colors.text.tertiary,
+          fontWeight: '500',
+        },
+        pageTitle: {
+          fontSize: 14.5,
+          fontWeight: '600',
+          color: colors.text.primary,
+        },
+        saveHeaderButton: {
+          paddingVertical: 6,
+          paddingHorizontal: 8,
+          marginRight: -4,
+        },
+        saveHeaderText: {
+          fontSize: 14,
+          color: colors.primary.default,
+          fontWeight: '600',
+        },
+        headerBlock: {
+          marginTop: 16,
+        },
+        heroTitle: {
+          fontFamily: displayFaces.regular,
+          fontSize: 28,
+          color: colors.text.primary,
+          letterSpacing: -0.56,
+          lineHeight: 33,
+        },
+        heroSubtitle: {
+          fontSize: 13,
+          color: colors.text.tertiary,
+          marginTop: 4,
+        },
+        card: {
+          backgroundColor: colors.surface.default,
+          borderRadius: 20,
+        },
+        avatarWrap: {
+          position: 'relative',
+          width: 80,
+          height: 80,
+        },
+        avatarCircle: {
+          width: 80,
+          height: 80,
+          borderRadius: 28,
+          backgroundColor: isDark ? colors.primary.subtle : colors.primary.default,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        },
+        avatarImage: {
+          width: '100%',
+          height: '100%',
+          borderRadius: 28,
+        },
+        avatarInitial: {
+          fontFamily: displayFaces.regular,
+          fontSize: 32,
+          color: isDark ? colors.primary.default : '#EDF3EF',
+        },
+        cameraBadge: {
+          position: 'absolute',
+          right: -2,
+          bottom: -2,
+          width: 28,
+          height: 28,
+          borderRadius: 10,
+          backgroundColor: colors.surface.default,
+          alignItems: 'center',
+          justifyContent: 'center',
+          shadowColor: '#14241E',
+          shadowOpacity: 0.1,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 2,
+        },
+        mascotPickerFrame: {
+          width: 58,
+          height: 58,
+          borderRadius: 14,
+          overflow: 'hidden',
+        },
+        chooseText: {
+          fontSize: 13,
+          fontWeight: '600',
+          color: colors.primary.default,
+        },
+        chipsRow: {
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: 8,
+          marginTop: 14,
+          flexWrap: 'wrap',
+        },
+        chip: {
+          height: 32,
+          paddingHorizontal: 13,
+          borderRadius: 999,
+          backgroundColor: colors.surface.muted,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        chipOn: {
+          backgroundColor: colors.surface.selected,
+        },
+        chipText: {
+          fontSize: 12,
+          fontWeight: '500',
+          color: colors.text.secondary,
+        },
+        chipTextOn: {
+          color: colors.primary.default,
+          fontWeight: '600',
+        },
+        fieldLabel: {
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.88,
+          textTransform: 'uppercase',
+          color: colors.text.tertiary,
+          marginBottom: 6,
+        },
+        fieldBox: {
+          height: 46,
+          borderRadius: 12,
+          backgroundColor: colors.background.default,
+          paddingHorizontal: 14,
+          justifyContent: 'center',
+        },
+        fieldInput: {
+          fontSize: 14.5,
+          color: colors.text.primary,
+          fontWeight: '500',
+          padding: 0,
+          margin: 0,
+        },
+        cloudRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+        },
+        cloudIconPlate: {
+          width: 36,
+          height: 36,
+          borderRadius: 11,
+          backgroundColor: colors.surface.muted,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        cloudTitle: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: colors.text.primary,
+        },
+        cloudSubtitle: {
+          fontSize: 12,
+          color: colors.text.tertiary,
+          marginTop: 1,
+        },
+        activePill: {
+          paddingHorizontal: 9,
+          paddingVertical: 3,
+          borderRadius: 999,
+          backgroundColor: colors.surface.selected,
+        },
+        activePillText: {
+          fontSize: 11.5,
+          fontWeight: '600',
+          color: colors.primary.default,
+        },
+        connectPill: {
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 999,
+          backgroundColor: colors.primary.default,
+        },
+        connectPillText: {
+          fontSize: 12,
+          fontWeight: '600',
+          color: colors.primary.foreground,
+        },
+        cloudActionBtn: {
+          backgroundColor: colors.surface.muted,
+          borderRadius: 12,
+          paddingVertical: 10,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        cloudActionBtnText: {
+          fontSize: 13,
+          fontWeight: '600',
+          color: colors.primary.default,
+        },
+        cloudSubBtn: {
+          paddingVertical: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 10,
+          backgroundColor: colors.surface.muted,
+        },
+        cloudSubBtnText: {
+          fontSize: 12,
+          fontWeight: '500',
+          color: colors.text.tertiary,
+        },
+        bottomSaveBtn: {
+          height: 52,
+          borderRadius: 16,
+          backgroundColor: colors.primary.default,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        bottomSaveText: {
+          fontSize: 15,
+          fontWeight: '600',
+          color: colors.primary.foreground,
+        },
+        sheetAction: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          padding: 14,
+          borderRadius: 16,
+          backgroundColor: colors.surface.muted,
+        },
+        sheetIconBox: {
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.surface.default,
+        },
+      }),
+    [colors, isDark]
+  );
+}

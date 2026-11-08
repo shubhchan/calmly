@@ -130,11 +130,17 @@ export const BottomNav = ({ className = '', style }: BottomNavProps) => {
     <View
       className={`
         flex-row items-center justify-around h-16
-        bg-[var(--color-bg-card)] border-t border-[var(--color-border-light)]
         shadow-soft-lg
         ${className}
       `}
-      style={style}
+      style={[
+        {
+          backgroundColor: colors.surface.default,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.subtle,
+        },
+        style,
+      ]}
     >
       {(tabs ?? []).map((tab, index) => {
         const isFocused = currentRoute === (tab as any)?.route;

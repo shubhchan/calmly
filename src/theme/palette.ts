@@ -12,7 +12,65 @@
 // - accent gold is decoration only, under 5% of a screen.
 
 export type ThemeMode = 'light' | 'dark';
-export type AccentColor = 'sage' | 'lavender' | 'sky' | 'peach' | 'rose' | 'ocean';
+export type NamedAccent = 'sage' | 'lavender' | 'sky' | 'peach' | 'rose' | 'ocean';
+/** Saved accent values: a named palette entry, 'dynamic' (follows the hour),
+ *  or any custom color as `#RRGGBB` / `#RGB`. */
+export type AccentColor = NamedAccent | 'dynamic' | `#${string}`;
+
+const hexLookup = (value: string): string | null => {
+  let raw = value.replace(/^#/, '');
+  if (/^[0-9a-fA-F]{3}$/.test(raw)) {
+    raw = raw.split('').map((c) => c + c).join('');
+  }
+  return /^[0-9a-fA-F]{6}$/.test(raw) ? `#${raw.toUpperCase()}` : null;
+};
+
+/** Channel-wise mix of two hex colors (t = 0 keeps `a`, t = 1 keeps `b`). */
+export function mixHex(a: string, b: string, t: number): string {
+  const pa = hexLookup(a);
+  const pb = hexLookup(b);
+  if (!pa || !pb) return pa || pb || a;
+  const clamp01 = Math.min(1, Math.max(0, t));
+  const mix = (ch: number, other: number) => Math.round(ch + (other - ch) * clamp01);
+  const r = mix(parseInt(pa.slice(1, 3), 16), parseInt(pb.slice(1, 3), 16));
+  const g = mix(parseInt(pa.slice(3, 5), 16), parseInt(pb.slice(3, 5), 16));
+  const bl = mix(parseInt(pa.slice(5, 7), 16), parseInt(pb.slice(5, 7), 16));
+  const toHex = (v: number) => v.toString(16).padStart(2, '0').toUpperCase();
+  return `#${toHex(r)}${toHex(g)}${toHex(bl)}`;
+}
+
+/** The accent 'dynamic' resolves to for the current hour (checked app focus). */
+export function dynamicAccentForNow(now = new Date()): NamedAccent {
+  const hour = now.getHours();
+  if (hour < 5) return 'ocean';
+  if (hour < 11) return 'sage';
+  if (hour < 17) return 'sky';
+  if (hour < 22) return 'peach';
+  return 'ocean';
+}
+
+/** Derive a usable accent ramp for any user hex in either theme. */
+export function customAccentFor(hexRaw: string, theme: ThemeMode) {
+  const hex = hexLookup(hexRaw);
+  if (!hex) return null;
+  if (theme === 'dark') {
+    const ground = '#0F1513';
+    const ink = '#ECF1EE';
+    return {
+      primary: mixHex(hex, ink, 0.4),
+      hover: mixHex(hex, ink, 0.6),
+      bg: mixHex(hex, ground, 0.75),
+      border: mixHex(hex, ground, 0.4),
+    };
+  }
+  const ground = '#F4F5F1';
+  return {
+    primary: hex,
+    hover: mixHex(hex, '#0F1513', 0.12),
+    bg: mixHex(hex, ground, 0.92),
+    border: mixHex(hex, ground, 0.78),
+  };
+}
 
 const base = {
   light: {
@@ -72,7 +130,12 @@ const accents = {
 
 export function resolveColors(theme: ThemeMode, accent: AccentColor) {
   const b = base[theme];
-  const a = accents[theme][accent];
+  const resolvedAccent: NamedAccent | string =
+    accent === 'dynamic' ? dynamicAccentForNow() : accent;
+  const a =
+    customAccentFor(resolvedAccent, theme) ??
+    accents[theme][resolvedAccent as NamedAccent] ??
+    accents[theme].sage;
   return {
     isDark: theme === 'dark',
     theme,

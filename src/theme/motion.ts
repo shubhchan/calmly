@@ -31,6 +31,10 @@ export const motion = {
     pop: { mass: 0.62, damping: 13, stiffness: 220 },
     /** Pressable interactions (TactilePressable only). */
     snappy: { mass: 0.45, damping: 14, stiffness: 280 },
+    /** Press-in: still and immediate, no perceived delay under the finger. */
+    pressIn: { mass: 0.35, damping: 18, stiffness: 420 },
+    /** Release: springs just past rest and settles — connected, not rubbery. */
+    release: { mass: 0.4, damping: 15, stiffness: 240 },
   },
   ease: {
     standard: Easing.bezier(0.2, 0, 0, 1),

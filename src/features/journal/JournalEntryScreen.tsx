@@ -51,15 +51,15 @@ const JOURNAL_TYPES_LIST: {
   { id: 'brain_dump', label: 'Brain dump', desc: 'Unfiltered flow, no rules or structure', icon: 'sparkles-outline' },
 ];
 
-const MOOD_WORDS = [
-  { label: 'Tender', tone: '#2C4F45', bg: '#E3ECE7' },
-  { label: 'Relieved', tone: '#2C4F45', bg: '#E3ECE7' },
-  { label: 'Grateful', tone: '#B08A4F', bg: '#F4EDE2' },
-  { label: 'At peace', tone: '#2C4F45', bg: '#E3ECE7' },
-  { label: 'Quiet', tone: '#5C6B65', bg: '#EAEDE7' },
-  { label: 'Restless', tone: '#5C6B65', bg: '#EAEDE7' },
-  { label: 'Heavy', tone: '#5C6B65', bg: '#EAEDE7' },
-  { label: 'Hopeful', tone: '#B08A4F', bg: '#F4EDE2' },
+const MOOD_WORDS: { label: string; group: 'accent' | 'gold' | 'neutral' }[] = [
+  { label: 'Tender', group: 'accent' },
+  { label: 'Relieved', group: 'accent' },
+  { label: 'Grateful', group: 'gold' },
+  { label: 'At peace', group: 'accent' },
+  { label: 'Quiet', group: 'neutral' },
+  { label: 'Restless', group: 'neutral' },
+  { label: 'Heavy', group: 'neutral' },
+  { label: 'Hopeful', group: 'gold' },
 ];
 
 /** Exact SVG icons from Doop "New page — A · Blank page" (n6PmK9J7dm) */
@@ -150,7 +150,7 @@ export function JournalEntryScreen() {
   const [recorderVisible, setRecorderVisible] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<NoteAttachment | null>(null);
 
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
 
   useEffect(() => {
     if (!id) return;
@@ -394,8 +394,8 @@ export function JournalEntryScreen() {
   const docAttachments = attachments.filter((a) => a.type === 'document');
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F4F5F1' }}>
-      <StatusBar barStyle="dark-content" />
+    <View style={{ flex: 1, backgroundColor: colors.background.default }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <View style={{ flex: 1, paddingTop: topPad }}>
         {/* Doop 1:1 Header: Cancel | New page | Save */}
         <View
@@ -416,10 +416,10 @@ export function JournalEntryScreen() {
             accessibilityLabel="Cancel"
             style={{ height: 44, justifyContent: 'center' }}
           >
-            <AppText style={{ fontSize: 14, color: '#5C6B65', fontWeight: '400' }}>Cancel</AppText>
+            <AppText style={{ fontSize: 14, color: colors.text.secondary, fontWeight: '400' }}>Cancel</AppText>
           </TactilePressable>
 
-          <AppText style={{ fontSize: 14.5, fontWeight: '600', color: '#1A2420' }}>
+          <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
             {isEditing ? 'Your page' : 'New page'}
           </AppText>
 
@@ -435,7 +435,7 @@ export function JournalEntryScreen() {
             <AppText
               style={{
                 fontSize: 14,
-                color: saving ? '#838F89' : '#2C4F45',
+                color: saving ? colors.text.tertiary : colors.primary.default,
                 fontWeight: '600',
               }}
             >
@@ -460,7 +460,7 @@ export function JournalEntryScreen() {
               fontWeight: '600',
               letterSpacing: 1.32,
               textTransform: 'uppercase',
-              color: '#838F89',
+              color: colors.text.tertiary,
             }}
           >
             {format(new Date(entryCreatedAt), 'EEEE, d MMMM')}
@@ -476,7 +476,7 @@ export function JournalEntryScreen() {
               height: 28,
               paddingHorizontal: 11,
               borderRadius: 999,
-              backgroundColor: isGratitude ? '#F4EDE2' : '#E3ECE7',
+              backgroundColor: isGratitude ? (isDark ? 'rgba(176,138,79,0.2)' : '#F4EDE2') : colors.surface.selected,
               flexDirection: 'row',
               alignItems: 'center',
               gap: 4,
@@ -486,7 +486,7 @@ export function JournalEntryScreen() {
               style={{
                 fontSize: 12.5,
                 fontWeight: '600',
-                color: isGratitude ? '#B08A4F' : '#2C4F45',
+                color: isGratitude ? (isDark ? '#D2B078' : '#B08A4F') : colors.primary.default,
               }}
             >
               {typeLabel}
@@ -494,7 +494,7 @@ export function JournalEntryScreen() {
             <Ionicons
               name="chevron-down"
               size={11}
-              color={isGratitude ? '#B08A4F' : '#2C4F45'}
+              color={isGratitude ? (isDark ? '#D2B078' : '#B08A4F') : colors.primary.default}
             />
           </TactilePressable>
         </View>
@@ -502,7 +502,7 @@ export function JournalEntryScreen() {
         {/* Title — Newsreader display serif */}
         <TextInput
           placeholder="A quieter evening than usual"
-          placeholderTextColor="#8A958F"
+          placeholderTextColor={colors.text.tertiary}
           value={title}
           onChangeText={setTitle}
           accessibilityLabel="Page title"
@@ -511,7 +511,7 @@ export function JournalEntryScreen() {
             fontSize: 24,
             lineHeight: 32,
             letterSpacing: -0.48,
-            color: '#1A2420',
+            color: colors.text.primary,
             marginTop: 12,
             paddingHorizontal: 24,
             paddingVertical: 2,
@@ -538,7 +538,7 @@ export function JournalEntryScreen() {
                     right: 0,
                     top: (index + 1) * 32 - 1,
                     height: 1,
-                    backgroundColor: '#E9EDE7',
+                    backgroundColor: colors.border.subtle,
                   }}
                 />
               ))}
@@ -551,14 +551,14 @@ export function JournalEntryScreen() {
                 <TextInput
                   multiline
                   placeholder="Start anywhere. No one else reads this."
-                  placeholderTextColor="#8A958F"
+                  placeholderTextColor={colors.text.tertiary}
                   value={content}
                   onChangeText={setContent}
                   accessibilityLabel="Page body"
                   style={{
                     fontSize: 16,
                     lineHeight: 32,
-                    color: '#1A2420',
+                    color: colors.text.primary,
                     minHeight: pageHeight,
                     textAlignVertical: 'top',
                     padding: 0,
@@ -572,7 +572,7 @@ export function JournalEntryScreen() {
                       marginTop: 18,
                       paddingTop: 14,
                       borderTopWidth: 1,
-                      borderTopColor: '#DEE3DC',
+                      borderTopColor: colors.border.default,
                       gap: 10,
                     }}
                   >
@@ -582,7 +582,7 @@ export function JournalEntryScreen() {
                         fontWeight: '600',
                         letterSpacing: 1.1,
                         textTransform: 'uppercase',
-                        color: '#838F89',
+                        color: colors.text.tertiary,
                       }}
                     >
                       Attached ({attachments.length})
@@ -624,7 +624,7 @@ export function JournalEntryScreen() {
 
                 {attaching ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
-                    <ActivityIndicator size="small" color="#2C4F45" />
+                    <ActivityIndicator size="small" color={colors.primary.default} />
                     <AppText variant="caption" tone="tertiary">
                       Saving attachment…
                     </AppText>
@@ -659,7 +659,7 @@ export function JournalEntryScreen() {
             paddingTop: 14,
             paddingBottom: 6,
             borderTopWidth: 1,
-            borderTopColor: '#E4E8E2',
+            borderTopColor: colors.border.subtle,
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
@@ -671,7 +671,7 @@ export function JournalEntryScreen() {
               accessibilityRole="button"
               accessibilityLabel="Add photo"
             >
-              <CameraSvgIcon color="#5C6B65" />
+              <CameraSvgIcon color={colors.text.secondary} />
             </TactilePressable>
 
             <TactilePressable
@@ -685,7 +685,7 @@ export function JournalEntryScreen() {
               accessibilityRole="button"
               accessibilityLabel="Record voice memo"
             >
-              <MicSvgIcon color="#5C6B65" />
+              <MicSvgIcon color={colors.text.secondary} />
             </TactilePressable>
 
             <TactilePressable
@@ -698,7 +698,7 @@ export function JournalEntryScreen() {
               accessibilityRole="button"
               accessibilityLabel="Stamp mood"
             >
-              <MoodSvgIcon color="#5C6B65" />
+              <MoodSvgIcon color={colors.text.secondary} />
             </TactilePressable>
 
             <TactilePressable
@@ -708,11 +708,11 @@ export function JournalEntryScreen() {
               accessibilityRole="button"
               accessibilityLabel="Insert prompt"
             >
-              <PromptSvgIcon color="#5C6B65" />
+              <PromptSvgIcon color={colors.text.secondary} />
             </TactilePressable>
           </View>
 
-          <AppText style={{ fontSize: 12, color: '#9AA5A0' }}>
+          <AppText style={{ fontSize: 12, color: colors.text.tertiary }}>
             {wordCount} {wordCount === 1 ? 'word' : 'words'}
           </AppText>
         </View>
@@ -727,12 +727,12 @@ export function JournalEntryScreen() {
             style={{
               height: 52,
               borderRadius: 16,
-              backgroundColor: '#E3ECE7',
+              backgroundColor: colors.surface.selected,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: '#2C4F45' }}>
+            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.primary.default }}>
               Insert today's prompt
             </AppText>
           </TactilePressable>
@@ -768,7 +768,7 @@ export function JournalEntryScreen() {
                   paddingVertical: 12,
                   paddingHorizontal: 10,
                   borderRadius: 14,
-                  backgroundColor: isSelected ? '#E3ECE7' : 'transparent',
+                  backgroundColor: isSelected ? colors.surface.selected : 'transparent',
                 }}
               >
                 <View
@@ -778,31 +778,31 @@ export function JournalEntryScreen() {
                     borderRadius: 12,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: isSelected ? '#2C4F45' : '#EAEDE7',
+                    backgroundColor: isSelected ? colors.primary.default : colors.surface.muted,
                   }}
                 >
                   <Ionicons
                     name={item.icon}
                     size={18}
-                    color={isSelected ? '#FFFFFF' : '#2C4F45'}
+                    color={isSelected ? colors.primary.foreground : colors.primary.default}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <AppText
                     style={{
                       fontSize: 15,
-                      color: isSelected ? '#2C4F45' : '#1A2420',
+                      color: isSelected ? colors.primary.default : colors.text.primary,
                       fontWeight: isSelected ? '700' : '600',
                     }}
                   >
                     {item.label}
                   </AppText>
-                  <AppText style={{ fontSize: 12, color: '#838F89', marginTop: 1 }}>
+                  <AppText style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 1 }}>
                     {item.desc}
                   </AppText>
                 </View>
                 {isSelected ? (
-                  <Ionicons name="checkmark" size={18} color="#2C4F45" />
+                  <Ionicons name="checkmark" size={18} color={colors.primary.default} />
                 ) : null}
               </TactilePressable>
             );
@@ -818,25 +818,36 @@ export function JournalEntryScreen() {
         title="A word for how this feels"
       >
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 10 }}>
-          {MOOD_WORDS.map((m) => (
-            <TactilePressable
-              key={m.label}
-              onPress={() => handleMoodSelect(m.label)}
-              scaleDownTo={0.94}
-              style={{
-                height: 34,
-                paddingHorizontal: 14,
-                borderRadius: 999,
-                backgroundColor: m.bg,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <AppText style={{ fontSize: 13, fontWeight: '600', color: m.tone }}>
-                {m.label}
-              </AppText>
-            </TactilePressable>
-          ))}
+          {MOOD_WORDS.map((m) => {
+            let chipBg = colors.surface.muted;
+            let chipTone = colors.text.secondary;
+            if (m.group === 'accent') {
+              chipBg = colors.primary.subtle;
+              chipTone = colors.primary.default;
+            } else if (m.group === 'gold') {
+              chipBg = isDark ? 'rgba(176,138,79,0.22)' : '#F4EDE2';
+              chipTone = isDark ? '#D2B078' : '#B08A4F';
+            }
+            return (
+              <TactilePressable
+                key={m.label}
+                onPress={() => handleMoodSelect(m.label)}
+                scaleDownTo={0.94}
+                style={{
+                  height: 34,
+                  paddingHorizontal: 14,
+                  borderRadius: 999,
+                  backgroundColor: chipBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <AppText style={{ fontSize: 13, fontWeight: '600', color: chipTone }}>
+                  {m.label}
+                </AppText>
+              </TactilePressable>
+            );
+          })}
         </View>
       </Modal>
 
@@ -861,11 +872,11 @@ export function JournalEntryScreen() {
               paddingVertical: 12,
               paddingHorizontal: 10,
               borderRadius: 12,
-              backgroundColor: '#EAEDE7',
+              backgroundColor: colors.surface.muted,
             }}
           >
-            <CameraSvgIcon color="#2C4F45" />
-            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: '#1A2420' }}>
+            <CameraSvgIcon color={colors.primary.default} />
+            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
               Take photo with camera
             </AppText>
           </TactilePressable>
@@ -883,11 +894,11 @@ export function JournalEntryScreen() {
               paddingVertical: 12,
               paddingHorizontal: 10,
               borderRadius: 12,
-              backgroundColor: '#EAEDE7',
+              backgroundColor: colors.surface.muted,
             }}
           >
-            <Ionicons name="images-outline" size={21} color="#2C4F45" />
-            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: '#1A2420' }}>
+            <Ionicons name="images-outline" size={21} color={colors.primary.default} />
+            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
               Choose photo or video
             </AppText>
           </TactilePressable>
@@ -905,11 +916,11 @@ export function JournalEntryScreen() {
               paddingVertical: 12,
               paddingHorizontal: 10,
               borderRadius: 12,
-              backgroundColor: '#EAEDE7',
+              backgroundColor: colors.surface.muted,
             }}
           >
-            <Ionicons name="attach-outline" size={21} color="#2C4F45" />
-            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: '#1A2420' }}>
+            <Ionicons name="attach-outline" size={21} color={colors.primary.default} />
+            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
               Attach file or document
             </AppText>
           </TactilePressable>

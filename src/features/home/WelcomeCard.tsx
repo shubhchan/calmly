@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card, CardContent, PrimaryButton, TactilePressable } from '../../components';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { resolveTint } from '../../theme/tints';
+import { accentToTint, resolveTint } from '../../theme/tints';
 import { fontFamilies } from '../../theme/typography';
 
 interface WelcomeCardProps {
@@ -19,11 +19,12 @@ const FEATURES: { icon: keyof typeof Ionicons.glyphMap; label: string; desc: str
 ];
 
 export function WelcomeCard({ onStart, onDismiss }: WelcomeCardProps) {
-  const { colors, isDark } = useAppTheme();
-  const tint = resolveTint(!!isDark, 'sage');
+  const { colors, isDark, accent } = useAppTheme();
+  const tone = accentToTint(accent);
+  const tint = resolveTint(!!isDark, tone);
 
   return (
-    <Card variant="elevated" tone="sage" style={{ marginBottom: 20, borderRadius: 22 }}>
+    <Card variant="elevated" tone={tone} style={{ marginBottom: 20, borderRadius: 22 }}>
       <CardContent style={{ padding: 18, gap: 14 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <View

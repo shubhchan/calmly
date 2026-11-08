@@ -141,4 +141,4 @@ export type MoodType =
 export type HabitFrequency = 'daily' | 'weekdays' | 'custom';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
-export type AccentColor = 'sage' | 'lavender' | 'sky' | 'peach' | 'rose' | 'ocean';
+export type { AccentColor, NamedAccent } from '../theme/palette';

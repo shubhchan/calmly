@@ -50,8 +50,11 @@ export const TactilePressable = forwardRef<View, TactilePressableProps>(
     const handlePressIn = (e: GestureResponderEvent) => {
       if (disabled) return;
       if (!reducedMotion) {
-        scale.value = withSpring(scaleDownTo, motion.spring.snappy);
-        opacity.value = withSpring(0.92, motion.spring.snappy);
+        // Asymmetric feel: press-in is tight and immediate so the target never
+        // feels delayed under the finger; release is a softer spring that
+        // settles just past rest, so the action and its end state connect.
+        scale.value = withSpring(scaleDownTo, motion.spring.pressIn);
+        opacity.value = withSpring(0.93, motion.spring.pressIn);
       }
       if (hapticStyle === 'light') hapticFeedback.light();
       else if (hapticStyle === 'medium') hapticFeedback.medium();
@@ -63,8 +66,8 @@ export const TactilePressable = forwardRef<View, TactilePressableProps>(
     const handlePressOut = (e: GestureResponderEvent) => {
       if (disabled) return;
       if (!reducedMotion) {
-        scale.value = withSpring(1, motion.spring.snappy);
-        opacity.value = withSpring(1, motion.spring.snappy);
+        scale.value = withSpring(1, motion.spring.release);
+        opacity.value = withSpring(1, motion.spring.release);
       }
       onPressOut?.(e);
     };

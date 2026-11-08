@@ -12,6 +12,7 @@ import { getDailyPrompt } from '../../utils/dailyPrompt';
 import Habit from '../../database/models/Habit';
 import { getIconName } from '../../utils/iconMap';
 import { useAppTheme } from '../../theme/ThemeContext';
+import { withAlpha } from '../../theme/tokens/colors';
 import { bootLog } from '../../components/ErrorBoundary';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { ListSkeleton } from '../../components/interactive/LoadingState';
@@ -36,7 +37,7 @@ function formatMoodNames(value: unknown): string {
  */
 export function HomeScreen() {
   const navigation = useNavigation<any>();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
 
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
@@ -188,12 +189,12 @@ export function HomeScreen() {
                 width: 44,
                 height: 44,
                 borderRadius: 14,
-                backgroundColor: homeActiveMascot ? homeActiveMascot.background : '#2C4F45',
+                backgroundColor: homeActiveMascot ? homeActiveMascot.background : (isDark ? colors.primary.subtle : colors.primary.default),
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
-                shadowColor: '#14241E',
-                shadowOpacity: 0.1,
+                shadowColor: isDark ? '#000000' : '#14241E',
+                shadowOpacity: isDark ? 0.28 : 0.1,
                 shadowRadius: 6,
                 shadowOffset: { width: 0, height: 2 },
                 elevation: 2,
@@ -213,7 +214,7 @@ export function HomeScreen() {
                   style={{
                     fontFamily: displayFaces.regular,
                     fontSize: 18,
-                    color: '#EDF3EF',
+                    color: isDark ? colors.primary.default : colors.primary.foreground,
                   }}
                 >
                   {homeInitial}
@@ -229,7 +230,9 @@ export function HomeScreen() {
         style={{
           marginTop: 24,
           borderRadius: 26,
-          backgroundColor: colors.primary.default,
+          backgroundColor: isDark ? colors.primary.subtle : colors.primary.default,
+          borderWidth: isDark ? 1 : 0,
+          borderColor: isDark ? colors.primary.subtleBorder : 'transparent',
           padding: 22,
           position: 'relative',
           overflow: 'hidden',
@@ -245,7 +248,7 @@ export function HomeScreen() {
             height: 170,
             borderRadius: 85,
             borderWidth: 1,
-            borderColor: 'rgba(198,220,209,0.25)',
+            borderColor: isDark ? colors.primary.subtleBorder : withAlpha(colors.primary.foreground, 0.25),
           }}
           pointerEvents="none"
         />
@@ -257,20 +260,20 @@ export function HomeScreen() {
             width: 86,
             height: 86,
             borderRadius: 43,
-            backgroundColor: 'rgba(198,220,209,0.12)',
+            backgroundColor: isDark ? withAlpha(colors.primary.default, 0.08) : withAlpha(colors.primary.foreground, 0.12),
           }}
           pointerEvents="none"
         />
 
-        <AppText variant="overline" color="#A9CBBC" style={{ letterSpacing: 1.2 }}>
+        <AppText variant="overline" color={isDark ? colors.primary.default : withAlpha(colors.primary.foreground, 0.72)} style={{ letterSpacing: 1.2 }}>
           Today · 6 minutes
         </AppText>
-        <AppText variant="display" color="#EDF3EF" style={{ fontSize: 28, lineHeight: 38, paddingBottom: 4, marginTop: 10, marginBottom: 8, maxWidth: 240 }}>
+        <AppText variant="display" color={isDark ? colors.text.primary : colors.primary.foreground} style={{ fontSize: 28, lineHeight: 38, paddingBottom: 4, marginTop: 10, marginBottom: 8, maxWidth: 240 }}>
           Let the morning be slow.
         </AppText>
         <AppText
           variant="bodySmall"
-          color="#C6DCD1"
+          color={isDark ? colors.text.secondary : withAlpha(colors.primary.foreground, 0.85)}
           style={{ lineHeight: 20, maxWidth: 250 }}
         >
           A short breath session before the day asks anything of you.
@@ -286,12 +289,12 @@ export function HomeScreen() {
               height: 46,
               paddingHorizontal: 22,
               borderRadius: 16,
-              backgroundColor: '#EDF3EF',
+              backgroundColor: isDark ? colors.primary.default : colors.primary.foreground,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <AppText variant="label" color="#223E36" style={{ fontWeight: '600' }}>
+            <AppText variant="label" color={isDark ? colors.primary.foreground : colors.primary.default} style={{ fontWeight: '600' }}>
               Begin
             </AppText>
           </TactilePressable>
@@ -301,8 +304,8 @@ export function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Choose another practice"
           >
-            <AppText variant="bodySmall" color="#A9CBBC">
-              or <AppText variant="bodySmall" color="#A9CBBC" style={{ textDecorationLine: 'underline' }}>choose another</AppText>
+            <AppText variant="bodySmall" color={isDark ? colors.primary.default : withAlpha(colors.primary.foreground, 0.8)}>
+              or <AppText variant="bodySmall" color={isDark ? colors.primary.default : withAlpha(colors.primary.foreground, 0.8)} style={{ textDecorationLine: 'underline' }}>choose another</AppText>
             </AppText>
           </TactilePressable>
         </View>
@@ -478,10 +481,10 @@ export function HomeScreen() {
         {/* Weekly rhythm bar graph — Doop Day arc */}
         <View style={{ marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border.default }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-            <AppText variant="label" color="#46524C" style={{ fontWeight: '600' }}>
+            <AppText variant="label" tone="secondary" style={{ fontWeight: '600' }}>
               This week
             </AppText>
-            <AppText variant="caption" color="#838F89">
+            <AppText variant="caption" tone="tertiary">
               {`${doneCount > 0 ? doneCount : 4} quiet days`}
             </AppText>
           </View>
@@ -499,11 +502,11 @@ export function HomeScreen() {
                       backgroundColor: isCompleted
                         ? colors.primary.default
                         : isToday
-                          ? '#C9DCD3'
+                          ? colors.surface.selected
                           : colors.surface.muted,
                     }}
                   />
-                  <AppText variant="caption" color="#838F89" style={{ fontSize: 10.5, marginTop: 5 }}>
+                  <AppText variant="caption" tone="tertiary" style={{ fontSize: 10.5, marginTop: 5 }}>
                     {day}
                   </AppText>
                 </View>

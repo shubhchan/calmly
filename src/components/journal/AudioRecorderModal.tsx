@@ -287,7 +287,7 @@ export function AudioRecorderModal({ visible, onClose, onSaved }: AudioRecorderM
                       : 'mic'
                   }
                   size={36}
-                  color="#FFFFFF"
+                  color={recorderState.isRecording ? '#FFFFFF' : colors.primary.foreground}
                 />
               </TactilePressable>
             </Animated.View>
@@ -337,8 +337,8 @@ export function AudioRecorderModal({ visible, onClose, onSaved }: AudioRecorderM
                   disabled={isSaving}
                   style={[styles.actionBtn, styles.primaryBtn, { backgroundColor: colors.primary.default }]}
                 >
-                  <Ionicons name="checkmark" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={[styles.btnText, { color: '#FFFFFF', fontWeight: '700' }]}>
+                  <Ionicons name="checkmark" size={18} color={colors.primary.foreground} style={{ marginRight: 6 }} />
+                  <Text style={[styles.btnText, { color: colors.primary.foreground, fontWeight: '700' }]}>
                     {isSaving ? 'Attaching...' : 'Attach Memo'}
                   </Text>
                 </TactilePressable>
@@ -357,8 +357,8 @@ export function AudioRecorderModal({ visible, onClose, onSaved }: AudioRecorderM
                 disabled={isPreparing}
                 style={[styles.actionBtn, styles.primaryBtn, { backgroundColor: colors.primary.default }]}
               >
-                <Ionicons name="mic" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={[styles.btnText, { color: '#FFFFFF', fontWeight: '700' }]}>Start Recording</Text>
+                <Ionicons name="mic" size={18} color={colors.primary.foreground} style={{ marginRight: 6 }} />
+                <Text style={[styles.btnText, { color: colors.primary.foreground, fontWeight: '700' }]}>Start Recording</Text>
               </TactilePressable>
             )}
           </View>

@@ -256,7 +256,7 @@ export function GratitudeScreen() {
           onPress={handleAdd}
           title={type === 'gratitude' ? 'Add Gratitude' : 'Add Good Thing'}
           style={styles.addButton}
-          leftIcon={<Ionicons name="add" size={20} color="#FFFFFF" />}
+          leftIcon={(btnColor, btnSize) => <Ionicons name="add" size={btnSize} color={btnColor} />}
         />
         </PopIn>
       )}

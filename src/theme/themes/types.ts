@@ -1,4 +1,4 @@
-import type { AccentColor, ResolvedColors, ThemeMode } from '../palette';
+import type { AccentColor, NamedAccent, ResolvedColors, ThemeMode } from '../palette';
 
 /** A status color family (success / warning / error / info). */
 export interface StatusTone {
@@ -38,7 +38,7 @@ export interface AppThemeColors {
     subtleBorder: string;
   };
   /** Named accent hues, for playful per-card tones. */
-  accents: Record<AccentColor, string>;
+  accents: Record<NamedAccent, string>;
   background: {
     default: string;
     secondary: string;

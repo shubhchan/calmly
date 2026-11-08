@@ -61,7 +61,10 @@ async function api(token: string, url: string, init: RequestInit = {}): Promise<
   if (!response.ok) {
     let detail = body;
     try { detail = JSON.parse(body)?.error?.message || body; } catch {}
-    throw new Error(`Drive request failed (${response.status}): ${detail.slice(0, 180)}`);
+    if (response.status === 403 && /Google Drive API has not been used|is disabled/i.test(detail)) {
+      throw new Error('Google Drive API is disabled in your Google Cloud project. Please enable "Google Drive API" in Google Cloud Console (APIs & Services > Library) for your project and retry after a few minutes.');
+    }
+    throw new Error(`Drive request failed (${response.status}): ${detail.slice(0, 220)}`);
   }
   return body ? JSON.parse(body) : {};
 }

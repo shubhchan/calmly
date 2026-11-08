@@ -46,7 +46,7 @@ export function DocumentAttachmentCard({
       style={[
         styles.card,
         {
-          backgroundColor: isDark ? '#1E293B' : colors.surface.default,
+          backgroundColor: colors.surface.default,
           borderColor: colors.border.default,
         },
       ]}

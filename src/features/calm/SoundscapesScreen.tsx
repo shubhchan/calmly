@@ -38,7 +38,7 @@ const BAR_HEIGHTS = [7, 14, 24, 32, 22, 38, 26, 44, 30, 20, 34, 26, 16, 28, 38, 
  */
 export function SoundscapesScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
 
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [selectedTimer, setSelectedTimer] = useState('Off');
@@ -125,25 +125,27 @@ export function SoundscapesScreen() {
       <View
         style={{
           marginTop: 16,
-          backgroundColor: colors.primary.default,
+          backgroundColor: isDark ? colors.primary.subtle : colors.primary.default,
           borderRadius: 24,
           padding: 22,
+          borderWidth: isDark ? 1 : 0,
+          borderColor: isDark ? colors.primary.subtleBorder : 'transparent',
         }}
       >
-        <AppText variant="overline" color={colors.primary.foreground} style={{ opacity: 0.7 }}>
+        <AppText variant="overline" color={isDark ? colors.primary.default : colors.primary.foreground} style={{ opacity: isDark ? 1 : 0.7 }}>
           {activeTrack ? 'Now playing' : 'Quiet right now'}
         </AppText>
         <AppText
           variant="h2"
-          color={colors.primary.foreground}
+          color={isDark ? colors.text.primary : colors.primary.foreground}
           style={{ marginTop: 8, maxWidth: 240 }}
         >
           {activeTrack ? activeTrack.title : 'Choose a sound'}
         </AppText>
         <AppText
           variant="caption"
-          color={colors.primary.foreground}
-          style={{ marginTop: 6, opacity: 0.7 }}
+          color={isDark ? colors.text.secondary : colors.primary.foreground}
+          style={{ marginTop: 6, opacity: isDark ? 1 : 0.7 }}
         >
           {activeTrack
             ? selectedTimer === 'Off'
@@ -168,7 +170,7 @@ export function SoundscapesScreen() {
                   width: 3,
                   height,
                   borderRadius: 2,
-                  backgroundColor: colors.primary.foreground,
+                  backgroundColor: isDark ? colors.primary.default : colors.primary.foreground,
                   opacity: activeTrack ? (index > 12 ? 0.35 : 0.8) : 0.18,
                 }}
               />
@@ -192,13 +194,13 @@ export function SoundscapesScreen() {
               borderRadius: 29,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: colors.primary.foreground,
+              backgroundColor: isDark ? colors.primary.default : colors.primary.foreground,
             }}
           >
             <Ionicons
               name={activeTrack ? 'pause' : 'play'}
               size={20}
-              color={colors.primary.default}
+              color={isDark ? colors.primary.foreground : colors.primary.default}
             />
           </TactilePressable>
         </View>

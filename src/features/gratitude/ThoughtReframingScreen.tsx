@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { PopIn } from '../../components/interactive/PopIn';
-import { resolveTint } from '../../theme/tints';
+import { accentToTint, resolveTint } from '../../theme/tints';
 
 const STEPS = [
   {
@@ -55,8 +55,9 @@ const STEPS = [
 ];
 
 export function ThoughtReframingScreen() {
-  const { colors, isDark } = useAppTheme();
-  const sageTint = resolveTint(!!isDark, 'sage');
+  const { colors, isDark, accent } = useAppTheme();
+  const cardTone = accentToTint(accent);
+  const accentTint = resolveTint(!!isDark, cardTone);
   const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState<string[]>(['', '', '', '', '', '', '']);
   const [completed, setCompleted] = useState(false);
@@ -115,33 +116,33 @@ export function ThoughtReframingScreen() {
     return (
       <ScreenContainer contentContainerStyle={styles.content}>
         <PopIn index={0}>
-        <Card tone="sage" style={styles.completeCard}>
+        <Card tone={cardTone} style={styles.completeCard}>
           <ThoughtReframingIllustration width={190} height={145} style={{ marginBottom: 8 }} />
-          <Text style={[styles.completeTitle, { color: sageTint.text }]}>Perspective Shifted</Text>
-          <Text style={[styles.completeText, { color: sageTint.text }]}>
+          <Text style={[styles.completeTitle, { color: accentTint.text }]}>Perspective Shifted</Text>
+          <Text style={[styles.completeText, { color: accentTint.text }]}>
             You stepped back from distortion and re-anchored your mind in balanced wisdom.
           </Text>
 
-          <View style={[styles.changeIndicator, { backgroundColor: sageTint.plate, borderColor: sageTint.border }]}>
-            <Text style={[styles.changeLabel, { color: sageTint.text }]}>Emotional Charge Shift</Text>
+          <View style={[styles.changeIndicator, { backgroundColor: accentTint.plate, borderColor: accentTint.border }]}>
+            <Text style={[styles.changeLabel, { color: accentTint.text }]}>Emotional Charge Shift</Text>
             <View style={styles.changeBars}>
               <View style={styles.changeBarWrapper}>
-                <Text style={[styles.changeBarLabel, { color: sageTint.muted }]}>Initial Intensity</Text>
-                <View style={[styles.changeBarTrack, { backgroundColor: sageTint.border }]}>
-                  <View style={[styles.changeBarFill, { width: `${before}%`, backgroundColor: sageTint.accent }]} />
+                <Text style={[styles.changeBarLabel, { color: accentTint.muted }]}>Initial Intensity</Text>
+                <View style={[styles.changeBarTrack, { backgroundColor: accentTint.border }]}>
+                  <View style={[styles.changeBarFill, { width: `${before}%`, backgroundColor: accentTint.accent }]} />
                 </View>
-                <Text style={[styles.changeBarValue, { color: sageTint.accent }]}>{before}%</Text>
+                <Text style={[styles.changeBarValue, { color: accentTint.accent }]}>{before}%</Text>
               </View>
               <View style={styles.changeBarWrapper}>
-                <Text style={[styles.changeBarLabel, { color: sageTint.muted }]}>Reframed Level</Text>
-                <View style={[styles.changeBarTrack, { backgroundColor: sageTint.border }]}>
-                  <View style={[styles.changeBarFillAfter, { width: `${after}%`, backgroundColor: sageTint.accent }]} />
+                <Text style={[styles.changeBarLabel, { color: accentTint.muted }]}>Reframed Level</Text>
+                <View style={[styles.changeBarTrack, { backgroundColor: accentTint.border }]}>
+                  <View style={[styles.changeBarFillAfter, { width: `${after}%`, backgroundColor: accentTint.accent }]} />
                 </View>
-                <Text style={[styles.changeBarValue, { color: sageTint.accent }]}>{after}%</Text>
+                <Text style={[styles.changeBarValue, { color: accentTint.accent }]}>{after}%</Text>
               </View>
             </View>
             {reduction > 0 && (
-              <Text style={[styles.reductionText, { color: sageTint.accent }]}>
+              <Text style={[styles.reductionText, { color: accentTint.accent }]}>
                 Distress reduced by {reduction}%
               </Text>
             )}

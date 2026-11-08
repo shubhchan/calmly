@@ -1,5 +1,6 @@
 import React from 'react';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
+import { useAppTheme } from '../../theme/ThemeContext';
 import type { MoodType } from '../../types/navigation';
 
 type Eyes = 'dot' | 'closed' | 'wide' | 'angry';
@@ -135,7 +136,9 @@ export interface MoodFaceProps {
   accent?: string;
 }
 
-export function MoodFace({ mood, size = 34, color = '#2C4F45', accent = '#B08A4F' }: MoodFaceProps) {
+export function MoodFace({ mood, size = 34, color, accent = '#B08A4F' }: MoodFaceProps) {
+  const { colors } = useAppTheme();
+  const ink = color ?? colors.primary.default;
   const spec = FACES[mood] ?? FACES.content;
   return (
     <Svg width={size} height={size} viewBox="0 0 40 40">
@@ -145,9 +148,9 @@ export function MoodFace({ mood, size = 34, color = '#2C4F45', accent = '#B08A4F
           <Ellipse cx={27.4} cy={22.6} rx={2.4} ry={1.4} fill={accent} opacity={0.4} />
         </>
       ) : null}
-      <EyesShape kind={spec.eyes} ink={color} accent={accent} />
-      <BrowsShape kind={spec.brows} ink={color} />
-      <MouthShape kind={spec.mouth} ink={color} />
+      <EyesShape kind={spec.eyes} ink={ink} accent={accent} />
+      <BrowsShape kind={spec.brows} ink={ink} />
+      <MouthShape kind={spec.mouth} ink={ink} />
       {spec.tear ? (
         <Path d={DROP} transform="translate(11.6 19.6) scale(0.78)" fill={accent} />
       ) : null}

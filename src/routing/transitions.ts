@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
+import { motion } from '../theme/tokens';
 
 /**
  * One transition matrix for every route in Calmly.
@@ -19,6 +20,9 @@ export function pushTransition(reducedMotion: boolean): NativeStackNavigationOpt
   return {
     headerShown: false,
     gestureEnabled: !reducedMotion,
+    // Fixed duration keeps pushes and pops symmetric across the stack (iOS;
+    // Android uses its native slide timing).
+    animationDuration: motion.duration.normal,
     animation: reducedMotion ? 'none' : Platform.OS === 'ios' ? 'default' : 'slide_from_right',
   };
 }

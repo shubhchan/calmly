@@ -211,7 +211,7 @@ export function GratitudeFormScreen() {
                   <Text
                     style={[
                       styles.moodChipText,
-                      { color: isSelected ? '#FFFFFF' : colors.text.primary },
+                      { color: isSelected ? colors.primary.foreground : colors.text.primary },
                       isSelected && { fontWeight: '700' },
                     ]}
                   >

@@ -82,7 +82,7 @@ function buildWavePaths(points: MoodTrendPoint[]) {
  */
 export function InsightsScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const [stats, setStats] = useState<WeeklyStats | null>(null);
   const [habitStats, setHabitStats] = useState<HabitStats[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -464,10 +464,10 @@ export function InsightsScreen() {
             }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-              <AppText variant="label" color="#46524C" style={{ fontWeight: '600' }}>
+              <AppText variant="label" tone="secondary" style={{ fontWeight: '600' }}>
                 Mood through the week
               </AppText>
-              <AppText variant="caption" color="#838F89">
+              <AppText variant="caption" tone="tertiary">
                 out of 10
               </AppText>
             </View>
@@ -493,14 +493,14 @@ export function InsightsScreen() {
                 cy={wavePaths.dot.cy}
                 r={4.5}
                 fill={colors.primary.default}
-                stroke="#FFFFFF"
+                stroke={colors.surface.default}
                 strokeWidth={2.5}
               />
             </Svg>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 8 }}>
               {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
-                <AppText key={idx} variant="caption" color="#9AA5A0" style={{ width: 22, textAlign: 'center', fontSize: 10.5 }}>
+                <AppText key={idx} variant="caption" tone="tertiary" style={{ width: 22, textAlign: 'center', fontSize: 10.5 }}>
                   {day}
                 </AppText>
               ))}
@@ -512,10 +512,10 @@ export function InsightsScreen() {
       {/* Where it came from / by time of day — Doop Three measures */}
       <View style={{ marginTop: 24 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-          <AppText variant="label" color="#46524C" style={{ fontWeight: '600' }}>
+          <AppText variant="label" tone="secondary" style={{ fontWeight: '600' }}>
             Where it came from
           </AppText>
-          <AppText variant="caption" color="#838F89">
+          <AppText variant="caption" tone="tertiary">
             by time of day
           </AppText>
         </View>
@@ -538,7 +538,7 @@ export function InsightsScreen() {
             <AppText variant="bodySmall" style={{ fontSize: 13, fontWeight: '600' }}>{timeOfDay.afternoon.avg}</AppText>
           </View>
           <View style={{ height: 7, borderRadius: 4, backgroundColor: colors.surface.muted, overflow: 'hidden' }}>
-            <View style={{ width: `${timeOfDay.afternoon.pct}%`, height: '100%', borderRadius: 4, backgroundColor: '#7FA394' }} />
+            <View style={{ width: `${timeOfDay.afternoon.pct}%`, height: '100%', borderRadius: 4, backgroundColor: isDark ? '#4D6B5E' : '#7FA394' }} />
           </View>
         </View>
 
@@ -549,7 +549,7 @@ export function InsightsScreen() {
             <AppText variant="bodySmall" style={{ fontSize: 13, fontWeight: '600' }}>{timeOfDay.evening.avg}</AppText>
           </View>
           <View style={{ height: 7, borderRadius: 4, backgroundColor: colors.surface.muted, overflow: 'hidden' }}>
-            <View style={{ width: `${timeOfDay.evening.pct}%`, height: '100%', borderRadius: 4, backgroundColor: '#C9DCD3' }} />
+            <View style={{ width: `${timeOfDay.evening.pct}%`, height: '100%', borderRadius: 4, backgroundColor: isDark ? '#2E473D' : '#C9DCD3' }} />
           </View>
         </View>
       </View>
@@ -570,13 +570,13 @@ export function InsightsScreen() {
               width: 32,
               height: 32,
               borderRadius: 10,
-              backgroundColor: '#E3ECE7',
+              backgroundColor: colors.surface.selected,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
             <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-              <Path d="M3 12h4l2-5 4 10 2-5h6" stroke="#2C4F45" strokeWidth={1.8} strokeLinecap="round" />
+              <Path d="M3 12h4l2-5 4 10 2-5h6" stroke={colors.primary.default} strokeWidth={1.8} strokeLinecap="round" />
             </Svg>
           </View>
           <View style={{ flex: 1 }}>
@@ -603,13 +603,13 @@ export function InsightsScreen() {
               width: 32,
               height: 32,
               borderRadius: 10,
-              backgroundColor: '#F0E7D6',
+              backgroundColor: isDark ? 'rgba(176,138,79,0.18)' : '#F0E7D6',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
             <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-              <Path d="M5 4h11l4 4v12H5zM8 10h8M8 14h5" stroke="#B08A4F" strokeWidth={1.8} strokeLinecap="round" />
+              <Path d="M5 4h11l4 4v12H5zM8 10h8M8 14h5" stroke={isDark ? '#D2B078' : '#B08A4F'} strokeWidth={1.8} strokeLinecap="round" />
             </Svg>
           </View>
           <View style={{ flex: 1 }}>
@@ -763,15 +763,17 @@ export function InsightsScreen() {
           marginTop: 24,
           padding: 16,
           borderRadius: 16,
-          backgroundColor: '#E3ECE7',
+          backgroundColor: colors.primary.subtle,
+          borderWidth: 1,
+          borderColor: colors.primary.subtleBorder,
           flexDirection: 'row',
           gap: 12,
           alignItems: 'flex-start',
         }}
       >
-        <Ionicons name="sparkles" size={17} color="#2C4F45" style={{ marginTop: 2 }} />
-        <AppText variant="bodySmall" color="#2F5147" style={{ flex: 1, lineHeight: 19 }}>
-          <AppText variant="label" color="#2F5147" style={{ fontWeight: '600' }}>Small idea: </AppText>
+        <Ionicons name="sparkles" size={17} color={colors.primary.default} style={{ marginTop: 2 }} />
+        <AppText variant="bodySmall" color={colors.text.primary} style={{ flex: 1, lineHeight: 19 }}>
+          <AppText variant="label" color={colors.primary.default} style={{ fontWeight: '600' }}>Small idea: </AppText>
           a two-minute evening check-in could lift your lowest hour.
         </AppText>
       </View>

@@ -167,6 +167,26 @@ export function resolveTint(isDark: boolean, name: TintName): Tint {
   return (isDark ? darkTints : lightTints)[name];
 }
 
+/** Map user accent selection to its corresponding card tint. */
+export function accentToTint(accent?: string): TintName {
+  switch (accent) {
+    case 'sage':
+      return 'sage';
+    case 'lavender':
+      return 'lilac';
+    case 'sky':
+      return 'sky';
+    case 'peach':
+      return 'coral';
+    case 'rose':
+      return 'blush';
+    case 'ocean':
+      return 'mint';
+    default:
+      return 'sage';
+  }
+}
+
 /** Deterministic tone rotation so cards feel ordered but never random. */
 export function tintForIndex(index: number): TintName {
   return TINT_NAMES[Math.abs(index) % TINT_NAMES.length];

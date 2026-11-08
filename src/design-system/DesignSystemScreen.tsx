@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { ScreenContainer } from '../components/layout/ScreenContainer';
 import { AppIcon } from '../components/AppIcon';
 import { useAppTheme, useTheme } from '../theme/ThemeContext';
-import { AccentColor } from '../types/navigation';
+import { AccentColor, type NamedAccent } from '../types/navigation';
 import {
   AppText,
   Avatar,
@@ -224,7 +224,7 @@ export function DesignSystemScreen() {
         />
         <SwatchGroup
           title="Accents"
-          items={ACCENTS.map((accent) => ({ name: accent, color: c.accents[accent] }))}
+          items={ACCENTS.map((accent) => ({ name: accent, color: c.accents[accent as NamedAccent] }))}
         />
       </Surface>
 

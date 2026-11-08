@@ -33,7 +33,7 @@ export function ZenPlaygroundScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'ZenPlayground'>>();
   const insets = useSafeAreaInsets();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
 
   const initial = ((route?.params as any)?.initialGame ?? null) as GameTab | null;
   const [activeGame, setActiveGame] = useState<GameTab | null>(initial);
@@ -104,9 +104,9 @@ export function ZenPlaygroundScreen() {
           </TactilePressable>
         </View>
         <View style={{ flex: 1, paddingBottom: Math.max(insets.bottom, 16) }}>
-          {activeGame === 'bubbles' ? <BubblePopGame /> : null}
-          {activeGame === 'sand' ? <ZenSandGardenGame /> : null}
-          {activeGame === 'pet' ? <BreathingCompanionGame /> : null}
+          {activeGame === 'bubbles' ? <BubblePopGame onExit={() => setActiveGame(null)} /> : null}
+          {activeGame === 'sand' ? <ZenSandGardenGame onExit={() => setActiveGame(null)} /> : null}
+          {activeGame === 'pet' ? <BreathingCompanionGame onExit={() => setActiveGame(null)} /> : null}
         </View>
       </ScreenContainer>
     );
@@ -169,9 +169,11 @@ export function ZenPlaygroundScreen() {
         style={{
           marginTop: 20,
           borderRadius: 24,
-          backgroundColor: colors.primary.default,
+          backgroundColor: isDark ? colors.primary.subtle : colors.primary.default,
           padding: 20,
           overflow: 'hidden',
+          borderWidth: isDark ? 1 : 0,
+          borderColor: isDark ? colors.primary.subtleBorder : 'transparent',
         }}
       >
         <View
@@ -184,20 +186,20 @@ export function ZenPlaygroundScreen() {
             height: 150,
             borderRadius: 75,
             borderWidth: 1,
-            borderColor: colors.primary.foreground,
+            borderColor: isDark ? colors.primary.default : colors.primary.foreground,
             opacity: 0.18,
           }}
         />
-        <AppText variant="overline" color={colors.primary.foreground} style={{ opacity: 0.7 }}>
+        <AppText variant="overline" color={isDark ? colors.primary.default : colors.primary.foreground} style={{ opacity: isDark ? 1 : 0.7 }}>
           Start here
         </AppText>
-        <AppText variant="h3" color={colors.primary.foreground} style={{ marginTop: 7 }}>
+        <AppText variant="h3" color={isDark ? colors.text.primary : colors.primary.foreground} style={{ marginTop: 7 }}>
           Sand garden
         </AppText>
         <AppText
           variant="caption"
-          color={colors.primary.foreground}
-          style={{ marginTop: 5, maxWidth: 220, lineHeight: 18, opacity: 0.8 }}
+          color={isDark ? colors.text.secondary : colors.primary.foreground}
+          style={{ marginTop: 5, maxWidth: 220, lineHeight: 18, opacity: isDark ? 1 : 0.8 }}
         >
           Rake lines, place stones, and let it be imperfect.
         </AppText>
@@ -209,15 +211,15 @@ export function ZenPlaygroundScreen() {
               borderRadius: 999,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: colors.primary.foreground,
+              backgroundColor: isDark ? colors.primary.default : colors.primary.foreground,
               opacity: 0.9,
             }}
           >
-            <AppText variant="caption" color={colors.primary.default} style={{ fontWeight: '600' }}>
+            <AppText variant="caption" color={isDark ? colors.primary.foreground : colors.primary.default} style={{ fontWeight: '600' }}>
               3–10 min
             </AppText>
           </View>
-          <AppText variant="caption" color={colors.primary.foreground} style={{ opacity: 0.55 }}>
+          <AppText variant="caption" color={isDark ? colors.text.tertiary : colors.primary.foreground} style={{ opacity: isDark ? 1 : 0.55 }}>
             no score, no timer
           </AppText>
         </View>

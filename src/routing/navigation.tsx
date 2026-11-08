@@ -5,9 +5,7 @@ import { StackActions } from '@react-navigation/native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
   withSpring,
-  Easing,
 } from 'react-native-reanimated';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,6 +57,7 @@ import { FontBrowserScreen } from '../features/settings/FontBrowserScreen';
 import { DesignSystemScreen } from '../design-system/DesignSystemScreen';
 import { BrandedLoader } from '../components/interactive/LoadingState';
 import { useAppReducedMotion } from '../theme/motion';
+import { motion } from '../theme/tokens';
 import { pushTransition, modalTransition, immersiveTransition, tabTransition } from './transitions';
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -136,7 +135,7 @@ function TabCrashFallback({ tabName, onRetry }: { tabName: string; onRetry: () =
           borderRadius: 12,
         }}
       >
-        <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Try again</Text>
+        <Text style={{ color: colors?.isDark ? (colors?.bgPrimary ?? '#0F1513') : '#FFFFFF', fontWeight: '700' }}>Try again</Text>
       </Pressable>
     </View>
   );
@@ -245,12 +244,24 @@ const AnimatedTabItem = React.memo(function AnimatedTabItem({
   }));
 
   const handlePressIn = () => {
-    scale.value = withTiming(0.92, { duration: 90, easing: Easing.out(Easing.quad) });
+    // Same asymmetric feel as TactilePressable: tight in, settling out.
+    scale.value = withSpring(0.92, motion.spring.pressIn);
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { mass: 0.5, damping: 15, stiffness: 260 });
+    scale.value = withSpring(1, motion.spring.release);
   };
+
+  // A small settle pop when a tab becomes active, so selecting it feels
+  // acknowledged rather than swapped.
+  const wasFocused = useSharedValue(isFocused);
+  useEffect(() => {
+    if (isFocused && !wasFocused.value) {
+      scale.value = 0.94;
+      scale.value = withSpring(1, motion.spring.release);
+    }
+    wasFocused.value = isFocused;
+  }, [isFocused, scale, wasFocused]);
 
   const handlePress = useCallback(() => {
     hapticFeedback.selection();

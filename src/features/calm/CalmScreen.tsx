@@ -47,7 +47,7 @@ const PRACTICE_LIST: {
 
 export function CalmScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const [activeSound, setActiveSound] = useState<string | null>(null);
   const [practice, setPractice] = useState<string>('Breathe');
 
@@ -121,7 +121,9 @@ export function CalmScreen() {
         accessibilityLabel="Continue body scan practice"
         style={{
           marginTop: 22,
-          backgroundColor: colors.primary.default,
+          backgroundColor: isDark ? colors.primary.subtle : colors.primary.default,
+          borderWidth: isDark ? 1 : 0,
+          borderColor: isDark ? colors.primary.subtleBorder : 'transparent',
           borderRadius: 22,
           padding: 18,
           flexDirection: 'row',
@@ -131,16 +133,16 @@ export function CalmScreen() {
         }}
       >
         <View style={{ flex: 1 }}>
-          <AppText variant="overline" color="#A9CBBC" style={{ letterSpacing: 1.2 }}>
+          <AppText variant="overline" color={isDark ? colors.primary.default : '#A9CBBC'} style={{ letterSpacing: 1.2 }}>
             Continue
           </AppText>
-          <AppText variant="display" color="#EDF3EF" style={{ fontSize: 22, lineHeight: 30, paddingBottom: 2, marginTop: 4 }}>
+          <AppText variant="display" color={isDark ? colors.text.primary : '#EDF3EF'} style={{ fontSize: 22, lineHeight: 30, paddingBottom: 2, marginTop: 4 }}>
             Evening wind-down
           </AppText>
-          <AppText variant="caption" color="#C6DCD1" style={{ marginTop: 4 }}>
+          <AppText variant="caption" color={isDark ? colors.text.secondary : '#C6DCD1'} style={{ marginTop: 4 }}>
             {activeSound ? `Soundscape · ${activeSound}` : 'Body scan · 3 of 8 min'}
           </AppText>
-          <View style={{ height: 4, borderRadius: 2, backgroundColor: 'rgba(198,220,209,0.25)', marginTop: 12, width: 120, overflow: 'hidden' }}>
+          <View style={{ height: 4, borderRadius: 2, backgroundColor: isDark ? colors.border.default : 'rgba(198,220,209,0.25)', marginTop: 12, width: 120, overflow: 'hidden' }}>
             <View style={{ width: '42%', height: '100%', backgroundColor: '#D2B078', borderRadius: 2 }} />
           </View>
         </View>
@@ -149,12 +151,12 @@ export function CalmScreen() {
             width: 54,
             height: 54,
             borderRadius: 27,
-            backgroundColor: '#EDF3EF',
+            backgroundColor: isDark ? colors.primary.default : '#EDF3EF',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Svg width={20} height={20} viewBox="0 0 24 24" fill="#223E36">
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill={isDark ? colors.primary.foreground : '#223E36'}>
             <Path d="M8 5l12 7-12 7z" />
           </Svg>
         </View>
@@ -171,7 +173,7 @@ export function CalmScreen() {
           style={{
             width: '48%',
             flexGrow: 1,
-            backgroundColor: '#E3ECE7',
+            backgroundColor: colors.surface.selected,
             borderRadius: 18,
             padding: 16,
             minHeight: 128,
@@ -183,20 +185,20 @@ export function CalmScreen() {
               width: 34,
               height: 34,
               borderRadius: 11,
-              backgroundColor: '#FFFFFF',
+              backgroundColor: colors.surface.default,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#2C4F45" strokeWidth="1.8" strokeLinecap="round">
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke={colors.primary.default} strokeWidth="1.8" strokeLinecap="round">
               <Path d="M12 3c3.5 3 6 6 6 9a6 6 0 01-12 0c0-3 2.5-6 6-9z" />
             </Svg>
           </View>
           <View style={{ marginTop: 20 }}>
-            <AppText variant="title" color="#223E36" style={{ fontWeight: '600' }}>
+            <AppText variant="title" style={{ fontWeight: '600', color: colors.primary.default }}>
               Breathe
             </AppText>
-            <AppText variant="caption" color="#5C7568" style={{ marginTop: 2 }}>
+            <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
               Paced &amp; box
             </AppText>
           </View>
@@ -223,12 +225,12 @@ export function CalmScreen() {
               width: 34,
               height: 34,
               borderRadius: 11,
-              backgroundColor: '#EAEDE7',
+              backgroundColor: colors.surface.muted,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#2C4F45" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke={colors.primary.default} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <Path d="M20 4C10.5 4 4 10.5 4 20c9.5 0 16-6.5 16-16z" />
               <Path d="M8 16c2.5-4 5.5-6.5 9-8" />
             </Svg>
@@ -264,12 +266,12 @@ export function CalmScreen() {
               width: 34,
               height: 34,
               borderRadius: 11,
-              backgroundColor: '#F0E7D6',
+              backgroundColor: isDark ? 'rgba(176,138,79,0.2)' : '#F0E7D6',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B08A4F" strokeWidth="1.8" strokeLinecap="round">
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#D2B078' : '#B08A4F'} strokeWidth="1.8" strokeLinecap="round">
               <Path d="M20 14.5A8.5 8.5 0 019.5 4 8.5 8.5 0 1020 14.5z" />
             </Svg>
           </View>
@@ -304,12 +306,12 @@ export function CalmScreen() {
               width: 34,
               height: 34,
               borderRadius: 11,
-              backgroundColor: '#EAEDE7',
+              backgroundColor: colors.surface.muted,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#2C4F45" strokeWidth="1.8" strokeLinecap="round">
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke={colors.primary.default} strokeWidth="1.8" strokeLinecap="round">
               <Path d="M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4 0M4 9c2-2 4-2 6 0s4 2 6 0 4-2 4 0" />
             </Svg>
           </View>
@@ -334,25 +336,25 @@ export function CalmScreen() {
           marginTop: 18,
           padding: 16,
           borderRadius: 16,
-          backgroundColor: '#EAEDE7',
+          backgroundColor: colors.surface.default,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
         }}
       >
-        <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="#2C4F45" strokeWidth="1.8" strokeLinecap="round">
+        <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke={colors.primary.default} strokeWidth="1.8" strokeLinecap="round">
           <Circle cx="12" cy="12" r="9" />
           <Path d="M12 7v5l3 2" />
         </Svg>
         <View style={{ flex: 1 }}>
-          <AppText variant="label" color="#223E36" style={{ fontWeight: '600' }}>
+          <AppText variant="label" tone="primary" style={{ fontWeight: '600' }}>
             Only three minutes?
           </AppText>
-          <AppText variant="caption" color="#6C7873" style={{ marginTop: 1 }}>
+          <AppText variant="caption" tone="secondary" style={{ marginTop: 1 }}>
             Try 4-7-8 breathing, no timer.
           </AppText>
         </View>
-        <Ionicons name="chevron-forward" size={16} color="#6C7873" />
+        <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
       </TactilePressable>
 
       {/* Sounds */}

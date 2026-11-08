@@ -23,6 +23,9 @@ export const motionPresets = {
   collapse: { duration: motion.duration.instant, easing: motion.ease.accelerate },
   /** Modal + bottom sheet presentation. */
   modal: { duration: motion.duration.normal, easing: motion.ease.decelerate },
+  /** Modal + bottom sheet entrance: a spring that just barely settles, so
+   *  sheets feel physical without a rubbery bounce. */
+  modalSpring: { mass: 0.5, damping: 20, stiffness: 220 },
   /** Page transitions (native stack drives these; token for custom cases). */
   page: { duration: motion.duration.normal, easing: motion.ease.standard },
   /** Loading shimmer sweep. */
