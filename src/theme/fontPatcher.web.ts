@@ -6,7 +6,6 @@ import {
   useFontStore,
 } from './fontStore';
 
-// On web, require react-native (aliased to react-native-web)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ReactNative = require('react-native');
 const OriginalText = ReactNative.Text;
@@ -45,104 +44,96 @@ const originalStyleSheetCreate = StyleSheet.create;
   return originalStyleSheetCreate(styles);
 };
 
-// 2. Wrap React Native's Text component globally for Web
-export const PatchedText = React.forwardRef<any, any>((props, ref) => {
-  const active = useFontStore((s) => s.active);
-  const flat = StyleSheet.flatten(props.style) || {};
+// 2. Patch react-native-web Text.render in-place without touching module exports
+if (OriginalText && typeof OriginalText.render === 'function') {
+  const originalTextRender = OriginalText.render;
+  OriginalText.render = function PatchedTextWebRender(props: any, ref: any) {
+    const active = useFontStore((s) => s.active);
+    const flat = StyleSheet.flatten(props?.style) || {};
 
-  if (isIconFont(flat.fontFamily)) {
-    return React.createElement(OriginalText, { ...props, ref });
-  }
+    if (isIconFont(flat.fontFamily)) {
+      return originalTextRender(props, ref);
+    }
 
-  if (isPreviewText(flat) || flat.fixedFont) {
-    return React.createElement(OriginalText, {
-      ...props,
-      ref,
-      style: [props.style, { fontWeight: 'normal' }],
-    });
-  }
+    if (isPreviewText(flat) || flat.fixedFont) {
+      return originalTextRender(
+        {
+          ...props,
+          style: [props?.style, { fontWeight: 'normal' }],
+        },
+        ref
+      );
+    }
 
-  const resolvedFace = resolveFaceForWeight(
-    active.faces,
-    flat.fontWeight,
-    flat.fontStyle,
-    flat.fontFamily
-  );
+    const resolvedFace = resolveFaceForWeight(
+      active.faces,
+      flat.fontWeight,
+      flat.fontStyle,
+      flat.fontFamily
+    );
 
-  const overrides: any = {
-    fontFamily: resolvedFace,
-    fontWeight: 'normal',
+    const overrides: any = {
+      fontFamily: resolvedFace,
+      fontWeight: 'normal',
+    };
+
+    return originalTextRender(
+      {
+        ...props,
+        style: [props?.style, overrides],
+      },
+      ref
+    );
   };
-
-  return React.createElement(OriginalText, {
-    ...props,
-    ref,
-    style: [props.style, overrides],
-  });
-});
-Object.assign(PatchedText, OriginalText);
-
-// 3. Wrap React Native's TextInput component globally for Web
-export const PatchedTextInput = React.forwardRef<any, any>((props, ref) => {
-  const active = useFontStore((s) => s.active);
-  const flat = StyleSheet.flatten(props.style) || {};
-
-  if (isIconFont(flat.fontFamily)) {
-    return React.createElement(OriginalTextInput, { ...props, ref });
-  }
-
-  if (isPreviewText(flat) || flat.fixedFont) {
-    return React.createElement(OriginalTextInput, {
-      ...props,
-      ref,
-      style: [props.style, { fontWeight: 'normal' }],
-    });
-  }
-
-  const resolvedFace = resolveFaceForWeight(
-    active.faces,
-    flat.fontWeight,
-    flat.fontStyle,
-    flat.fontFamily
-  );
-
-  const overrides: any = {
-    fontFamily: resolvedFace,
-    fontWeight: 'normal',
-  };
-
-  return React.createElement(OriginalTextInput, {
-    ...props,
-    ref,
-    style: [props.style, overrides],
-  });
-});
-Object.assign(PatchedTextInput, OriginalTextInput);
-
-// 4. Overwrite Text and TextInput on ReactNative with getters
-try {
-  Object.defineProperty(ReactNative, 'Text', {
-    get: () => PatchedText,
-    set: () => {},
-    configurable: true,
-    enumerable: true,
-  });
-} catch {
-  ReactNative.Text = PatchedText;
 }
 
-try {
-  Object.defineProperty(ReactNative, 'TextInput', {
-    get: () => PatchedTextInput,
-    set: () => {},
-    configurable: true,
-    enumerable: true,
-  });
-} catch {
-  ReactNative.TextInput = PatchedTextInput;
+// 3. Patch react-native-web TextInput.render in-place without touching module exports
+if (OriginalTextInput && typeof OriginalTextInput.render === 'function') {
+  const originalInputRender = OriginalTextInput.render;
+  OriginalTextInput.render = function PatchedTextInputWebRender(props: any, ref: any) {
+    const active = useFontStore((s) => s.active);
+    const flat = StyleSheet.flatten(props?.style) || {};
+
+    if (isIconFont(flat.fontFamily)) {
+      return originalInputRender(props, ref);
+    }
+
+    if (isPreviewText(flat) || flat.fixedFont) {
+      return originalInputRender(
+        {
+          ...props,
+          style: [props?.style, { fontWeight: 'normal' }],
+        },
+        ref
+      );
+    }
+
+    const resolvedFace = resolveFaceForWeight(
+      active.faces,
+      flat.fontWeight,
+      flat.fontStyle,
+      flat.fontFamily
+    );
+
+    const overrides: any = {
+      fontFamily: resolvedFace,
+      fontWeight: 'normal',
+    };
+
+    return originalInputRender(
+      {
+        ...props,
+        style: [props?.style, overrides],
+      },
+      ref
+    );
+  };
 }
 
-// 5. Register with NativeWind cssInterop
+export const PatchedText = OriginalText;
+export const PatchedTextInput = OriginalTextInput;
+
+// 4. Register with NativeWind cssInterop if available
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { cssInterop } = require('react-native-css-interop');
@@ -153,4 +144,3 @@ try {
     });
   }
 } catch {}
-

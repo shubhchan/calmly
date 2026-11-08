@@ -160,7 +160,9 @@ try {
     enumerable: true,
   });
 } catch {
-  ReactNative.Text = PatchedText;
+  try {
+    ReactNative.Text = PatchedText;
+  } catch {}
 }
 
 try {
@@ -171,7 +173,9 @@ try {
     enumerable: true,
   });
 } catch {
-  ReactNative.TextInput = PatchedTextInput;
+  try {
+    ReactNative.TextInput = PatchedTextInput;
+  } catch {}
 }
 
 // 5. Overwrite the module export of Libraries/Text/Text and Libraries/Components/TextInput/TextInput
