@@ -98,7 +98,9 @@ export function SettingsScreen() {
   const [cloudUser, setCloudUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [stats, setStats] = useState<MindfulStats>(EMPTY_MINDFUL_STATS);
-  const [openPanel, setOpenPanel] = useState<'appearance' | 'comfort' | null>(null);
+  const [openPanel, setOpenPanel] = useState<
+    'practice' | 'appearance' | 'privacy' | 'comfort' | null
+  >(null);
   const [accentSheetOpen, setAccentSheetOpen] = useState(false);
 
   useEffect(() => {
@@ -200,21 +202,38 @@ export function SettingsScreen() {
         <StatCard value={`${stats.streak || 7}`} label="day streak" highlight />
       </View>
 
-      {/* PRACTICE Section */}
-      <Text style={styles.sectionEyebrow}>Practice</Text>
-      <View style={styles.groupedCard}>
+      {/* Four doors. Everything else lives inside one of them. */}
+      <View style={[styles.groupedCard, { marginTop: 24 }]}>
         <GroupRow
           icon="leaf-outline"
-          label="Habits & routines"
-          value={stats.streak > 0 ? `${stats.streak} today` : '3 today'}
-          onPress={() => navigation.navigate('Habits')}
-        />
-        <GroupRow
-          icon="notifications-outline"
-          label="Reminders"
-          value="8:00 am"
-          onPress={() => navigation.navigate('Notifications')}
-        />
+          label="Practice"
+          value={stats.streak > 0 ? `${stats.streak} day streak` : undefined}
+          onPress={() => setOpenPanel(openPanel === 'practice' ? null : 'practice')}
+          expanded={openPanel === 'practice'}
+        >
+          <View style={{ paddingBottom: 10 }}>
+            <PanelRow
+              icon="repeat-outline"
+              label="Habits & routines"
+              value={stats.streak > 0 ? `${stats.streak} today` : undefined}
+              onPress={() => navigation.navigate('Habits')}
+            />
+            <PanelRow
+              icon="notifications-outline"
+              label="Reminders"
+              value="8:00 am"
+              onPress={() => navigation.navigate('Notifications')}
+            />
+            <PanelRow
+              icon="text-outline"
+              label="Font & text"
+              value={activeFont.label || 'Calming'}
+              onPress={() => navigation.navigate('FontBrowser')}
+              last
+            />
+          </View>
+        </GroupRow>
+
         <GroupRow
           icon="contrast-outline"
           label="Appearance"
@@ -315,52 +334,43 @@ export function SettingsScreen() {
             )}
           </View>
         </GroupRow>
-        <GroupRow
-          icon="text-outline"
-          label="Font & text"
-          value={activeFont.label || 'Calming'}
-          onPress={() => navigation.navigate('FontBrowser')}
-          last
-        />
-      </View>
 
-      {/* PRIVACY Section */}
-      <Text style={styles.sectionEyebrow}>Privacy</Text>
-      <View style={styles.groupedCard}>
         <GroupRow
           icon="lock-closed-outline"
-          label="App lock"
-          value={settings?.pinEnabled || settings?.biometricEnabled ? 'On' : 'Off'}
-          onPress={() => navigation.navigate('AppLockSettings')}
-        />
-        <GroupRow
-          icon="cloud-outline"
-          label="Cloud backup"
-          value={cloudUser ? 'Synced' : 'Local only'}
-          onPress={() => navigation.navigate('CloudStorage')}
-        />
-        <GroupRow
-          icon="download-outline"
-          label="Your data"
-          onPress={() => navigation.navigate('DataManagement')}
-          last
-        />
-      </View>
+          label="Privacy & data"
+          value={cloudUser ? 'Backed up' : 'On this device'}
+          onPress={() => setOpenPanel(openPanel === 'privacy' ? null : 'privacy')}
+          expanded={openPanel === 'privacy'}
+        >
+          <View style={{ paddingBottom: 10 }}>
+            <PanelRow
+              icon="finger-print-outline"
+              label="App lock"
+              value={settings?.pinEnabled || settings?.biometricEnabled ? 'On' : 'Off'}
+              onPress={() => navigation.navigate('AppLockSettings')}
+            />
+            <PanelRow
+              icon="cloud-outline"
+              label="Cloud backup"
+              value={cloudUser ? 'Synced' : 'Local only'}
+              onPress={() => navigation.navigate('CloudStorage')}
+            />
+            <PanelRow
+              icon="download-outline"
+              label="Your data"
+              onPress={() => navigation.navigate('DataManagement')}
+              last
+            />
+          </View>
+        </GroupRow>
 
-      {/* CALMLY Section */}
-      <Text style={styles.sectionEyebrow}>Calmly</Text>
-      <View style={styles.groupedCard}>
-        <GroupRow
-          icon="heart-outline"
-          label="Help & feedback"
-          onPress={() => navigation.navigate('Onboarding')}
-        />
         <GroupRow
           icon="options-outline"
           label="Comfort & motion"
           value={reduceAnimations ? 'Reduced motion' : undefined}
           onPress={() => setOpenPanel(openPanel === 'comfort' ? null : 'comfort')}
           expanded={openPanel === 'comfort'}
+          last
         >
           <View style={{ paddingBottom: 12 }}>
             <SwitchRow
@@ -384,13 +394,6 @@ export function SettingsScreen() {
             />
           </View>
         </GroupRow>
-        <GroupRow
-          icon="information-circle-outline"
-          label="What's new"
-          value="v1.0"
-          onPress={showWhatsNew}
-          last
-        />
       </View>
 
       {/* Custom accent sheet */}
@@ -404,9 +407,27 @@ export function SettingsScreen() {
         }}
       />
 
-      {/* Footer — 1:1 match */}
+      {/* Footer — quiet links, not rows */}
       <View style={styles.footerWrap}>
-        <Text style={styles.footerText}>Calmly 1.0 · Made slowly</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+          <TactilePressable
+            onPress={() => navigation.navigate('Onboarding')}
+            scaleDownTo={0.96}
+            accessibilityRole="button"
+            accessibilityLabel="Help and feedback"
+          >
+            <Text style={styles.footerLink}>Help & feedback</Text>
+          </TactilePressable>
+          <TactilePressable
+            onPress={showWhatsNew}
+            scaleDownTo={0.96}
+            accessibilityRole="button"
+            accessibilityLabel="What's new in Calmly 1.0"
+          >
+            <Text style={styles.footerLink}>What&apos;s new</Text>
+          </TactilePressable>
+        </View>
+        <Text style={[styles.footerText, { marginTop: 10 }]}>Calmly 1.0 · Made slowly</Text>
       </View>
     </ScreenContainer>
   );
@@ -472,6 +493,38 @@ function GroupRow({
       </TactilePressable>
       {expanded && children ? children : null}
     </View>
+  );
+}
+
+/** A quiet child row inside an expanded group. */
+function PanelRow({
+  icon,
+  label,
+  value,
+  onPress,
+  last,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  value?: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  const styles = useSettingsStyles();
+  const { colors } = useAppTheme();
+  return (
+    <TactilePressable
+      onPress={onPress}
+      scaleDownTo={0.99}
+      accessibilityRole="button"
+      accessibilityLabel={value ? `${label}, ${value}` : label}
+      style={[styles.panelRow, !last && styles.switchDivider]}
+    >
+      <Ionicons name={icon} size={17} color={colors.text.secondary} />
+      <Text style={[styles.switchLabel, { flex: 1 }]}>{label}</Text>
+      {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+      <Ionicons name="chevron-forward" size={14} color={colors.text.tertiary} />
+    </TactilePressable>
   );
 }
 
@@ -723,15 +776,6 @@ function useSettingsStyles() {
           color: colors.text.tertiary,
           marginTop: 1,
         },
-        sectionEyebrow: {
-          fontSize: 11,
-          fontWeight: '600',
-          letterSpacing: 1.3,
-          textTransform: 'uppercase',
-          color: colors.text.tertiary,
-          marginTop: 22,
-          marginBottom: 6,
-        },
         groupedCard: {
           backgroundColor: colors.surface.default,
           borderRadius: 18,
@@ -808,6 +852,17 @@ function useSettingsStyles() {
         footerText: {
           fontSize: 12.5,
           color: colors.text.tertiary,
+        },
+        footerLink: {
+          fontSize: 12.5,
+          color: colors.text.secondary,
+        },
+        panelRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          paddingVertical: 12,
+          paddingLeft: 2,
         },
         miniEyebrow: {
           fontSize: 11,

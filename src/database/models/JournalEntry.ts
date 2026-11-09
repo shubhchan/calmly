@@ -12,6 +12,9 @@ export default class JournalEntry extends Model {
   @field('favorite') favorite!: boolean;
   @text('image_uri') imageUri!: string;
   @text('audio_uri') audioUri!: string;
+  @text('page_style') pageStyle!: string;
+  @text('drawing') drawing!: string;
+  @text('layout') layout!: string;
   @field('created_at') createdAt!: number;
   @field('updated_at') updatedAt!: number;
 

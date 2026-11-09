@@ -46,6 +46,9 @@ export const journalRepository = {
     favorite?: boolean;
     imageUri?: string;
     audioUri?: string;
+    pageStyle?: string;
+    drawing?: string;
+    layout?: string;
     attachments?: NoteAttachment[];
   }) {
     const now = Date.now();
@@ -71,6 +74,9 @@ export const journalRepository = {
           entry.favorite = data.favorite || false;
           entry.imageUri = resolvedImageUri;
           entry.audioUri = resolvedAudioUri;
+          entry.pageStyle = data.pageStyle || '';
+          entry.drawing = data.drawing || '';
+          entry.layout = data.layout || '';
           entry.createdAt = now;
           entry.updatedAt = now;
         });
@@ -89,6 +95,9 @@ export const journalRepository = {
       favorite: data.favorite || false,
       imageUri: resolvedImageUri,
       audioUri: resolvedAudioUri,
+      pageStyle: data.pageStyle || '',
+      drawing: data.drawing || '',
+      layout: data.layout || '',
       createdAt: now,
       updatedAt: now,
       attachments: data.attachments || parseAttachments({ imageUri: resolvedImageUri, audioUri: resolvedAudioUri, createdAt: now }),
@@ -110,6 +119,9 @@ export const journalRepository = {
         favorite: watermelonRecord.favorite,
         imageUri: watermelonRecord.imageUri,
         audioUri: watermelonRecord.audioUri,
+        pageStyle: watermelonRecord.pageStyle || '',
+        drawing: watermelonRecord.drawing || '',
+        layout: watermelonRecord.layout || '',
         createdAt: watermelonRecord.createdAt,
         updatedAt: watermelonRecord.updatedAt,
         attachments: parseAttachments(watermelonRecord),
@@ -132,6 +144,9 @@ export const journalRepository = {
           favorite: entry.favorite,
           imageUri: entry.imageUri,
           audioUri: entry.audioUri,
+          pageStyle: entry.pageStyle || '',
+          drawing: entry.drawing || '',
+          layout: entry.layout || '',
           createdAt: entry.createdAt,
           updatedAt: entry.updatedAt,
           attachments: parseAttachments(entry),
@@ -146,6 +161,9 @@ export const journalRepository = {
     if (found) {
       return {
         ...found,
+        pageStyle: found.pageStyle || '',
+        drawing: found.drawing || '',
+        layout: found.layout || '',
         attachments: parseAttachments(found),
       };
     }
@@ -179,6 +197,9 @@ export const journalRepository = {
             favorite: wm.favorite,
             imageUri: wm.imageUri,
             audioUri: wm.audioUri,
+            pageStyle: wm.pageStyle || '',
+            drawing: wm.drawing || '',
+            layout: wm.layout || '',
             createdAt: wm.createdAt,
             updatedAt: wm.updatedAt,
             attachments: parseAttachments(wm),
@@ -258,6 +279,9 @@ export const journalRepository = {
       favorite: boolean;
       imageUri: string;
       audioUri: string;
+      pageStyle: string;
+      drawing: string;
+      layout: string;
       attachments: NoteAttachment[];
     }>
   ) {
@@ -284,6 +308,9 @@ export const journalRepository = {
           if (data.favorite !== undefined) e.favorite = data.favorite;
           if (resolvedImageUri !== undefined) e.imageUri = resolvedImageUri;
           if (resolvedAudioUri !== undefined) e.audioUri = resolvedAudioUri;
+          if (data.pageStyle !== undefined) e.pageStyle = data.pageStyle;
+          if (data.drawing !== undefined) e.drawing = data.drawing;
+          if (data.layout !== undefined) e.layout = data.layout;
           e.updatedAt = now;
         });
       });
@@ -299,6 +326,9 @@ export const journalRepository = {
           ...data,
           imageUri: resolvedImageUri !== undefined ? resolvedImageUri : item.imageUri,
           audioUri: resolvedAudioUri !== undefined ? resolvedAudioUri : item.audioUri,
+          pageStyle: data.pageStyle !== undefined ? data.pageStyle : item.pageStyle,
+          drawing: data.drawing !== undefined ? data.drawing : item.drawing,
+          layout: data.layout !== undefined ? data.layout : item.layout,
           tags: data.tags !== undefined ? JSON.stringify(data.tags) : item.tags,
           updatedAt: now,
         };

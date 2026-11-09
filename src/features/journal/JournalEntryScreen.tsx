@@ -1,5 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, ScrollView, TextInput, View, Platform, StatusBar } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  TextInput,
+  View,
+  Platform,
+  StatusBar,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { Alert } from '../../services/appAlert';
@@ -21,6 +31,12 @@ import { VideoAttachmentCard } from '../../components/journal/VideoAttachmentCar
 import { DocumentAttachmentCard } from '../../components/journal/DocumentAttachmentCard';
 import { ImageLightboxModal } from '../../components/journal/ImageLightboxModal';
 import { AudioRecorderModal } from '../../components/journal/AudioRecorderModal';
+import { SketchPad } from '../../components/journal/SketchPad';
+import { DraggableResizable } from '../../components/journal/DraggableResizable';
+import { PaperTexture } from '../../components/journal/PaperTexture';
+import { paperById, paperColor } from './papers';
+import { SketchStroke, parseSketch, serializeSketch } from './sketch';
+import { PageLayout, ElementLayout, parsePageLayout, serializePageLayout } from '../../types/journalLayout';
 import { hapticFeedback } from '../../utils/haptics';
 import { getDailyPrompt } from '../../utils/dailyPrompt';
 import { fontFamilies } from '../../theme/typography';
@@ -66,9 +82,9 @@ const MOOD_WORDS: { label: string; group: 'accent' | 'gold' | 'neutral' }[] = [
 function CameraSvgIcon({ color = '#5C6B65' }: { color?: string }) {
   return (
     <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="5" width="18" height="14" rx="3" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
-      <Circle cx="12" cy="12" r="3.5" stroke={color} strokeWidth="1.7" />
-      <Path d="M8 5l1-2h6l1 2" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+      <Rect x="3" y="5" width="18" height="14" rx="3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+      <Circle cx="12" cy="12" r="3.5" stroke={color} strokeWidth={1.7} />
+      <Path d="M8 5l1-2h6l1 2" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -76,8 +92,8 @@ function CameraSvgIcon({ color = '#5C6B65' }: { color?: string }) {
 function MicSvgIcon({ color = '#5C6B65' }: { color?: string }) {
   return (
     <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
-      <Rect x="9" y="3" width="6" height="11" rx="3" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
-      <Path d="M5 11a7 7 0 0014 0M12 18v3" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+      <Rect x="9" y="3" width="6" height="11" rx="3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+      <Path d="M5 11a7 7 0 0014 0M12 18v3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -85,8 +101,8 @@ function MicSvgIcon({ color = '#5C6B65' }: { color?: string }) {
 function MoodSvgIcon({ color = '#5C6B65' }: { color?: string }) {
   return (
     <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.7" />
-      <Path d="M8 14s1.5 2 4 2 4-2 4-2" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={1.7} />
+      <Path d="M8 14s1.5 2 4 2 4-2 4-2" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
       <Circle cx="9" cy="9" r="1.1" fill={color} />
       <Circle cx="15" cy="9" r="1.1" fill={color} />
     </Svg>
@@ -96,22 +112,39 @@ function MoodSvgIcon({ color = '#5C6B65' }: { color?: string }) {
 function PromptSvgIcon({ color = '#5C6B65' }: { color?: string }) {
   return (
     <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
-      <Path d="M7 7h10M7 12h10M7 17h6" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+      <Path d="M7 7h10M7 12h10M7 17h6" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function PenSvgIcon({ color = '#5C6B65' }: { color?: string }) {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4 20l4-1 10-10-3-3L5 16l-1 4z"
+        stroke={color}
+        strokeWidth={1.7}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M14 6l3 3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
     </Svg>
   );
 }
 
 /**
- * Journal entry screen — 1:1 implementation of Doop "New page — A · Blank page".
+ * Journal entry screen — 1:1 implementation of Doop "New page — A · Blank page"
+ * and "Page — Draggable sketch & attachments" (mobile 09dIMTqlOD & desktop 8717GYBYYz).
  *
  * Exact tokens:
  * - Background: #F4F5F1
- * - Header: Cancel (14px #5C6B65) | New page (14.5px 600 #1A2420) | Save (14px 600 #2C4F45)
- * - Date: Eyebrow (11px 600 uppercase #838F89) | Chip: Free write (28px height #E3ECE7 / #2C4F45)
- * - Title: Newsreader serif (24px #1A2420) with placeholder "A quieter evening than usual"
- * - Page: Ruled lines spaced 32px (#E9EDE7), placeholder "Start anywhere. No one else reads this." (#8A958F)
- * - Tool row: Camera, Mic, Mood face, Prompt icons (stroke #5C6B65 1.7) | Word count (#9AA5A0)
- * - Bottom action: "Insert today's prompt" button (52px radius 16 #E3ECE7, text #2C4F45)
+ * - Header: Cancel (14px #5C6B65) | Your page / New page (14.5px 600 #1A2420) | Save (14px 600 #2C4F45)
+ * - Date: Eyebrow (11px 600 uppercase #838F89) | Chip: Category
+ * - Title: Newsreader serif (24px #1A2420) + "Move / resize" mode toggle button
+ * - Page: Paper texture & ruled lines (32px pitch)
+ * - Freeform layout mode: Draggable and resizable sketch pad & attachments anywhere on the sheet
+ * - Tool row: Camera, Mic, Pen (Sketch), Mood, Prompt | Word count
+ * - Bottom action: "Insert today's prompt" or "Done rearranging"
  */
 export function JournalEntryScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'JournalEntry'>>();
@@ -147,10 +180,24 @@ export function JournalEntryScreen() {
   const [saving, setSaving] = useState(false);
   const [attaching, setAttaching] = useState(false);
 
+  // Freeform layout, sketch pad, and paper style states
+  const [paperId, setPaperId] = useState<string>('dawn');
+  const [sketchStrokes, setSketchStrokes] = useState<SketchStroke[]>([]);
+  const [isSketchOpen, setIsSketchOpen] = useState<boolean>(false);
+  const [pageLayout, setPageLayout] = useState<PageLayout>({ isFreeform: false, attachments: {} });
+  const [isFreeform, setIsFreeform] = useState<boolean>(false);
+  const [selectedElementId, setSelectedElementId] = useState<'sketch' | string | null>(null);
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({
+    width: 342,
+    height: 520,
+  });
+
   const [recorderVisible, setRecorderVisible] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<NoteAttachment | null>(null);
 
   const { colors, isDark } = useAppTheme();
+  const currentPaper = useMemo(() => paperById(paperId), [paperId]);
+  const currentPaperColor = useMemo(() => paperColor(currentPaper, isDark), [currentPaper, isDark]);
 
   useEffect(() => {
     if (!id) return;
@@ -171,6 +218,23 @@ export function JournalEntryScreen() {
           }
           if (Array.isArray(entry.attachments)) {
             setAttachments(entry.attachments);
+          }
+          if (entry.pageStyle) {
+            setPaperId(entry.pageStyle);
+          }
+          if (entry.drawing) {
+            const parsed = parseSketch(entry.drawing);
+            setSketchStrokes(parsed);
+            if (parsed.length > 0) {
+              setIsSketchOpen(true);
+            }
+          }
+          if (entry.layout) {
+            const parsedLayout = parsePageLayout(entry.layout);
+            setPageLayout(parsedLayout);
+            if (parsedLayout.isFreeform) {
+              setIsFreeform(true);
+            }
           }
         }
       } catch (err) {
@@ -303,19 +367,31 @@ export function JournalEntryScreen() {
   const handleRemoveAttachment = (attachmentId: string) => {
     hapticFeedback.selection();
     setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    setPageLayout((prev) => {
+      const copy = { ...(prev.attachments || {}) };
+      delete copy[attachmentId];
+      return { ...prev, attachments: copy };
+    });
   };
 
   const handleSave = async () => {
     const trimmedTitle = (title || '').trim();
     const trimmedContent = (content || '').trim();
 
-    if (!trimmedContent && !trimmedTitle && attachments.length === 0) {
-      Alert.alert('Nothing to save yet', 'Write a line or attach something first.');
+    if (!trimmedContent && !trimmedTitle && attachments.length === 0 && sketchStrokes.length === 0) {
+      Alert.alert('Nothing to save yet', 'Write a line, sketch, or attach something first.');
       return;
     }
 
     setSaving(true);
     try {
+      const serializedDrawing = serializeSketch(sketchStrokes);
+      const layoutToSave: PageLayout = {
+        ...pageLayout,
+        isFreeform,
+      };
+      const serializedLayout = serializePageLayout(layoutToSave);
+
       if (isEditing && id) {
         await journalRepository.update(id, {
           type: entryType,
@@ -323,6 +399,9 @@ export function JournalEntryScreen() {
           body: trimmedContent,
           favorite: isFavorite,
           attachments,
+          pageStyle: paperId,
+          drawing: serializedDrawing,
+          layout: serializedLayout,
         });
       } else {
         await journalRepository.create({
@@ -331,6 +410,9 @@ export function JournalEntryScreen() {
           body: trimmedContent,
           favorite: isFavorite,
           attachments,
+          pageStyle: paperId,
+          drawing: serializedDrawing,
+          layout: serializedLayout,
         });
       }
       navigation.goBack();
@@ -393,6 +475,139 @@ export function JournalEntryScreen() {
   const videoAttachments = attachments.filter((a) => a.type === 'video');
   const docAttachments = attachments.filter((a) => a.type === 'document');
 
+  // Compute or get saved layout for attachments in freeform mode
+  const getAttachmentLayout = (attId: string, index: number): ElementLayout => {
+    if (pageLayout.attachments && pageLayout.attachments[attId]) {
+      return pageLayout.attachments[attId];
+    }
+    const defaultW = Math.min(144, Math.floor((containerSize.width - 36) / 2));
+    const defaultH = 152;
+    const col = index % 2;
+    const row = Math.floor(index / 2);
+    return {
+      x: 12 + col * (defaultW + 10),
+      y: 12 + row * (defaultH + 12),
+      width: defaultW,
+      height: defaultH,
+    };
+  };
+
+  // Compute or get saved layout for sketch pad
+  const sketchLayout: ElementLayout = useMemo(() => {
+    if (pageLayout.sketch) {
+      return pageLayout.sketch;
+    }
+    const defaultW = Math.min(224, containerSize.width - 24);
+    const defaultH = 206;
+    return {
+      x: Math.max(12, containerSize.width - defaultW - 12),
+      y: Math.max(12, containerSize.height - defaultH - 16),
+      width: defaultW,
+      height: defaultH,
+      hideHeader: false,
+      hideFooter: false,
+      compact: false,
+      zeroPad: false,
+    };
+  }, [pageLayout.sketch, containerSize.width, containerSize.height]);
+
+  const renderAttachmentPreview = (att: NoteAttachment) => {
+    if (att.type === 'image') {
+      return (
+        <View style={{ flex: 1, backgroundColor: isDark ? '#1C2521' : '#E2E6DF' }}>
+          <Image
+            source={{ uri: att.uri }}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="cover"
+          />
+          {att.name ? (
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: isDark ? 'rgba(20,28,24,0.78)' : 'rgba(255,255,255,0.85)',
+                paddingVertical: 2,
+                paddingHorizontal: 4,
+              }}
+            >
+              <AppText
+                numberOfLines={1}
+                style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center' }}
+              >
+                {att.name}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+      );
+    }
+
+    if (att.type === 'audio') {
+      return (
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 8,
+            backgroundColor: isDark ? '#1E2823' : '#F0F4F1',
+            gap: 4,
+          }}
+        >
+          <Ionicons name="mic" size={24} color={colors.primary.default} />
+          <AppText numberOfLines={1} style={{ fontSize: 10, color: colors.text.primary, fontWeight: '600' }}>
+            {att.name || 'Voice Memo'}
+          </AppText>
+          {att.duration ? (
+            <AppText style={{ fontSize: 9, color: colors.text.tertiary }}>
+              {Math.floor(att.duration / 60)}:{String(att.duration % 60).padStart(2, '0')}
+            </AppText>
+          ) : null}
+        </View>
+      );
+    }
+
+    if (att.type === 'video') {
+      return (
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 8,
+            backgroundColor: isDark ? '#1E2823' : '#F0F4F1',
+            gap: 4,
+          }}
+        >
+          <Ionicons name="videocam" size={24} color={colors.primary.default} />
+          <AppText numberOfLines={1} style={{ fontSize: 10, color: colors.text.primary, fontWeight: '600' }}>
+            {att.name || 'Video Clip'}
+          </AppText>
+        </View>
+      );
+    }
+
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 8,
+          backgroundColor: isDark ? '#1E2823' : '#F0F4F1',
+          gap: 4,
+        }}
+      >
+        <Ionicons name="document-text" size={24} color={colors.primary.default} />
+        <AppText numberOfLines={1} style={{ fontSize: 10, color: colors.text.primary, fontWeight: '600' }}>
+          {att.name || 'Document'}
+        </AppText>
+      </View>
+    );
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -447,7 +662,7 @@ export function JournalEntryScreen() {
         {/* Date & Category row */}
         <View
           style={{
-            marginTop: 14,
+            marginTop: 10,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -499,36 +714,120 @@ export function JournalEntryScreen() {
           </TactilePressable>
         </View>
 
-        {/* Title — Newsreader display serif */}
-        <TextInput
-          placeholder="A quieter evening than usual"
-          placeholderTextColor={colors.text.tertiary}
-          value={title}
-          onChangeText={setTitle}
-          accessibilityLabel="Page title"
+        {/* Title — Newsreader display serif + Move/resize mode toggle pill */}
+        <View
           style={{
-            fontFamily: fontFamilies.display.regular,
-            fontSize: 24,
-            lineHeight: 32,
-            letterSpacing: -0.48,
-            color: colors.text.primary,
-            marginTop: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             paddingHorizontal: 24,
-            paddingVertical: 2,
-            paddingBottom: 4,
+            marginTop: 8,
+            gap: 12,
           }}
-        />
+        >
+          <TextInput
+            placeholder="A quieter evening than usual"
+            placeholderTextColor={colors.text.tertiary}
+            value={title}
+            onChangeText={setTitle}
+            accessibilityLabel="Page title"
+            style={{
+              flex: 1,
+              fontFamily: fontFamilies.display.regular,
+              fontSize: 24,
+              lineHeight: 32,
+              letterSpacing: -0.48,
+              color: colors.text.primary,
+              paddingVertical: 2,
+              paddingBottom: 4,
+            }}
+          />
 
-        {/* Page — repeating ruled lines */}
-        <View style={{ flex: 1, marginTop: 10 }}>
+          {/* Mode Pill: "Move / resize" */}
+          <TactilePressable
+            onPress={() => {
+              hapticFeedback.selection();
+              setIsFreeform((prev) => !prev);
+            }}
+            scaleDownTo={0.94}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={isFreeform ? 'Exit freeform mode' : 'Enter freeform mode'}
+            style={{
+              height: 26,
+              paddingHorizontal: 9,
+              borderRadius: 7,
+              backgroundColor: isFreeform ? colors.primary.default : colors.surface.selected,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
+              borderWidth: 1,
+              borderColor: isFreeform ? colors.primary.default : 'rgba(44,79,69,0.22)',
+            }}
+          >
+            <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
+                stroke={isFreeform ? colors.primary.foreground : colors.primary.default}
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+            <AppText
+              style={{
+                fontSize: 11,
+                fontWeight: '600',
+                color: isFreeform ? colors.primary.foreground : colors.primary.default,
+              }}
+            >
+              {isFreeform ? 'Rearranging' : 'Move / resize'}
+            </AppText>
+          </TactilePressable>
+        </View>
+
+        {/* Paper Sheet Container */}
+        <View
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            if (width > 0 && height > 0) {
+              setContainerSize({ width, height });
+            }
+          }}
+          style={{
+            flex: 1,
+            marginHorizontal: 14,
+            marginTop: 8,
+            borderRadius: 22,
+            backgroundColor: currentPaperColor,
+            position: 'relative',
+            overflow: isFreeform ? 'visible' : 'hidden',
+            borderWidth: 1,
+            borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(44,79,69,0.1)',
+            shadowColor: '#14241E',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 10,
+            elevation: 2,
+          }}
+        >
+          {/* Paper Texture layer */}
+          <PaperTexture texture={currentPaper.texture} isDark={isDark} />
+
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={{ minHeight: pageHeight, paddingHorizontal: 24, paddingBottom: 20 }}
+            contentContainerStyle={{
+              minHeight: pageHeight,
+              paddingHorizontal: 18,
+              paddingVertical: 14,
+              paddingBottom: 24,
+            }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            scrollEnabled={!isFreeform}
           >
-            {/* Repeating hairlines every 32px */}
-            <View style={{ position: 'absolute', top: 0, left: 24, right: 24, bottom: 0 }} pointerEvents="none">
+            {/* Repeating ruled lines every 32px */}
+            <View style={{ position: 'absolute', top: 0, left: 18, right: 18, bottom: 0 }} pointerEvents="none">
               {Array.from({ length: lineCount }).map((_, index) => (
                 <View
                   key={`rule-${index}`}
@@ -538,7 +837,7 @@ export function JournalEntryScreen() {
                     right: 0,
                     top: (index + 1) * 32 - 1,
                     height: 1,
-                    backgroundColor: colors.border.subtle,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(44,79,69,0.06)',
                   }}
                 />
               ))}
@@ -555,18 +854,32 @@ export function JournalEntryScreen() {
                   value={content}
                   onChangeText={setContent}
                   accessibilityLabel="Page body"
+                  editable={!isFreeform}
                   style={{
                     fontSize: 16,
                     lineHeight: 32,
                     color: colors.text.primary,
-                    minHeight: pageHeight,
+                    minHeight: isFreeform ? 180 : pageHeight,
                     textAlignVertical: 'top',
                     padding: 0,
                   }}
                 />
 
-                {/* Attachments rendering */}
-                {attachments.length > 0 ? (
+                {/* In-flow SketchPad when NOT freeform */}
+                {isSketchOpen && !isFreeform && (
+                  <View style={{ marginTop: 16, marginBottom: 8 }}>
+                    <SketchPad
+                      strokes={sketchStrokes}
+                      onChange={setSketchStrokes}
+                      onClose={() => setIsSketchOpen(false)}
+                      height={200}
+                      isFreeform={false}
+                    />
+                  </View>
+                )}
+
+                {/* In-flow Attachments rendering when NOT freeform */}
+                {!isFreeform && attachments.length > 0 ? (
                   <View
                     style={{
                       marginTop: 18,
@@ -647,9 +960,135 @@ export function JournalEntryScreen() {
               </>
             )}
           </ScrollView>
+
+          {/* Freeform Draggable Overlays */}
+          {isFreeform && (
+            <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+              {/* Draggable Sketch Pad */}
+              {isSketchOpen && (
+                <DraggableResizable
+                  layout={sketchLayout}
+                  onChange={(next) => {
+                    setPageLayout((prev) => ({ ...prev, sketch: next }));
+                  }}
+                  containerWidth={containerSize.width}
+                  containerHeight={containerSize.height}
+                  isFreeform={true}
+                  isSelected={selectedElementId === 'sketch'}
+                  onSelect={() => setSelectedElementId('sketch')}
+                  minWidth={170}
+                  minHeight={140}
+                >
+                  <SketchPad
+                    strokes={sketchStrokes}
+                    onChange={setSketchStrokes}
+                    zeroPad={sketchLayout.zeroPad}
+                    compact={sketchLayout.compact}
+                    hideHeader={sketchLayout.hideHeader}
+                    hideFooter={sketchLayout.hideFooter}
+                    onToggleHideHeader={() => {
+                      setPageLayout((prev) => ({
+                        ...prev,
+                        sketch: { ...(prev.sketch || sketchLayout), hideHeader: !sketchLayout.hideHeader },
+                      }));
+                    }}
+                    onToggleHideFooter={() => {
+                      setPageLayout((prev) => ({
+                        ...prev,
+                        sketch: { ...(prev.sketch || sketchLayout), hideFooter: !sketchLayout.hideFooter },
+                      }));
+                    }}
+                    onToggleZeroPad={() => {
+                      setPageLayout((prev) => ({
+                        ...prev,
+                        sketch: { ...(prev.sketch || sketchLayout), zeroPad: !sketchLayout.zeroPad },
+                      }));
+                    }}
+                    onToggleCompact={() => {
+                      setPageLayout((prev) => ({
+                        ...prev,
+                        sketch: { ...(prev.sketch || sketchLayout), compact: !sketchLayout.compact },
+                      }));
+                    }}
+                    onClose={() => {
+                      setIsSketchOpen(false);
+                    }}
+                    isFreeform={true}
+                  />
+                </DraggableResizable>
+              )}
+
+              {/* Draggable Attachments */}
+              {attachments.map((att, idx) => {
+                const attLayout = getAttachmentLayout(att.id, idx);
+                return (
+                  <DraggableResizable
+                    key={att.id}
+                    layout={attLayout}
+                    onChange={(next) => {
+                      setPageLayout((prev) => ({
+                        ...prev,
+                        attachments: { ...(prev.attachments || {}), [att.id]: next },
+                      }));
+                    }}
+                    containerWidth={containerSize.width}
+                    containerHeight={containerSize.height}
+                    isFreeform={true}
+                    isSelected={selectedElementId === att.id}
+                    onSelect={() => setSelectedElementId(att.id)}
+                    minWidth={120}
+                    minHeight={100}
+                    renderHeaderBar={(dragHandlers) => (
+                      <View
+                        {...dragHandlers}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingHorizontal: 7,
+                          paddingVertical: 3.5,
+                          backgroundColor: isDark ? '#1F2B26' : '#E3ECE7',
+                          borderBottomWidth: 1,
+                          borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(44,79,69,0.15)',
+                          ...(Platform.OS === 'web' ? ({ cursor: 'grab' } as any) : {}),
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3.5 }}>
+                          <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#838F89' }} />
+                          <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#838F89' }} />
+                          <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#838F89' }} />
+                        </View>
+                        <AppText
+                          style={{
+                            fontSize: 9.5,
+                            fontWeight: '700',
+                            letterSpacing: 0.8,
+                            textTransform: 'uppercase',
+                            color: colors.primary.default,
+                          }}
+                        >
+                          {att.type}
+                        </AppText>
+                        <TouchableOpacity
+                          onPress={() => handleRemoveAttachment(att.id)}
+                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Remove attachment"
+                        >
+                          <Ionicons name="close" size={13} color={colors.text.secondary} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  >
+                    {renderAttachmentPreview(att)}
+                  </DraggableResizable>
+                );
+              })}
+            </View>
+          )}
         </View>
 
-        {/* Tool row — Doop 4 SVG icons + word count */}
+        {/* Tool row — Doop Camera, Mic, Pen (Sketch), Mood, Prompt + Word count */}
         <View
           style={{
             flexDirection: 'row',
@@ -688,6 +1127,20 @@ export function JournalEntryScreen() {
               <MicSvgIcon color={colors.text.secondary} />
             </TactilePressable>
 
+            {/* Pen Sketch Icon */}
+            <TactilePressable
+              onPress={() => {
+                hapticFeedback.light();
+                setIsSketchOpen((prev) => !prev);
+              }}
+              scaleDownTo={0.9}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Sketch on page"
+            >
+              <PenSvgIcon color={isSketchOpen ? colors.primary.default : colors.text.secondary} />
+            </TactilePressable>
+
             <TactilePressable
               onPress={() => {
                 hapticFeedback.light();
@@ -717,26 +1170,54 @@ export function JournalEntryScreen() {
           </AppText>
         </View>
 
-        {/* Bottom button — Doop "Insert today's prompt" */}
-        <View style={{ paddingHorizontal: 24, paddingBottom: 22, paddingTop: 10 }}>
-          <TactilePressable
-            onPress={handleInsertPrompt}
-            scaleDownTo={0.98}
-            accessibilityRole="button"
-            accessibilityLabel="Insert today's prompt"
-            style={{
-              height: 52,
-              borderRadius: 16,
-              backgroundColor: colors.surface.selected,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.primary.default }}>
-              Insert today's prompt
-            </AppText>
-          </TactilePressable>
-        </View>
+        {/* Bottom button — Freeform Done CTA or "Insert today's prompt" */}
+        {isFreeform ? (
+          <View style={{ paddingHorizontal: 24, paddingBottom: 22, paddingTop: 10 }}>
+            <TactilePressable
+              onPress={() => {
+                hapticFeedback.selection();
+                setIsFreeform(false);
+              }}
+              scaleDownTo={0.98}
+              accessibilityRole="button"
+              accessibilityLabel="Done rearranging"
+              style={{
+                height: 48,
+                borderRadius: 14,
+                backgroundColor: colors.primary.default,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 6,
+              }}
+            >
+              <Ionicons name="checkmark" size={17} color={colors.primary.foreground} />
+              <AppText style={{ fontSize: 14, fontWeight: '600', color: colors.primary.foreground }}>
+                Done rearranging
+              </AppText>
+            </TactilePressable>
+          </View>
+        ) : (
+          <View style={{ paddingHorizontal: 24, paddingBottom: 22, paddingTop: 10 }}>
+            <TactilePressable
+              onPress={handleInsertPrompt}
+              scaleDownTo={0.98}
+              accessibilityRole="button"
+              accessibilityLabel="Insert today's prompt"
+              style={{
+                height: 52,
+                borderRadius: 16,
+                backgroundColor: colors.surface.selected,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.primary.default }}>
+                Insert today's prompt
+              </AppText>
+            </TactilePressable>
+          </View>
+        )}
       </View>
 
       {/* Category Selection Modal */}

@@ -1,7 +1,8 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
+import { schemaMigrations, createTable, addColumns } from '@nozbe/watermelondb/Schema/migrations';
 
 export const schema = appSchema({
-  version: 2,
+  version: 4,
   tables: [
     tableSchema({
       name: 'user_settings',
@@ -34,6 +35,9 @@ export const schema = appSchema({
         { name: 'favorite', type: 'boolean' },
         { name: 'image_uri', type: 'string' },
         { name: 'audio_uri', type: 'string' },
+        { name: 'page_style', type: 'string' },
+        { name: 'drawing', type: 'string' },
+        { name: 'layout', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
       ],
@@ -193,8 +197,6 @@ export const schema = appSchema({
   ],
 });
 
-import { schemaMigrations, createTable } from '@nozbe/watermelondb/Schema/migrations';
-
 // v1 -> v2: the PositiveMoment model shipped without its table, so any access
 // to positive_moments threw. Fresh installs get the table from `schema` above;
 // existing v1 installs migrate here instead of resetting (which would wipe
@@ -214,6 +216,29 @@ export const migrations = schemaMigrations({
             { name: 'resurfaced_at', type: 'number' },
             { name: 'created_at', type: 'number', isIndexed: true },
             { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
+    {
+      toVersion: 3,
+      steps: [
+        addColumns({
+          table: 'journal_entries',
+          columns: [
+            { name: 'page_style', type: 'string' },
+            { name: 'drawing', type: 'string' },
+          ],
+        }),
+      ],
+    },
+    {
+      toVersion: 4,
+      steps: [
+        addColumns({
+          table: 'journal_entries',
+          columns: [
+            { name: 'layout', type: 'string', isOptional: true },
           ],
         }),
       ],

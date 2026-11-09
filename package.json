@@ -69,7 +69,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build": "expo export --platform web",
-    "test:reports": "node --test tests/reflectionReport.test.cjs",
+    "test:reports": "node --test tests/reflectionReport.test.cjs tests/journalLayout.test.cjs",
     "test:source": "node tests/syntax-check.cjs",
     "test": "npm run test:source && npm run test:reports"
   },

@@ -59,6 +59,7 @@ import { BrandedLoader } from '../components/interactive/LoadingState';
 import { useAppReducedMotion } from '../theme/motion';
 import { motion } from '../theme/tokens';
 import { pushTransition, modalTransition, immersiveTransition, tabTransition } from './transitions';
+import { useResponsive } from '../theme/responsive';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -321,11 +322,188 @@ const AnimatedTabItem = React.memo(function AnimatedTabItem({
 });
 
 /**
+ * One row in the desktop rail. Same press physics and ink-only active state as
+ * the mobile tab, laid out horizontally.
+ */
+const DesktopRailItem = React.memo(function DesktopRailItem({
+  route,
+  isFocused,
+  navigation,
+  colors,
+}: AnimatedTabItemProps) {
+  const scale = useSharedValue(1);
+
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePress = useCallback(() => {
+    hapticFeedback.selection();
+    const event = navigation.emit({
+      type: 'tabPress',
+      target: route.key,
+      canPreventDefault: true,
+    });
+    if (event.defaultPrevented) return;
+
+    if (isFocused) {
+      const tabRoute = navigation.getState().routes.find((r: any) => r.key === route.key);
+      const nestedState = (tabRoute as any)?.state;
+      if (nestedState && (nestedState.index ?? 0) > 0) {
+        navigation.dispatch({ ...StackActions.popToTop(), target: nestedState.key });
+      }
+      return;
+    }
+    navigation.navigate(route.name);
+  }, [navigation, route.key, route.name, isFocused]);
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      onPressIn={() => {
+        scale.value = withSpring(0.98, motion.spring.pressIn);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, motion.spring.release);
+      }}
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={TAB_LABELS[route.name] ?? route.name}
+      style={{ marginBottom: 4 }}
+    >
+      <Animated.View
+        style={[
+          railStyles.item,
+          isFocused && { backgroundColor: colors.primary.subtle },
+          pressStyle,
+        ]}
+      >
+        <Ionicons
+          name={tabIcon(route.name as keyof TabParamList, isFocused)}
+          size={20}
+          color={isFocused ? colors.primary.default : colors.text.secondary}
+        />
+        <Text
+          style={[
+            railStyles.label,
+            {
+              color: isFocused ? colors.primary.default : colors.text.secondary,
+              fontWeight: isFocused ? '600' : '500',
+            },
+          ]}
+        >
+          {TAB_LABELS[route.name] ?? route.name}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+});
+
+/**
+ * Desktop navigation: a quiet left rail with the wordmark, the same five
+ * destinations, and nothing else. Content keeps the full remaining width.
+ */
+function DesktopTabRail({ state, navigation, insets }: BottomTabBarProps) {
+  const colors = useAppTheme().colors;
+
+  return (
+    <View
+      style={[
+        railStyles.shell,
+        {
+          backgroundColor: colors.surface.default,
+          borderRightColor: colors.border.subtle,
+          paddingTop: Math.max(insets?.top ?? 0, 20) + 24,
+          paddingBottom: Math.max(insets?.bottom ?? 0, 12) + 16,
+        },
+      ]}
+    >
+      <View style={railStyles.brand}>
+        <Ionicons name="leaf" size={21} color={colors.primary.default} />
+        <Text style={[railStyles.wordmark, { color: colors.text.primary }]}>Calmly</Text>
+      </View>
+
+      <View style={railStyles.nav}>
+        {state.routes.map((route, index) => (
+          <DesktopRailItem
+            key={route.key}
+            route={route}
+            isFocused={state.index === index}
+            navigation={navigation}
+            colors={colors as any}
+          />
+        ))}
+      </View>
+
+      <View style={[railStyles.footer, { borderTopColor: colors.border.subtle }]}>
+        <Text style={[railStyles.footerText, { color: colors.text.tertiary }]}>
+          A quiet place,{'\n'}on every screen.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const railStyles = StyleSheet.create({
+  shell: {
+    width: 248,
+    height: '100%',
+    flexShrink: 0,
+    paddingHorizontal: 18,
+    borderRightWidth: StyleSheet.hairlineWidth,
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    paddingHorizontal: 10,
+    paddingBottom: 30,
+  },
+  wordmark: {
+    fontFamily: fontFamilies.serif.regular,
+    fontSize: 23,
+    letterSpacing: -0.2,
+  },
+  nav: {
+    flex: 1,
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  label: {
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 14,
+    letterSpacing: 0.1,
+  },
+  footer: {
+    paddingTop: 14,
+    paddingHorizontal: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  footerText: {
+    fontFamily: fontFamilies.sans.regular,
+    fontSize: 11.5,
+    lineHeight: 17,
+    letterSpacing: 0.1,
+  },
+});
+
+/**
  * Flat, quiet tab bar. A single surface with a hairline rule, no blur and no
  * shadow — contrast does the separating.
  */
 function CustomTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   const colors = useAppTheme().colors;
+  const { usesDesktopNav } = useResponsive();
+
+  if (usesDesktopNav) {
+    return <DesktopTabRail state={state} descriptors={descriptors} navigation={navigation} insets={insets} />;
+  }
 
   const bottomInset = insets?.bottom ?? 0;
   const barHeight = 60 + (bottomInset > 0 ? bottomInset : 10);
@@ -399,6 +577,7 @@ const tabBarStyles = StyleSheet.create({
 
 export function AppNavigator() {
   useRenderLog('app-navigator-render');
+  const { usesDesktopNav } = useResponsive();
   useEffect(() => {
     bootLog('app-navigator-mounted');
   }, []);
@@ -407,7 +586,11 @@ export function AppNavigator() {
     <Tab.Navigator
       initialRouteName="Home"
       tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ ...tabTransition(), popToTopOnBlur: true }}
+      screenOptions={{
+        ...tabTransition(),
+        popToTopOnBlur: true,
+        tabBarPosition: usesDesktopNav ? 'left' : 'bottom',
+      }}
     >
       <Tab.Screen name="Home" component={GuardedHomeStack} />
       <Tab.Screen name="Calm" component={GuardedCalmStack} />

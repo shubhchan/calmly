@@ -3,6 +3,7 @@ import { Platform, RefreshControlProps, ScrollView, StyleProp, View, ViewStyle }
 import { NavigationContainerRefContext, NavigationContext } from '@react-navigation/native';
 import { SharedTransitionBoundary } from 'react-native-reanimated';
 import { useAppTheme } from '../../theme/ThemeContext';
+import { useResponsive } from '../../theme/responsive';
 
 function useSafeIsFocused(): boolean {
   const root = useContext(NavigationContainerRefContext);
@@ -50,6 +51,11 @@ interface ScreenContainerProps {
   refreshControl?: React.ReactElement<RefreshControlProps>;
   keyboardShouldPersistTaps?: 'always' | 'never' | 'handled';
   showsVerticalScrollIndicator?: boolean;
+  /**
+   * Cap content to a readable column and center it on wide screens.
+   * Defaults to on for scrolling screens and off for custom full-bleed UIs.
+   */
+  constrain?: boolean;
 }
 
 /**
@@ -71,20 +77,28 @@ export function ScreenContainer({
   refreshControl,
   keyboardShouldPersistTaps,
   showsVerticalScrollIndicator,
+  constrain,
 }: ScreenContainerProps) {
   const { colors } = useAppTheme();
   const isFocused = useSafeIsFocused();
+  const { isWide, contentMaxWidth } = useResponsive();
 
   const surfaceStyle: StyleProp<ViewStyle> = {
     flex: 1,
     backgroundColor: backgroundColor ?? colors.background.default,
   };
 
+  const shouldConstrain = constrain ?? scroll;
+  const columnStyle: StyleProp<ViewStyle> = shouldConstrain && isWide
+    ? { width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }
+    : undefined;
+  const effectiveBottomPadding = isWide ? Math.min(bottomPadding, 56) : bottomPadding;
+
   if (!scroll) {
     return (
       <Boundary isActive={isFocused}>
         <View style={surfaceStyle}>
-          <View style={[{ flex: 1 }, style]}>{children}</View>
+          <View style={[{ flex: 1 }, columnStyle, style]}>{children}</View>
         </View>
       </Boundary>
     );
@@ -95,12 +109,12 @@ export function ScreenContainer({
       <View style={surfaceStyle}>
         <ScrollView
           style={[{ flex: 1 }, style]}
-          contentContainerStyle={[{ paddingBottom: bottomPadding }, contentContainerStyle]}
+          contentContainerStyle={[{ paddingBottom: effectiveBottomPadding }, contentContainerStyle]}
           showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? false}
           keyboardShouldPersistTaps={keyboardShouldPersistTaps ?? 'handled'}
           refreshControl={refreshControl}
         >
-          {children}
+          <View style={columnStyle}>{children}</View>
         </ScrollView>
       </View>
     </Boundary>
