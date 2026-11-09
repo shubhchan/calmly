@@ -27,7 +27,7 @@ export interface TactilePressableProps extends Omit<PressableProps, 'style'> {
 export const TactilePressable = forwardRef<View, TactilePressableProps>(
   (
     {
-      scaleDownTo = 0.965,
+      scaleDownTo = 1,
       hapticStyle = 'light',
       onPressIn,
       onPressOut,

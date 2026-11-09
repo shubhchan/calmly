@@ -22,6 +22,7 @@ import { type NamedAccent } from '../../theme/palette';
 import { getCalmlyAuth } from '../../services/calmlyAuth';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { ProfileAvatarView } from '../../components/profile/ProfileAvatarView';
+import { WhatsNewModal } from '../../components/settings/WhatsNewModal';
 import { settingsRepository, type AppSettings } from '../../database/repositories/settingsRepository';
 import { loadMindfulStats, EMPTY_MINDFUL_STATS, type MindfulStats } from '../../utils/mindfulStats';
 import { displayFaces } from '../../theme/typography';
@@ -93,8 +94,9 @@ export function SettingsScreen() {
   const setReduceAnimations = useMotionPrefs((s) => s.setReduceMotion);
   const dynamicColors = themeContext.dynamicColors ?? false;
   const setDynamicColors = themeContext.setDynamicColors ?? (() => {});
+  const highContrast = themeContext.highContrast ?? false;
+  const setHighContrast = themeContext.setHighContrast ?? (() => {});
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const [highContrast, setHighContrast] = useState(false);
   const [cloudUser, setCloudUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [stats, setStats] = useState<MindfulStats>(EMPTY_MINDFUL_STATS);
@@ -102,6 +104,7 @@ export function SettingsScreen() {
     'practice' | 'appearance' | 'privacy' | 'comfort' | null
   >(null);
   const [accentSheetOpen, setAccentSheetOpen] = useState(false);
+  const [whatsNewVisible, setWhatsNewVisible] = useState(false);
 
   useEffect(() => {
     const auth = getCalmlyAuth();
@@ -143,10 +146,7 @@ export function SettingsScreen() {
     theme === 'system' ? 'System' : theme === 'dark' ? 'Dark' : 'Mist';
 
   const showWhatsNew = () => {
-    Alert.alert(
-      "What's New in Calmly 1.0",
-      "• Still Water v2: Calm editorial typography with Newsreader and Figtree\n• Ruled notebook hairlines with flexible attachment layouts\n• Zen mascot companions & quiet encrypted Google Drive sync\n• Built slowly for peace of mind."
-    );
+    setWhatsNewVisible(true);
   };
 
   return (
@@ -405,6 +405,12 @@ export function SettingsScreen() {
           void setAccent(`#${hex}`);
           setAccentSheetOpen(false);
         }}
+      />
+
+      {/* What's New Bottom Sheet */}
+      <WhatsNewModal
+        visible={whatsNewVisible}
+        onClose={() => setWhatsNewVisible(false)}
       />
 
       {/* Footer — quiet links, not rows */}

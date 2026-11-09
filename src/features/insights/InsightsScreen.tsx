@@ -37,10 +37,15 @@ const RANGES: { value: Exclude<RangeKey, 'custom'>; label: string }[] = [
 ];
 
 function buildWavePaths(points: MoodTrendPoint[]) {
-  if (!points || points.length < 2) {
-    const stroke = 'M6 82 C38 74 62 50 92 54 C122 58 148 68 178 60 C208 52 232 38 258 46 C272 50 284 42 292 40';
-    const area = stroke + ' L292 114 L6 114 Z';
-    return { area, stroke, dot: { cx: 278, cy: 40 } };
+  if (!points || points.length === 0) {
+    return null;
+  }
+  if (points.length === 1) {
+    const intensity = Math.max(1, Math.min(10, points[0].intensity));
+    const y = 102 - ((intensity - 1) / 9) * 70;
+    const stroke = `M6 ${y.toFixed(1)} L292 ${y.toFixed(1)}`;
+    const area = `${stroke} L292 114 L6 114 Z`;
+    return { area, stroke, dot: { cx: 149, cy: y } };
   }
 
   const chartW = 286;
@@ -90,9 +95,9 @@ export function InsightsScreen() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [moodTrend, setMoodTrend] = useState<MoodTrendPoint[]>([]);
   const [timeOfDay, setTimeOfDay] = useState({
-    morning: { avg: 7.4, pct: 74 },
-    afternoon: { avg: 6.5, pct: 65 },
-    evening: { avg: 5.9, pct: 59 },
+    morning: { avg: 0, pct: 0 },
+    afternoon: { avg: 0, pct: 0 },
+    evening: { avg: 0, pct: 0 },
   });
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<RangeKey>('week');
@@ -144,16 +149,16 @@ export function InsightsScreen() {
 
     setTimeOfDay({
       morning: {
-        avg: mCount > 0 ? +(mSum / mCount).toFixed(1) : 7.4,
-        pct: mCount > 0 ? Math.min(100, Math.round((mSum / mCount) * 10)) : 74,
+        avg: mCount > 0 ? +(mSum / mCount).toFixed(1) : 0,
+        pct: mCount > 0 ? Math.min(100, Math.round((mSum / mCount) * 10)) : 0,
       },
       afternoon: {
-        avg: aCount > 0 ? +(aSum / aCount).toFixed(1) : 6.5,
-        pct: aCount > 0 ? Math.min(100, Math.round((aSum / aCount) * 10)) : 65,
+        avg: aCount > 0 ? +(aSum / aCount).toFixed(1) : 0,
+        pct: aCount > 0 ? Math.min(100, Math.round((aSum / aCount) * 10)) : 0,
       },
       evening: {
-        avg: eCount > 0 ? +(eSum / eCount).toFixed(1) : 5.9,
-        pct: eCount > 0 ? Math.min(100, Math.round((eSum / eCount) * 10)) : 59,
+        avg: eCount > 0 ? +(eSum / eCount).toFixed(1) : 0,
+        pct: eCount > 0 ? Math.min(100, Math.round((eSum / eCount) * 10)) : 0,
       },
     });
 
@@ -362,71 +367,122 @@ export function InsightsScreen() {
             Your mood, day by day
           </AppText>
           <AppText variant="caption" tone="tertiary">
-            out of 10
+            {wavePaths ? 'out of 10' : 'No entries yet'}
           </AppText>
         </View>
 
-        <Svg width="100%" height={128} viewBox="0 0 330 128">
-          <Defs>
-            <LinearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor={colors.primary.default} stopOpacity={0.14} />
-              <Stop offset="100%" stopColor={colors.primary.default} stopOpacity={0} />
-            </LinearGradient>
-          </Defs>
-          <Path d={wavePaths.area} fill="url(#waveGradient)" />
-          <Path
-            d={wavePaths.stroke}
-            fill="none"
-            stroke={colors.primary.default}
-            strokeWidth={2.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <Circle
-            cx={wavePaths.dot.cx}
-            cy={wavePaths.dot.cy}
-            r={4.5}
-            fill={colors.primary.default}
-            stroke={colors.surface.default}
-            strokeWidth={2.5}
-          />
-        </Svg>
+        {wavePaths ? (
+          <>
+            <Svg width="100%" height={128} viewBox="0 0 330 128">
+              <Defs>
+                <LinearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor={colors.primary.default} stopOpacity={0.14} />
+                  <Stop offset="100%" stopColor={colors.primary.default} stopOpacity={0} />
+                </LinearGradient>
+              </Defs>
+              <Path d={wavePaths.area} fill="url(#waveGradient)" />
+              <Path
+                d={wavePaths.stroke}
+                fill="none"
+                stroke={colors.primary.default}
+                strokeWidth={2.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <Circle
+                cx={wavePaths.dot.cx}
+                cy={wavePaths.dot.cy}
+                r={4.5}
+                fill={colors.primary.default}
+                stroke={colors.surface.default}
+                strokeWidth={2.5}
+              />
+            </Svg>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 8 }}>
-          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
-            <AppText key={idx} variant="caption" tone="tertiary" style={{ width: 22, textAlign: 'center', fontSize: 10.5 }}>
-              {day}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 8 }}>
+              {chartPoints.length > 0 ? (
+                chartPoints.map((p, idx) => (
+                  <AppText
+                    key={idx}
+                    variant="caption"
+                    tone="tertiary"
+                    style={{ minWidth: 24, textAlign: 'center', fontSize: 10.5 }}
+                  >
+                    {p.date}
+                  </AppText>
+                ))
+              ) : (
+                ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
+                  <AppText key={idx} variant="caption" tone="tertiary" style={{ width: 22, textAlign: 'center', fontSize: 10.5 }}>
+                    {day}
+                  </AppText>
+                ))
+              )}
+            </View>
+          </>
+        ) : (
+          <View
+            style={{
+              height: 128,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              paddingHorizontal: 16,
+            }}
+          >
+            <Ionicons name="analytics-outline" size={28} color={colors.text.tertiary} />
+            <AppText variant="caption" tone="secondary" center>
+              No check-ins recorded in this period.
             </AppText>
-          ))}
-        </View>
+            <TactilePressable
+              onPress={() => navigation.navigate('MoodCheckIn')}
+              scaleDownTo={0.96}
+              accessibilityRole="button"
+              accessibilityLabel="Record a mood check-in"
+              style={{
+                marginTop: 4,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 999,
+                backgroundColor: colors.surface.muted,
+              }}
+            >
+              <AppText variant="label" tone="link" style={{ fontSize: 12 }}>
+                Check in today
+              </AppText>
+            </TactilePressable>
+          </View>
+        )}
       </View>
 
       {/* When the days felt best */}
-      <View style={{ marginTop: 24 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-          <AppText variant="label" tone="secondary" style={{ fontWeight: '600' }}>
-            Best hours
-          </AppText>
-          <AppText variant="caption" tone="tertiary">
-            by time of day
-          </AppText>
-        </View>
+      {timeOfDay.morning.pct > 0 || timeOfDay.afternoon.pct > 0 || timeOfDay.evening.pct > 0 ? (
+        <View style={{ marginTop: 24 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+            <AppText variant="label" tone="secondary" style={{ fontWeight: '600' }}>
+              Best hours
+            </AppText>
+            <AppText variant="caption" tone="tertiary">
+              by time of day
+            </AppText>
+          </View>
 
-        <TimeBar label="Morning" avg={timeOfDay.morning.avg} pct={timeOfDay.morning.pct} fill={colors.primary.default} />
-        <TimeBar
-          label="Afternoon"
-          avg={timeOfDay.afternoon.avg}
-          pct={timeOfDay.afternoon.pct}
-          fill={isDark ? '#4D6B5E' : '#7FA394'}
-        />
-        <TimeBar
-          label="Evening"
-          avg={timeOfDay.evening.avg}
-          pct={timeOfDay.evening.pct}
-          fill={isDark ? '#2E473D' : '#C9DCD3'}
-          last
-        />
-      </View>
+          <TimeBar label="Morning" avg={timeOfDay.morning.avg} pct={timeOfDay.morning.pct} fill={colors.primary.default} />
+          <TimeBar
+            label="Afternoon"
+            avg={timeOfDay.afternoon.avg}
+            pct={timeOfDay.afternoon.pct}
+            fill={isDark ? '#4D6B5E' : '#7FA394'}
+          />
+          <TimeBar
+            label="Evening"
+            avg={timeOfDay.evening.avg}
+            pct={timeOfDay.evening.pct}
+            fill={isDark ? '#2E473D' : '#C9DCD3'}
+            last
+          />
+        </View>
+      ) : null}
 
       {/* One observation */}
       {observation ? (

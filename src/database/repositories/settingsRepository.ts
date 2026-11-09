@@ -134,6 +134,7 @@ export interface AppSettings {
   accent: string;
   /** Wallpaper-derived Material You colors override the accent (Android 12+). */
   dynamicColors?: boolean;
+  highContrast?: boolean;
   reducedMotion: boolean;
   hapticsEnabled: boolean;
   notificationsEnabled: boolean;
@@ -175,6 +176,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   accent: 'sage',
   dynamicColors: true,
+  highContrast: false,
   reducedMotion: false,
   hapticsEnabled: true,
   notificationsEnabled: true,

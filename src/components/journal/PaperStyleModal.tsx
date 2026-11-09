@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { AppText, Modal, TactilePressable } from '../../components';
 import { useAppTheme } from '../../theme/ThemeContext';
@@ -11,6 +11,8 @@ import {
   ACCENT_COLORS,
   PaperStyle,
   paperColor,
+  paperInk,
+  paperInkSoft,
 } from '../../features/journal/papers';
 import { PaperTexture } from './PaperTexture';
 import { hapticFeedback } from '../../utils/haptics';
@@ -48,9 +50,7 @@ export function PaperStyleModal({
         onPress={() => {
           hapticFeedback.selection();
           onSelectPaper(paper.id);
-          if (onSelectAccentColor && !accentColor) {
-            onSelectAccentColor(paper.accent);
-          }
+          onSelectAccentColor?.(paper.accent);
         }}
         activeOpacity={0.88}
         style={{
@@ -59,12 +59,12 @@ export function PaperStyleModal({
           padding: 7,
           borderRadius: 16,
           backgroundColor: isSelected ? (isDark ? '#26332C' : '#FFFFFF') : isDark ? '#1C2520' : '#F4F5F1',
-          borderWidth: isSelected ? 1.5 : 1,
-          borderColor: isSelected ? activeAccent : 'transparent',
+          borderWidth: isSelected ? 2 : 1,
+          borderColor: isSelected ? activeAccent : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(26,36,32,0.08)',
           shadowColor: '#14241E',
-          shadowOffset: { width: 0, height: isSelected ? 3 : 1 },
-          shadowOpacity: isSelected ? 0.12 : 0.04,
-          shadowRadius: isSelected ? 6 : 2,
+          shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
+          shadowOpacity: isSelected ? 0.16 : 0.04,
+          shadowRadius: isSelected ? 8 : 2,
         }}
       >
         {/* Paper swatch preview box */}
@@ -79,8 +79,13 @@ export function PaperStyleModal({
             borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(26,36,32,0.08)',
           }}
         >
-          {/* Texture pattern overlay */}
-          <PaperTexture texture={paper.texture} isDark={isDark} />
+          {/* Texture pattern overlay with 0.6 intensity preview */}
+          <PaperTexture
+            texture={paper.texture}
+            isDark={isDark}
+            accentColor={isSelected ? activeAccent : paper.accent}
+            intensity={0.6}
+          />
 
           {/* Sample lines */}
           <View
@@ -112,8 +117,8 @@ export function PaperStyleModal({
               left: 11,
               top: 10,
               fontFamily: fontFamilies.display.regular,
-              fontSize: 10,
-              color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(26,36,32,0.5)',
+              fontSize: 10.5,
+              color: paperInk(paper, isDark),
             }}
           >
             {paper.inkText}
@@ -124,17 +129,21 @@ export function PaperStyleModal({
             <View
               style={{
                 position: 'absolute',
-                top: 8,
-                right: 8,
-                width: 20,
-                height: 20,
-                borderRadius: 10,
+                top: 7,
+                right: 7,
+                width: 22,
+                height: 22,
+                borderRadius: 11,
                 backgroundColor: activeAccent,
                 alignItems: 'center',
                 justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.2,
+                shadowRadius: 2,
               }}
             >
-              <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+              <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
                 <Path
                   d="M20 6L9 17l-5-5"
                   stroke="#FFFFFF"
@@ -154,14 +163,14 @@ export function PaperStyleModal({
             alignItems: 'baseline',
             justifyContent: 'space-between',
             paddingTop: 8,
-            paddingHorizontal: 3,
+            paddingHorizontal: 4,
             paddingBottom: 2,
           }}
         >
-          <AppText style={{ fontSize: 13.5, fontWeight: '600', color: colors.text.primary }}>
+          <AppText style={{ fontSize: 13.5, fontWeight: '600', color: paperInk(paper, isDark) }}>
             {paper.name}
           </AppText>
-          <AppText style={{ fontSize: 11, color: colors.text.tertiary }}>
+          <AppText style={{ fontSize: 11, color: paperInkSoft(paper, isDark) }}>
             {paper.feeling}
           </AppText>
         </View>
@@ -233,7 +242,7 @@ export function PaperStyleModal({
         {/* Accent Color Palette Section */}
         {onSelectAccentColor && (
           <View style={{ marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.border.subtle }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <AppText
                 style={{
                   fontSize: 11,
@@ -245,7 +254,7 @@ export function PaperStyleModal({
               >
                 Accent color
               </AppText>
-              <AppText style={{ fontSize: 11, color: activeAccent, fontWeight: '600' }}>
+              <AppText style={{ fontSize: 12, color: activeAccent, fontWeight: '700' }}>
                 {ACCENT_COLORS.find((c) => c.color.toLowerCase() === activeAccent.toLowerCase())?.name || 'Custom'}
               </AppText>
             </View>
@@ -263,13 +272,13 @@ export function PaperStyleModal({
                     accessibilityRole="button"
                     accessibilityLabel={item.name}
                     style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 19,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      borderWidth: isSelected ? 2 : 0,
-                      borderColor: item.color,
+                      borderWidth: isSelected ? 2.5 : 1,
+                      borderColor: isSelected ? item.color : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
                       padding: 2,
                     }}
                   >
@@ -283,16 +292,16 @@ export function PaperStyleModal({
                         justifyContent: 'center',
                         shadowColor: '#000',
                         shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.15,
+                        shadowOpacity: 0.18,
                         shadowRadius: 2,
                       }}
                     >
                       {isSelected && (
-                        <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                        <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
                           <Path
                             d="M20 6L9 17l-5-5"
                             stroke="#FFFFFF"
-                            strokeWidth={3}
+                            strokeWidth={3.2}
                             strokeLinecap="round"
                             strokeLinejoin="round"
                           />
@@ -306,11 +315,13 @@ export function PaperStyleModal({
           </View>
         )}
 
-        {/* Buttons matching Doop 26DIvsEVtC */}
+        {/* Action Buttons matching Doop 26DIvsEVtC */}
         <View style={{ marginTop: 20, gap: 10 }}>
           <TactilePressable
             onPress={() => {
               hapticFeedback.selection();
+              onSelectPaper(activePaper.id);
+              onSelectAccentColor?.(activeAccent);
               onClose();
             }}
             scaleDownTo={0.98}
@@ -333,9 +344,7 @@ export function PaperStyleModal({
             onPress={() => {
               hapticFeedback.light();
               onSelectPaper('mist');
-              if (onSelectAccentColor) {
-                onSelectAccentColor('#2C4F45');
-              }
+              onSelectAccentColor?.('#2C4F45');
               onClose();
             }}
             style={{ paddingVertical: 6, alignItems: 'center' }}

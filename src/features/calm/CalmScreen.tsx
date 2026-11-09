@@ -138,6 +138,66 @@ export function CalmScreen() {
         ))}
       </View>
 
+      {/* Zen Playground Door */}
+      <TactilePressable
+        onPress={() => navigation.navigate('ZenPlayground')}
+        scaleDownTo={0.99}
+        accessibilityRole="button"
+        accessibilityLabel="Open Zen Playground"
+        style={{
+          marginTop: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+          paddingVertical: 14,
+          paddingHorizontal: 16,
+          borderRadius: 20,
+          backgroundColor: colors.surface.default,
+          borderWidth: 1,
+          borderColor: colors.border.subtle,
+        }}
+      >
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 14,
+            backgroundColor: isDark ? 'rgba(74, 107, 93, 0.22)' : 'rgba(44, 79, 69, 0.08)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="sparkles-outline" size={22} color={colors.primary.default} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppText variant="h3" style={{ fontSize: 16, lineHeight: 22 }}>
+              Playground
+            </AppText>
+            <View
+              style={{
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 6,
+                backgroundColor: colors.surface.muted,
+              }}
+            >
+              <AppText
+                variant="caption"
+                tone="tertiary"
+                style={{ fontSize: 10, fontWeight: '600', letterSpacing: 0.4, textTransform: 'uppercase' }}
+              >
+                Zen
+              </AppText>
+            </View>
+          </View>
+          <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+            Sand garden, bubble pop & breathing companion.
+          </AppText>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+      </TactilePressable>
+
       <TactilePressable
         onPress={() => navigation.navigate('PanicAnchor')}
         scaleDownTo={0.99}

@@ -49,3 +49,4 @@ GoogleService-Info.plist
 /android
 
 .vercel
+.agent-inbox/

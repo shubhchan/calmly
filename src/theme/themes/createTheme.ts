@@ -18,8 +18,12 @@ function statusTone(base: string, isDark: boolean): StatusTone {
  * see `bgPrimary`/`accentPrimary` etc. Because the mapping is a pure function,
  * switching accents or light/dark instantly updates every semantic token.
  */
-export function createAppTheme(raw: ResolvedColors): AppTheme {
+export function createAppTheme(raw: ResolvedColors, highContrast = false): AppTheme {
   const isDark = raw.isDark;
+
+  const textPrimary = highContrast ? (isDark ? '#FFFFFF' : '#000000') : raw.textPrimary;
+  const textSecondary = highContrast ? (isDark ? '#E2E8E5' : '#1A2420') : raw.textSecondary;
+  const textTertiary = highContrast ? (isDark ? '#BAC7C1' : '#33403A') : raw.textTertiary;
 
   const colors: AppThemeColors = {
     primary: {
@@ -36,7 +40,7 @@ export function createAppTheme(raw: ResolvedColors): AppTheme {
     secondary: {
       default: raw.bgSecondary,
       hover: raw.bgCardHover,
-      foreground: raw.textPrimary,
+      foreground: textPrimary,
       subtle: raw.bgCard,
       subtleBorder: raw.borderLight,
     },
@@ -61,11 +65,11 @@ export function createAppTheme(raw: ResolvedColors): AppTheme {
       selected: raw.accentBg,
     },
     text: {
-      primary: raw.textPrimary,
-      secondary: raw.textSecondary,
-      tertiary: raw.textTertiary,
+      primary: textPrimary,
+      secondary: textSecondary,
+      tertiary: textTertiary,
       inverse: raw.textInverse,
-      disabled: withAlpha(raw.textPrimary, isDark ? 0.45 : 0.38),
+      disabled: withAlpha(textPrimary, isDark ? 0.45 : 0.38),
       link: raw.accentPrimary,
     },
     border: {
@@ -102,6 +106,7 @@ export function createAppTheme(raw: ResolvedColors): AppTheme {
     mode: raw.theme,
     isDark,
     accent: raw.accent,
+    highContrast,
     colors,
     raw,
   };

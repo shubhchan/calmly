@@ -94,6 +94,7 @@ export interface AppTheme {
   mode: ThemeMode;
   isDark: boolean;
   accent: AccentColor;
+  highContrast?: boolean;
   colors: AppThemeColors;
   /** Escape hatch: raw palette values for legacy code paths. */
   raw: ResolvedColors;

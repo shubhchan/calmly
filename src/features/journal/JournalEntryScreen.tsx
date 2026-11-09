@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -6,9 +6,7 @@ import {
   View,
   Platform,
   StatusBar,
-  Image,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
@@ -20,24 +18,42 @@ import { useAppTheme } from '../../theme/ThemeContext';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { Ionicons } from '@expo/vector-icons';
 import { FormSkeleton } from '../../components/interactive/LoadingState';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { NoteAttachment } from '../../types/attachment';
+import { NoteAttachment, AttachmentType } from '../../types/attachment';
 import { persistAttachmentFile } from '../../utils/attachmentStorage';
-import { MediaAttachmentGrid } from '../../components/journal/MediaAttachmentGrid';
-import { AudioAttachmentPlayer } from '../../components/journal/AudioAttachmentPlayer';
-import { VideoAttachmentCard } from '../../components/journal/VideoAttachmentCard';
-import { DocumentAttachmentCard } from '../../components/journal/DocumentAttachmentCard';
 import { ImageLightboxModal } from '../../components/journal/ImageLightboxModal';
 import { AudioRecorderModal } from '../../components/journal/AudioRecorderModal';
-import { SketchPad } from '../../components/journal/SketchPad';
-import { DraggableResizable } from '../../components/journal/DraggableResizable';
 import { PaperTexture } from '../../components/journal/PaperTexture';
 import { PaperStyleModal } from '../../components/journal/PaperStyleModal';
-import { paperById, paperColor } from './papers';
-import { SketchStroke, parseSketch, serializeSketch } from './sketch';
-import { PageLayout, ElementLayout, parsePageLayout, serializePageLayout } from '../../types/journalLayout';
+import { PageBlockEditor } from '../../components/journal/PageBlockEditor';
+import { BlockInsertSheet, InsertKind } from '../../components/journal/BlockInsertSheet';
+import {
+  paperById,
+  paperColor,
+  paperInk,
+  paperInkSoft,
+  paperAccentText,
+  PAPER_LINE_HEIGHT,
+  PAPER_BODY_SIZE,
+} from './papers';
+import { parseSketch } from './sketch';
+import { parsePageLayout, serializePageLayout } from '../../types/journalLayout';
+import {
+  PageBlock,
+  BlockSize,
+  BlockBreath,
+  Cursor,
+  PageDocument,
+  newId,
+  allowedSizes,
+  insertAtCursor,
+  insertTextAtCursor,
+  normalizeBlocks,
+  plainTextForSearch,
+  migrateLegacyEntry,
+} from './pageBlocks';
 import { hapticFeedback } from '../../utils/haptics';
 import { getDailyPrompt } from '../../utils/dailyPrompt';
 import { fontFamilies } from '../../theme/typography';
@@ -79,48 +95,15 @@ const MOOD_WORDS: { label: string; group: 'accent' | 'gold' | 'neutral' }[] = [
   { label: 'Hopeful', group: 'gold' },
 ];
 
-/** SVG Icons from Doop */
-function CameraSvgIcon({ color = '#5C6B65' }: { color?: string }) {
-  return (
-    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="5" width="18" height="14" rx="3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-      <Circle cx="12" cy="12" r="3.5" stroke={color} strokeWidth={1.7} />
-      <Path d="M8 5l1-2h6l1 2" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function MicSvgIcon({ color = '#5C6B65' }: { color?: string }) {
-  return (
-    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
-      <Rect x="9" y="3" width="6" height="11" rx="3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-      <Path d="M5 11a7 7 0 0014 0M12 18v3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function PenSvgIcon({ color = '#5C6B65' }: { color?: string }) {
-  return (
-    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M4 20l4-1 10-10-3-3L5 16l-1 4z"
-        stroke={color}
-        strokeWidth={1.7}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path d="M14 6l3 3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function PaperSvgIcon({ color = '#5C6B65' }: { color?: string }) {
-  return (
-    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
-      <Rect x="4" y="3" width="16" height="18" rx="2.5" stroke={color} strokeWidth={1.7} />
-      <Path d="M8 8h8M8 12h8M8 16h5" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-    </Svg>
-  );
+function hexToRgba(hex: string, alpha: number): string {
+  let clean = (hex || '#2C4F45').replace('#', '');
+  if (clean.length === 3) {
+    clean = clean.split('').map((c) => c + c).join('');
+  }
+  const r = parseInt(clean.substring(0, 2), 16) || 44;
+  const g = parseInt(clean.substring(2, 4), 16) || 79;
+  const b = parseInt(clean.substring(4, 6), 16) || 69;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 function MoodSvgIcon({ color = '#5C6B65' }: { color?: string }) {
@@ -142,10 +125,6 @@ function PromptSvgIcon({ color = '#5C6B65' }: { color?: string }) {
   );
 }
 
-/**
- * Journal entry screen — 1:1 implementation of Doop "New page — A · Blank page",
- * "Page style — Paper & mood (sheet)" (26DIvsEVtC), and "Page — Draggable sketch & attachments" (09dIMTqlOD).
- */
 export function JournalEntryScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'JournalEntry'>>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -159,42 +138,37 @@ export function JournalEntryScreen() {
   const initialType: JournalType = (rawType && (journalTypeLabels as any)[rawType]
     ? rawType
     : preview?.type && (journalTypeLabels as any)[preview.type]
-    ? preview.type
-    : 'free') as JournalType;
+      ? preview.type
+      : 'free') as JournalType;
   const isEditing = !!id;
 
   const [entryType, setEntryType] = useState<JournalType>(initialType);
   const [typePickerVisible, setTypePickerVisible] = useState(false);
   const [moodPickerVisible, setMoodPickerVisible] = useState(false);
-  const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
   const [entryCreatedAt, setEntryCreatedAt] = useState<number>(preview?.createdAt ?? Date.now());
 
   const typeLabel = (journalTypeLabels as any)?.[entryType] ?? 'Free write';
-  const isGratitude = entryType === 'gratitude';
 
   const [title, setTitle] = useState<string>(preview?.title ?? '');
-  const [content, setContent] = useState<string>(preview?.body ?? '');
   const [isFavorite, setIsFavorite] = useState(!!preview?.favorite);
-  const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [attaching, setAttaching] = useState(false);
 
-  // Paper Style, Texture, and Accent Color states (Doop mock 26DIvsEVtC)
+  // Paper Style, Texture, and Accent Color states
   const [paperId, setPaperId] = useState<string>('dawn');
   const [accentColor, setAccentColor] = useState<string>(paperById('dawn').accent);
   const [paperModalVisible, setPaperModalVisible] = useState<boolean>(false);
 
-  // Freeform layout and sketch pad states (Doop mock 09dIMTqlOD)
-  const [sketchStrokes, setSketchStrokes] = useState<SketchStroke[]>([]);
-  const [isSketchOpen, setIsSketchOpen] = useState<boolean>(false);
-  const [pageLayout, setPageLayout] = useState<PageLayout>({ isFreeform: false, attachments: {} });
-  const [isFreeform, setIsFreeform] = useState<boolean>(false);
-  const [selectedElementId, setSelectedElementId] = useState<'sketch' | string | null>(null);
-  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({
-    width: 360,
-    height: 1200,
-  });
+  // Inline blocks document model
+  const [blocks, setBlocks] = useState<PageBlock[]>(() => [{ id: newId('txt'), kind: 'text', text: '' }]);
+  const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
+  const cursorRef = useRef<Cursor | null>(null);
+  const [insertOpen, setInsertOpen] = useState(false);
+  const [insertSize, setInsertSize] = useState<BlockSize>('half');
+  const [insertBreath, setInsertBreath] = useState<BlockBreath>('comfortable');
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   const [recorderVisible, setRecorderVisible] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<NoteAttachment | null>(null);
@@ -204,6 +178,19 @@ export function JournalEntryScreen() {
   const currentPaperColor = useMemo(() => paperColor(currentPaper, isDark), [currentPaper, isDark]);
   const activeAccent = accentColor || currentPaper.accent;
 
+  const ink = useMemo(() => paperInk(currentPaper, isDark), [currentPaper, isDark]);
+  const inkSoft = useMemo(() => paperInkSoft(currentPaper, isDark), [currentPaper, isDark]);
+  const textAccent = useMemo(
+    () => paperAccentText(currentPaper, isDark, activeAccent),
+    [currentPaper, isDark, activeAccent],
+  );
+
+  const editingBlock = useMemo(
+    () => blocks.find((b) => b.id === editingBlockId && b.kind !== 'text'),
+    [blocks, editingBlockId],
+  );
+
+  // Load entry & migrate legacy format if needed
   useEffect(() => {
     if (!id) return;
     let isMounted = true;
@@ -213,7 +200,6 @@ export function JournalEntryScreen() {
         const entry = await journalRepository.getById(id);
         if (entry && isMounted) {
           setTitle(entry.title || '');
-          setContent(entry.body || '');
           setIsFavorite(!!entry.favorite);
           if (entry.createdAt) {
             setEntryCreatedAt(entry.createdAt);
@@ -221,27 +207,21 @@ export function JournalEntryScreen() {
           if (entry.type && (journalTypeLabels as any)[entry.type]) {
             setEntryType(entry.type as JournalType);
           }
-          if (Array.isArray(entry.attachments)) {
-            setAttachments(entry.attachments);
-          }
           if (entry.pageStyle) {
             setPaperId(entry.pageStyle);
             const p = paperById(entry.pageStyle);
             setAccentColor(p.accent);
           }
-          if (entry.drawing) {
-            const parsed = parseSketch(entry.drawing);
-            setSketchStrokes(parsed);
-            if (parsed.length > 0) {
-              setIsSketchOpen(true);
-            }
-          }
-          if (entry.layout) {
-            const parsedLayout = parsePageLayout(entry.layout);
-            setPageLayout(parsedLayout);
-            if (parsedLayout.isFreeform) {
-              setIsFreeform(true);
-            }
+
+          const parsedAttachments: NoteAttachment[] = Array.isArray(entry.attachments) ? entry.attachments : [];
+          setAttachments(parsedAttachments);
+
+          const layout = parsePageLayout(entry.layout);
+          const legacyStrokes = entry.drawing ? parseSketch(entry.drawing) : [];
+          const doc = migrateLegacyEntry(entry.body || '', layout, parsedAttachments, legacyStrokes);
+          setBlocks(doc.blocks);
+          if (doc.accentColor) {
+            setAccentColor(doc.accentColor);
           }
         }
       } catch (err) {
@@ -256,7 +236,67 @@ export function JournalEntryScreen() {
     };
   }, [id]);
 
-  const handlePickCamera = async () => {
+  // Debounced autosave
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pending = useRef(false);
+
+  const persist = useCallback(() => {
+    if (!id) return;
+    const doc: PageDocument = { version: 2, accentColor: activeAccent, blocks };
+    journalRepository
+      .update(id, {
+        content: plainTextForSearch(blocks),
+        body: plainTextForSearch(blocks),
+        layout: serializePageLayout({ accentColor: activeAccent, doc }),
+        attachments,
+      })
+      .catch((e) => console.warn('[journal] autosave failed', e));
+  }, [id, blocks, activeAccent, attachments]);
+
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
+
+  useEffect(() => {
+    if (!isEditing || !id || loading) return;
+    pending.current = true;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      pending.current = false;
+      persistRef.current();
+    }, 600);
+  }, [blocks, activeAccent, isEditing, id, loading, attachments]);
+
+  useEffect(() => () => {
+    // Flush on leaving the screen so a quick swipe-back does not lose the last edit.
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    if (pending.current) persistRef.current();
+  }, []);
+
+  const capSize = (t: AttachmentType | 'sketch', s: BlockSize): BlockSize => {
+    const ok = allowedSizes(t);
+    return ok.includes(s) ? s : ok[ok.length - 1];
+  };
+
+  const placeBlock = (block: PageBlock) => {
+    const res = insertAtCursor(blocks, cursorRef.current, block);
+    setBlocks(res.blocks);
+    cursorRef.current = res.cursor;
+    hapticFeedback.success();
+  };
+
+  const placeAttachment = (att: NoteAttachment) => {
+    setAttachments((prev) => [...prev, att]);
+    placeBlock({
+      id: newId('med'),
+      kind: 'media',
+      attachmentId: att.id,
+      mediaType: att.type,
+      size: capSize(att.type, insertSize),
+      breath: insertBreath,
+    });
+  };
+
+  const handleCapturePhoto = async () => {
     try {
       hapticFeedback.light();
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -284,8 +324,7 @@ export function JournalEntryScreen() {
           mimeType: asset.mimeType || 'image/jpeg',
           createdAt: Date.now(),
         };
-        setAttachments((prev) => [...prev, newAttachment]);
-        hapticFeedback.success();
+        placeAttachment(newAttachment);
       }
     } catch (err) {
       console.error('Camera capture failed:', err);
@@ -295,18 +334,17 @@ export function JournalEntryScreen() {
     }
   };
 
-  const handlePickMedia = async () => {
+  const handlePickMedia = async (targetMediaType: 'media' | 'video' = 'media') => {
     try {
       hapticFeedback.light();
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images', 'videos'],
+        mediaTypes: targetMediaType === 'video' ? ['videos'] : ['images', 'videos'],
         allowsMultipleSelection: true,
         quality: 0.85,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
         setAttaching(true);
-        const newItems: NoteAttachment[] = [];
         for (const asset of result.assets) {
           const isVideo = asset.type === 'video';
           const mediaType = isVideo ? 'video' : 'image';
@@ -317,7 +355,7 @@ export function JournalEntryScreen() {
             asset.fileName || `${defaultName}.${isVideo ? 'mp4' : 'jpg'}`
           );
 
-          newItems.push({
+          const newAttachment: NoteAttachment = {
             id: `att_med_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             type: mediaType,
             uri,
@@ -326,10 +364,9 @@ export function JournalEntryScreen() {
             mimeType: asset.mimeType,
             duration: asset.duration ? Math.round(asset.duration / 1000) : undefined,
             createdAt: Date.now(),
-          });
+          };
+          placeAttachment(newAttachment);
         }
-        setAttachments((prev) => [...prev, ...newItems]);
-        hapticFeedback.success();
       }
     } catch (err) {
       console.error('Media picker failed:', err);
@@ -360,8 +397,7 @@ export function JournalEntryScreen() {
           mimeType: asset.mimeType,
           createdAt: Date.now(),
         };
-        setAttachments((prev) => [...prev, newAttachment]);
-        hapticFeedback.success();
+        placeAttachment(newAttachment);
       }
     } catch (err) {
       console.error('Document picker failed:', err);
@@ -374,51 +410,120 @@ export function JournalEntryScreen() {
   const handleRemoveAttachment = (attachmentId: string) => {
     hapticFeedback.selection();
     setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
-    setPageLayout((prev) => {
-      const copy = { ...(prev.attachments || {}) };
-      delete copy[attachmentId];
-      return { ...prev, attachments: copy };
-    });
+  };
+
+  const removeMedia = (blockId: string) => {
+    const b = blocks.find((x) => x.id === blockId);
+    if (!b || b.kind !== 'media') {
+      setBlocks((prev) => normalizeBlocks(prev.filter((x) => x.id !== blockId)));
+      return;
+    }
+    setBlocks((prev) => normalizeBlocks(prev.filter((x) => x.id !== blockId)));
+    handleRemoveAttachment(b.attachmentId);
+  };
+
+  const handleInsertKind = async (kind: InsertKind) => {
+    setInsertOpen(false);
+    if (kind === 'prompt') {
+      const prompt = getDailyPrompt();
+      if (!prompt) return;
+      const res = insertTextAtCursor(blocks, cursorRef.current, prompt);
+      setBlocks(res.blocks);
+      cursorRef.current = res.cursor;
+      return;
+    }
+    if (kind === 'sketch') {
+      placeBlock({
+        id: newId('skt'),
+        kind: 'sketch',
+        strokes: [],
+        size: capSize('sketch', insertSize),
+        breath: insertBreath,
+      });
+      return;
+    }
+    if (kind === 'voice') {
+      setRecorderVisible(true);
+      return;
+    }
+    if (kind === 'photo') return handlePickMedia('media');
+    if (kind === 'camera') return handleCapturePhoto();
+    if (kind === 'video') return handlePickMedia('video');
+    if (kind === 'file') return handlePickDocument();
+  };
+
+  const openInsertAtCursor = () => {
+    hapticFeedback.light();
+    setEditingBlockId(null);
+    setInsertOpen(true);
+  };
+
+  const editBlock = (id: string) => {
+    const b = blocks.find((x) => x.id === id);
+    if (!b || b.kind === 'text') return;
+    hapticFeedback.light();
+    setEditingBlockId(id);
+    setInsertSize(b.size);
+    setInsertBreath(b.breath);
+    setInsertOpen(true);
+  };
+
+  const changeSize = (s: BlockSize) => {
+    setInsertSize(s);
+    if (editingBlockId) {
+      setBlocks((prev) =>
+        prev.map((b) =>
+          b.id === editingBlockId && b.kind !== 'text'
+            ? { ...b, size: capSize(b.kind === 'media' ? b.mediaType : 'sketch', s) }
+            : b,
+        ),
+      );
+    }
+  };
+
+  const changeBreath = (br: BlockBreath) => {
+    setInsertBreath(br);
+    if (editingBlockId) {
+      setBlocks((prev) =>
+        prev.map((b) => (b.id === editingBlockId && b.kind !== 'text' ? { ...b, breath: br } : b)),
+      );
+    }
   };
 
   const handleSave = async () => {
     const trimmedTitle = (title || '').trim();
-    const trimmedContent = (content || '').trim();
+    const plainText = plainTextForSearch(blocks);
 
-    if (!trimmedContent && !trimmedTitle && attachments.length === 0 && sketchStrokes.length === 0) {
+    if (!plainText && !trimmedTitle && blocks.length <= 1) {
       Alert.alert('Nothing to save yet', 'Write a line, sketch, or attach something first.');
       return;
     }
 
     setSaving(true);
     try {
-      const serializedDrawing = serializeSketch(sketchStrokes);
-      const layoutToSave: PageLayout = {
-        ...pageLayout,
-        isFreeform,
-      };
-      const serializedLayout = serializePageLayout(layoutToSave);
+      const doc: PageDocument = { version: 2, accentColor: activeAccent, blocks };
+      const serializedLayout = serializePageLayout({ accentColor: activeAccent, doc });
 
       if (isEditing && id) {
         await journalRepository.update(id, {
           type: entryType,
           title: trimmedTitle,
-          body: trimmedContent,
+          body: plainText,
+          content: plainText,
           favorite: isFavorite,
           attachments,
           pageStyle: paperId,
-          drawing: serializedDrawing,
           layout: serializedLayout,
         });
       } else {
         await journalRepository.create({
           type: entryType,
           title: trimmedTitle,
-          body: trimmedContent,
+          body: plainText,
+          content: plainText,
           favorite: isFavorite,
           attachments,
           pageStyle: paperId,
-          drawing: serializedDrawing,
           layout: serializedLayout,
         });
       }
@@ -454,172 +559,23 @@ export function JournalEntryScreen() {
     ]);
   };
 
-  const handleInsertPrompt = () => {
-    hapticFeedback.selection();
-    const prompt = getDailyPrompt();
-    if (!prompt) return;
-    setContent((prev) => (prev.trim() ? `${prev.replace(/\s+$/, '')}\n\n${prompt}` : prompt));
-  };
-
   const handleMoodSelect = (word: string) => {
     hapticFeedback.selection();
     setMoodPickerVisible(false);
-    setContent((prev) => {
-      const stamp = `Feeling: ${word}.`;
-      return prev.trim() ? `${prev.replace(/\s+$/, '')}\n\n${stamp}\n` : `${stamp}\n\n`;
-    });
+    const stamp = `Feeling: ${word}.`;
+    const res = insertTextAtCursor(blocks, cursorRef.current, stamp);
+    setBlocks(res.blocks);
+    cursorRef.current = res.cursor;
   };
 
-  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-  const contentLines = content
-    ? content.split('\n').reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 32)), 0)
-    : 0;
-  const lineCount = Math.max(16, contentLines + 8);
-  const pageHeight = Math.max(700, lineCount * 32);
-
-  const imageAttachments = attachments.filter((a) => a.type === 'image');
-  const audioAttachments = attachments.filter((a) => a.type === 'audio');
-  const videoAttachments = attachments.filter((a) => a.type === 'video');
-  const docAttachments = attachments.filter((a) => a.type === 'document');
-
-  // Compute or get saved layout for attachments in freeform mode
-  const getAttachmentLayout = (attId: string, index: number): ElementLayout => {
-    if (pageLayout.attachments && pageLayout.attachments[attId]) {
-      return pageLayout.attachments[attId];
-    }
-    const defaultW = Math.min(150, Math.floor((containerSize.width - 36) / 2));
-    const defaultH = 158;
-    const col = index % 2;
-    const row = Math.floor(index / 2);
-    return {
-      x: 12 + col * (defaultW + 12),
-      y: 14 + row * (defaultH + 14),
-      width: defaultW,
-      height: defaultH,
-    };
-  };
-
-  // Compute or get saved layout for sketch pad
-  const sketchLayout: ElementLayout = useMemo(() => {
-    if (pageLayout.sketch) {
-      return pageLayout.sketch;
-    }
-    const defaultW = Math.min(232, containerSize.width - 24);
-    const defaultH = 210;
-    return {
-      x: Math.max(12, containerSize.width - defaultW - 12),
-      y: Math.max(12, 180),
-      width: defaultW,
-      height: defaultH,
-      hideHeader: false,
-      hideFooter: false,
-      compact: false,
-      zeroPad: false,
-    };
-  }, [pageLayout.sketch, containerSize.width]);
-
-  const renderAttachmentPreview = (att: NoteAttachment) => {
-    if (att.type === 'image') {
-      return (
-        <View style={{ flex: 1, backgroundColor: isDark ? '#1C2521' : '#E2E6DF' }}>
-          <Image
-            source={{ uri: att.uri }}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-          {att.name ? (
-            <View
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                backgroundColor: isDark ? 'rgba(20,28,24,0.78)' : 'rgba(255,255,255,0.85)',
-                paddingVertical: 2,
-                paddingHorizontal: 4,
-              }}
-            >
-              <AppText
-                numberOfLines={1}
-                style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center' }}
-              >
-                {att.name}
-              </AppText>
-            </View>
-          ) : null}
-        </View>
-      );
-    }
-
-    if (att.type === 'audio') {
-      return (
-        <View
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 8,
-            backgroundColor: isDark ? '#1E2823' : '#F0F4F1',
-            gap: 4,
-          }}
-        >
-          <Ionicons name="mic" size={24} color={activeAccent} />
-          <AppText numberOfLines={1} style={{ fontSize: 10, color: colors.text.primary, fontWeight: '600' }}>
-            {att.name || 'Voice Memo'}
-          </AppText>
-          {att.duration ? (
-            <AppText style={{ fontSize: 9, color: colors.text.tertiary }}>
-              {Math.floor(att.duration / 60)}:{String(att.duration % 60).padStart(2, '0')}
-            </AppText>
-          ) : null}
-        </View>
-      );
-    }
-
-    if (att.type === 'video') {
-      return (
-        <View
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 8,
-            backgroundColor: isDark ? '#1E2823' : '#F0F4F1',
-            gap: 4,
-          }}
-        >
-          <Ionicons name="videocam" size={24} color={activeAccent} />
-          <AppText numberOfLines={1} style={{ fontSize: 10, color: colors.text.primary, fontWeight: '600' }}>
-            {att.name || 'Video Clip'}
-          </AppText>
-        </View>
-      );
-    }
-
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 8,
-          backgroundColor: isDark ? '#1E2823' : '#F0F4F1',
-          gap: 4,
-        }}
-      >
-        <Ionicons name="document-text" size={24} color={activeAccent} />
-        <AppText numberOfLines={1} style={{ fontSize: 10, color: colors.text.primary, fontWeight: '600' }}>
-          {att.name || 'Document'}
-        </AppText>
-      </View>
-    );
-  };
+  const fullText = useMemo(() => plainTextForSearch(blocks), [blocks]);
+  const wordCount = fullText.trim() ? fullText.trim().split(/\s+/).length : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <View style={{ flex: 1, paddingTop: topPad }}>
-        {/* Doop Header: Cancel | New page / Your page | Save */}
+        {/* Header: Cancel | New page / Your page | Save */}
         <View
           style={{
             flexDirection: 'row',
@@ -666,7 +622,7 @@ export function JournalEntryScreen() {
           </TactilePressable>
         </View>
 
-        {/* Date, Category, and Paper & Mood Row (Doop 26DIvsEVtC) */}
+        {/* Date & Category Row */}
         <View
           style={{
             marginTop: 8,
@@ -700,85 +656,35 @@ export function JournalEntryScreen() {
                 height: 28,
                 paddingHorizontal: 10,
                 borderRadius: 999,
-                backgroundColor: isGratitude
-                  ? isDark
-                    ? 'rgba(176,138,79,0.2)'
-                    : '#F4EDE2'
-                  : colors.surface.selected,
+                backgroundColor: isDark
+                  ? hexToRgba(activeAccent, 0.18)
+                  : hexToRgba(activeAccent, 0.1),
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 4,
+                borderWidth: 1,
+                borderColor: isDark ? hexToRgba(activeAccent, 0.3) : hexToRgba(activeAccent, 0.2),
               }}
             >
               <AppText
                 style={{
                   fontSize: 12,
                   fontWeight: '600',
-                  color: isGratitude ? (isDark ? '#D2B078' : '#B08A4F') : activeAccent,
+                  color: activeAccent,
                 }}
               >
                 {typeLabel}
               </AppText>
-              <Ionicons
-                name="chevron-down"
-                size={11}
-                color={isGratitude ? (isDark ? '#D2B078' : '#B08A4F') : activeAccent}
-              />
-            </TactilePressable>
-
-            {/* Paper & Mood Chip (opens Doop mock 26DIvsEVtC sheet) */}
-            <TactilePressable
-              onPress={() => {
-                hapticFeedback.light();
-                setPaperModalVisible(true);
-              }}
-              scaleDownTo={0.94}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel={`Paper style: ${currentPaper.name}. Tap to change style and accent color`}
-              style={{
-                height: 28,
-                paddingHorizontal: 10,
-                borderRadius: 999,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F0F2EC',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 5,
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(26,36,32,0.08)',
-              }}
-            >
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: activeAccent,
-                }}
-              />
-              <AppText
-                style={{
-                  fontSize: 12,
-                  fontWeight: '600',
-                  color: colors.text.primary,
-                }}
-              >
-                {currentPaper.name} paper
-              </AppText>
-              <Ionicons name="chevron-down" size={11} color={colors.text.tertiary} />
+              <Ionicons name="chevron-down" size={11} color={activeAccent} />
             </TactilePressable>
           </View>
         </View>
 
-        {/* Title — Newsreader display serif + Move/resize mode toggle pill */}
+        {/* Title — Newsreader display serif */}
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
             paddingHorizontal: 24,
             marginTop: 8,
-            gap: 12,
           }}
         >
           <TextInput
@@ -788,7 +694,6 @@ export function JournalEntryScreen() {
             onChangeText={setTitle}
             accessibilityLabel="Page title"
             style={{
-              flex: 1,
               fontFamily: fontFamilies.display.regular,
               fontSize: 24,
               lineHeight: 32,
@@ -798,58 +703,10 @@ export function JournalEntryScreen() {
               paddingBottom: 4,
             }}
           />
-
-          {/* Mode Pill: "Move / resize" (Doop mock 09dIMTqlOD) */}
-          <TactilePressable
-            onPress={() => {
-              hapticFeedback.selection();
-              setIsFreeform((prev) => !prev);
-            }}
-            scaleDownTo={0.94}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel={isFreeform ? 'Exit rearrange mode' : 'Enter move and resize mode'}
-            style={{
-              height: 28,
-              paddingHorizontal: 10,
-              borderRadius: 8,
-              backgroundColor: isFreeform ? activeAccent : isDark ? '#26332C' : '#E3ECE7',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 5,
-              borderWidth: 1,
-              borderColor: isFreeform ? activeAccent : 'rgba(44,79,69,0.22)',
-            }}
-          >
-            <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
-                stroke={isFreeform ? '#FFFFFF' : activeAccent}
-                strokeWidth={2.4}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-            <AppText
-              style={{
-                fontSize: 11.5,
-                fontWeight: '600',
-                color: isFreeform ? '#FFFFFF' : colors.text.primary,
-              }}
-            >
-              {isFreeform ? 'Rearranging' : 'Move / resize'}
-            </AppText>
-          </TactilePressable>
         </View>
 
-        {/* Paper Sheet Container (Doop mock 26DIvsEVtC & 09dIMTqlOD) */}
+        {/* Paper Sheet Container */}
         <View
-          onLayout={(e) => {
-            const { width } = e.nativeEvent.layout;
-            if (width > 0) {
-              setContainerSize({ width, height: Math.max(pageHeight, 1000) });
-            }
-          }}
           style={{
             flex: 1,
             marginHorizontal: 14,
@@ -857,9 +714,9 @@ export function JournalEntryScreen() {
             borderRadius: 22,
             backgroundColor: currentPaperColor,
             position: 'relative',
-            overflow: isFreeform ? 'visible' : 'hidden',
-            borderWidth: 1,
-            borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(44,79,69,0.1)',
+            overflow: 'hidden',
+            borderWidth: 1.5,
+            borderColor: isDark ? hexToRgba(activeAccent, 0.28) : hexToRgba(activeAccent, 0.22),
             shadowColor: '#14241E',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.04,
@@ -868,464 +725,79 @@ export function JournalEntryScreen() {
           }}
         >
           {/* Paper Texture layer */}
-          <PaperTexture texture={currentPaper.texture} isDark={isDark} />
+          <PaperTexture texture={currentPaper.texture} isDark={isDark} accentColor={activeAccent} />
 
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={{
-              minHeight: pageHeight,
+              minHeight: 800,
               paddingHorizontal: 18,
               paddingVertical: 14,
-              paddingBottom: 28,
+              paddingBottom: 40,
             }}
             keyboardShouldPersistTaps="handled"
+            scrollEnabled={true}
             showsVerticalScrollIndicator={false}
           >
-            {/* Repeating ruled lines */}
-            <View style={{ position: 'absolute', top: 0, left: 18, right: 18, bottom: 0 }} pointerEvents="none">
-              {Array.from({ length: lineCount }).map((_, index) => (
-                <View
-                  key={`rule-${index}`}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: (index + 1) * 32 - 1,
-                    height: 1,
-                    backgroundColor: isDark
-                      ? 'rgba(255,255,255,0.04)'
-                      : currentPaper.id === 'dawn'
-                      ? 'rgba(176,138,79,0.12)'
-                      : 'rgba(44,79,69,0.06)',
-                  }}
-                />
-              ))}
-            </View>
-
-            {loading ? (
-              <FormSkeleton fields={2} />
-            ) : (
-              <>
-                <TextInput
-                  multiline
-                  placeholder="Start anywhere. No one else reads this."
-                  placeholderTextColor={colors.text.tertiary}
-                  value={content}
-                  onChangeText={setContent}
-                  accessibilityLabel="Page body"
-                  editable={!isFreeform}
-                  style={{
-                    fontSize: 16,
-                    lineHeight: 32,
-                    color: colors.text.primary,
-                    minHeight: isFreeform ? 180 : pageHeight,
-                    textAlignVertical: 'top',
-                    padding: 0,
-                  }}
-                />
-
-                {/* In-flow SketchPad when NOT freeform */}
-                {isSketchOpen && !isFreeform && (
-                  <View style={{ marginTop: 16, marginBottom: 8 }}>
-                    <SketchPad
-                      strokes={sketchStrokes}
-                      onChange={setSketchStrokes}
-                      accentColor={activeAccent}
-                      onClose={() => setIsSketchOpen(false)}
-                      height={200}
-                      isFreeform={false}
-                    />
-                  </View>
-                )}
-
-                {/* In-flow Attachments rendering when NOT freeform */}
-                {!isFreeform && attachments.length > 0 ? (
-                  <View
-                    style={{
-                      marginTop: 18,
-                      paddingTop: 14,
-                      borderTopWidth: 1,
-                      borderTopColor: colors.border.default,
-                      gap: 10,
+            <View onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
+              {loading ? (
+                <FormSkeleton fields={2} />
+              ) : (
+                <>
+                  <PageBlockEditor
+                    blocks={blocks}
+                    attachments={attachments}
+                    containerWidth={containerWidth}
+                    ink={ink}
+                    inkSoft={inkSoft}
+                    accent={textAccent}
+                    paperBg={currentPaperColor}
+                    onChangeText={(id, text) =>
+                      setBlocks((prev) =>
+                        prev.map((b) => (b.id === id && b.kind === 'text' ? { ...b, text } : b)),
+                      )
+                    }
+                    onChangeSketch={(id, strokes) =>
+                      setBlocks((prev) =>
+                        prev.map((b) => (b.id === id && b.kind === 'sketch' ? { ...b, strokes } : b)),
+                      )
+                    }
+                    onCursor={(c) => {
+                      cursorRef.current = c;
                     }}
-                  >
-                    <AppText
-                      style={{
-                        fontSize: 10.5,
-                        fontWeight: '600',
-                        letterSpacing: 1.1,
-                        textTransform: 'uppercase',
-                        color: colors.text.tertiary,
-                      }}
-                    >
-                      Attached ({attachments.length})
-                    </AppText>
-                    {imageAttachments.length > 0 ? (
-                      <MediaAttachmentGrid
-                        attachments={imageAttachments}
-                        onPressImage={(img) => setLightboxImage(img)}
-                        onRemove={handleRemoveAttachment}
-                        editable
-                      />
-                    ) : null}
-                    {audioAttachments.map((aud) => (
-                      <AudioAttachmentPlayer
-                        key={aud.id}
-                        attachment={aud}
-                        onRemove={() => handleRemoveAttachment(aud.id)}
-                        editable
-                      />
-                    ))}
-                    {videoAttachments.map((vid) => (
-                      <VideoAttachmentCard
-                        key={vid.id}
-                        attachment={vid}
-                        onRemove={() => handleRemoveAttachment(vid.id)}
-                        editable
-                      />
-                    ))}
-                    {docAttachments.map((doc) => (
-                      <DocumentAttachmentCard
-                        key={doc.id}
-                        attachment={doc}
-                        onRemove={() => handleRemoveAttachment(doc.id)}
-                        editable
-                      />
-                    ))}
-                  </View>
-                ) : null}
-
-                {attaching ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
-                    <ActivityIndicator size="small" color={activeAccent} />
-                    <AppText variant="caption" tone="tertiary">
-                      Saving attachment…
-                    </AppText>
-                  </View>
-                ) : null}
-
-                {isEditing ? (
-                  <TactilePressable
-                    onPress={handleDelete}
-                    scaleDownTo={0.95}
-                    accessibilityRole="button"
-                    accessibilityLabel="Delete this page"
-                    style={{ marginTop: 24, paddingVertical: 4 }}
-                  >
-                    <AppText variant="label" tone="error">
-                      Delete this page
-                    </AppText>
-                  </TactilePressable>
-                ) : null}
-              </>
-            )}
-          </ScrollView>
-
-          {/* Freeform Draggable & Resizable Overlays (Doop mock 09dIMTqlOD) */}
-          {isFreeform && (
-            <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
-              {/* Draggable Sketch Pad */}
-              {isSketchOpen && (
-                <DraggableResizable
-                  layout={sketchLayout}
-                  onChange={(next) => {
-                    setPageLayout((prev) => ({ ...prev, sketch: next }));
-                  }}
-                  containerWidth={containerSize.width}
-                  containerHeight={containerSize.height}
-                  isFreeform={true}
-                  isSelected={selectedElementId === 'sketch'}
-                  onSelect={() => setSelectedElementId('sketch')}
-                  minWidth={160}
-                  minHeight={130}
-                  renderHeaderBar={(dragHandlers) => (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        backgroundColor: isDark ? '#141C18' : '#1A2420',
-                        borderTopLeftRadius: 14,
-                        borderTopRightRadius: 14,
-                        paddingHorizontal: 8,
-                        paddingVertical: 5,
-                        borderBottomWidth: 1,
-                        borderBottomColor: 'rgba(255,255,255,0.08)',
-                      }}
-                    >
-                      {/* Drag Handle with Grip and Move Icon */}
-                      <View
-                        {...dragHandlers}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 4,
-                          paddingRight: 8,
-                          paddingVertical: 2,
-                          ...(Platform.OS === 'web'
-                            ? ({
-                                cursor: 'grab',
-                                userSelect: 'none',
-                                touchAction: 'none',
-                              } as any)
-                            : {}),
-                        }}
-                      >
-                        <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-                          <Path
-                            d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
-                            stroke="#D2B078"
-                            strokeWidth={2.4}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </Svg>
-                        <AppText
-                          style={{
-                            fontSize: 10,
-                            fontWeight: '700',
-                            letterSpacing: 0.6,
-                            textTransform: 'uppercase',
-                            color: '#D2B078',
-                          }}
-                        >
-                          Drag
-                        </AppText>
-                      </View>
-
-                      {/* Controls matching Doop 09dIMTqlOD: Footer toggle, ZeroPad toggle, Compact toggle, Close */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        {/* Toggle Footer */}
-                        <TouchableOpacity
-                          onPress={() => {
-                            hapticFeedback.light();
-                            setPageLayout((prev) => ({
-                              ...prev,
-                              sketch: { ...(prev.sketch || sketchLayout), hideFooter: !sketchLayout.hideFooter },
-                            }));
-                          }}
-                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Toggle footer"
-                          style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 4,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: !sketchLayout.hideFooter
-                              ? 'rgba(255, 255, 255, 0.22)'
-                              : 'rgba(255, 255, 255, 0.08)',
-                          }}
-                        >
-                          <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
-                            <Circle cx={6} cy={12} r={2.5} fill="#B4C0BA" />
-                            <Circle cx={12} cy={12} r={2.5} fill="#B4C0BA" />
-                            <Circle cx={18} cy={12} r={2.5} fill="#B4C0BA" />
-                          </Svg>
-                        </TouchableOpacity>
-
-                        {/* Zero Padding */}
-                        <TouchableOpacity
-                          onPress={() => {
-                            hapticFeedback.light();
-                            setPageLayout((prev) => ({
-                              ...prev,
-                              sketch: { ...(prev.sketch || sketchLayout), zeroPad: !sketchLayout.zeroPad },
-                            }));
-                          }}
-                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Zero padding"
-                          style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 4,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: sketchLayout.zeroPad
-                              ? 'rgba(255, 255, 255, 0.25)'
-                              : 'rgba(255, 255, 255, 0.08)',
-                          }}
-                        >
-                          <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
-                            <Rect
-                              x={3}
-                              y={3}
-                              width={18}
-                              height={18}
-                              rx={2}
-                              stroke={sketchLayout.zeroPad ? '#FFF' : '#B4C0BA'}
-                              strokeWidth={2}
-                            />
-                          </Svg>
-                        </TouchableOpacity>
-
-                        {/* Compact Mode */}
-                        <TouchableOpacity
-                          onPress={() => {
-                            hapticFeedback.light();
-                            setPageLayout((prev) => ({
-                              ...prev,
-                              sketch: { ...(prev.sketch || sketchLayout), compact: !sketchLayout.compact },
-                            }));
-                          }}
-                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Compact mode"
-                          style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 4,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: sketchLayout.compact
-                              ? 'rgba(255, 255, 255, 0.25)'
-                              : 'rgba(255, 255, 255, 0.08)',
-                          }}
-                        >
-                          <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
-                            <Path
-                              d="M4 14h6v6M20 10h-6V4"
-                              stroke={sketchLayout.compact ? '#FFF' : '#B4C0BA'}
-                              strokeWidth={2}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </Svg>
-                        </TouchableOpacity>
-
-                        {/* Remove / Close */}
-                        <TouchableOpacity
-                          onPress={() => {
-                            hapticFeedback.light();
-                            setIsSketchOpen(false);
-                          }}
-                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Remove sketch"
-                          style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 4,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: 'rgba(227, 141, 132, 0.2)',
-                          }}
-                        >
-                          <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
-                            <Path d="M18 6L6 18M6 6l12 12" stroke="#E38D84" strokeWidth={2.4} strokeLinecap="round" />
-                          </Svg>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                >
-                  <SketchPad
-                    strokes={sketchStrokes}
-                    onChange={setSketchStrokes}
-                    accentColor={activeAccent}
-                    zeroPad={sketchLayout.zeroPad}
-                    compact={sketchLayout.compact}
-                    hideHeader={true}
-                    hideFooter={sketchLayout.hideFooter}
-                    onClose={() => {
-                      setIsSketchOpen(false);
-                    }}
-                    isFreeform={true}
+                    onLongPressMedia={editBlock}
+                    onRemoveMedia={removeMedia}
+                    onLongPressMargin={openInsertAtCursor}
                   />
-                </DraggableResizable>
+
+                  {attaching ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
+                      <ActivityIndicator size="small" color={activeAccent} />
+                      <AppText variant="caption" tone="tertiary">
+                        Saving attachment…
+                      </AppText>
+                    </View>
+                  ) : null}
+
+                  {isEditing ? (
+                    <TactilePressable
+                      onPress={handleDelete}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete this page"
+                      style={{ marginTop: 24, paddingVertical: 4 }}
+                    >
+                      <AppText variant="label" tone="error">
+                        Delete this page
+                      </AppText>
+                    </TactilePressable>
+                  ) : null}
+                </>
               )}
-
-              {/* Draggable Attachments */}
-              {attachments.map((att, idx) => {
-                const attLayout = getAttachmentLayout(att.id, idx);
-                return (
-                  <DraggableResizable
-                    key={att.id}
-                    layout={attLayout}
-                    onChange={(next) => {
-                      setPageLayout((prev) => ({
-                        ...prev,
-                        attachments: { ...(prev.attachments || {}), [att.id]: next },
-                      }));
-                    }}
-                    containerWidth={containerSize.width}
-                    containerHeight={containerSize.height}
-                    isFreeform={true}
-                    isSelected={selectedElementId === att.id}
-                    onSelect={() => setSelectedElementId(att.id)}
-                    minWidth={120}
-                    minHeight={100}
-                    renderHeaderBar={(dragHandlers) => (
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          backgroundColor: isDark ? '#19241F' : '#E3ECE7',
-                          borderTopLeftRadius: 14,
-                          borderTopRightRadius: 14,
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          borderBottomWidth: 1,
-                          borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(44,79,69,0.15)',
-                        }}
-                      >
-                        <View
-                          {...dragHandlers}
-                          style={{
-                            flex: 1,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 4,
-                            paddingVertical: 2,
-                            ...(Platform.OS === 'web'
-                              ? ({
-                                  cursor: 'grab',
-                                  userSelect: 'none',
-                                  touchAction: 'none',
-                                } as any)
-                              : {}),
-                          }}
-                        >
-                          <View style={{ width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#838F89' }} />
-                          <View style={{ width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#838F89' }} />
-                          <View style={{ width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#838F89' }} />
-                          <AppText
-                            style={{
-                              fontSize: 9.5,
-                              fontWeight: '700',
-                              letterSpacing: 0.8,
-                              textTransform: 'uppercase',
-                              color: activeAccent,
-                              marginLeft: 4,
-                            }}
-                          >
-                            {att.type}
-                          </AppText>
-                        </View>
-
-                        <TouchableOpacity
-                          onPress={() => handleRemoveAttachment(att.id)}
-                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Remove attachment"
-                        >
-                          <Ionicons name="close" size={13} color={colors.text.secondary} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  >
-                    {renderAttachmentPreview(att)}
-                  </DraggableResizable>
-                );
-              })}
             </View>
-          )}
+          </ScrollView>
         </View>
 
-        {/* Tool row — Camera, Mic, Pen (Sketch), Paper & Mood, Emotion, Prompt + Word count */}
+        {/* Toolbar */}
         <View
           style={{
             flexDirection: 'row',
@@ -1340,138 +812,118 @@ export function JournalEntryScreen() {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
             <TactilePressable
-              onPress={() => setPhotoPickerVisible(true)}
-              disabled={attaching}
-              scaleDownTo={0.9}
-              hitSlop={6}
+              onPress={openInsertAtCursor}
               accessibilityRole="button"
-              accessibilityLabel="Add photo"
+              accessibilityLabel="Insert at cursor"
             >
-              <CameraSvgIcon color={colors.text.secondary} />
+              <Ionicons name="add-circle-outline" size={24} color={colors.text.secondary} />
             </TactilePressable>
-
             <TactilePressable
-              onPress={() => {
-                hapticFeedback.light();
-                setRecorderVisible(true);
-              }}
-              disabled={attaching}
-              scaleDownTo={0.9}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel="Record voice memo"
-            >
-              <MicSvgIcon color={colors.text.secondary} />
-            </TactilePressable>
-
-            {/* Pen Sketch Icon */}
-            <TactilePressable
-              onPress={() => {
-                hapticFeedback.light();
-                setIsSketchOpen((prev) => !prev);
-              }}
-              scaleDownTo={0.9}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel="Sketch on page"
-            >
-              <PenSvgIcon color={isSketchOpen ? activeAccent : colors.text.secondary} />
-            </TactilePressable>
-
-            {/* Paper style and colors button (Doop 26DIvsEVtC) */}
-            <TactilePressable
-              onPress={() => {
-                hapticFeedback.light();
-                setPaperModalVisible(true);
-              }}
-              scaleDownTo={0.9}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel="Paper style and colors"
-            >
-              <PaperSvgIcon color={paperModalVisible ? activeAccent : colors.text.secondary} />
-            </TactilePressable>
-
-            <TactilePressable
-              onPress={() => {
-                hapticFeedback.light();
-                setMoodPickerVisible(true);
-              }}
-              scaleDownTo={0.9}
-              hitSlop={6}
+              onPress={() => setMoodPickerVisible(true)}
               accessibilityRole="button"
               accessibilityLabel="Stamp mood"
             >
               <MoodSvgIcon color={colors.text.secondary} />
             </TactilePressable>
-
             <TactilePressable
-              onPress={handleInsertPrompt}
-              scaleDownTo={0.9}
-              hitSlop={6}
+              onPress={() => handleInsertKind('prompt')}
               accessibilityRole="button"
               accessibilityLabel="Insert prompt"
             >
               <PromptSvgIcon color={colors.text.secondary} />
             </TactilePressable>
           </View>
-
           <AppText style={{ fontSize: 12, color: colors.text.tertiary }}>
             {wordCount} {wordCount === 1 ? 'word' : 'words'}
           </AppText>
         </View>
 
-        {/* Bottom button — Freeform Done CTA or "Insert today's prompt" */}
-        {isFreeform ? (
-          <View style={{ paddingHorizontal: 24, paddingBottom: 22, paddingTop: 10 }}>
-            <TactilePressable
-              onPress={() => {
-                hapticFeedback.selection();
-                setIsFreeform(false);
-              }}
-              scaleDownTo={0.98}
-              accessibilityRole="button"
-              accessibilityLabel="Done rearranging"
+        {/* Footer with page type / paper style chip */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingBottom: 14,
+          }}
+        >
+          <TactilePressable
+            onPress={() => {
+              hapticFeedback.light();
+              setPaperModalVisible(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Page type: ${currentPaper.name}. Change paper and accent.`}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              paddingHorizontal: 12,
+              height: 32,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.border.subtle,
+            }}
+          >
+            <View
               style={{
-                height: 48,
-                borderRadius: 14,
+                width: 12,
+                height: 12,
+                borderRadius: 6,
+                backgroundColor: currentPaperColor,
+                borderWidth: 1,
+                borderColor: colors.border.default,
+              }}
+            />
+            <View
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 6,
                 backgroundColor: activeAccent,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 6,
               }}
-            >
-              <Ionicons name="checkmark" size={17} color="#FFFFFF" />
-              <AppText style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>
-                Done rearranging
-              </AppText>
-            </TactilePressable>
-          </View>
-        ) : (
-          <View style={{ paddingHorizontal: 24, paddingBottom: 22, paddingTop: 10 }}>
-            <TactilePressable
-              onPress={handleInsertPrompt}
-              scaleDownTo={0.98}
-              accessibilityRole="button"
-              accessibilityLabel="Insert today's prompt"
-              style={{
-                height: 52,
-                borderRadius: 16,
-                backgroundColor: colors.surface.selected,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <AppText style={{ fontSize: 14.5, fontWeight: '600', color: activeAccent }}>
-                Insert today's prompt
-              </AppText>
-            </TactilePressable>
-          </View>
-        )}
+            />
+            <AppText style={{ fontSize: 12.5, fontWeight: '600', color: colors.text.secondary }}>
+              {currentPaper.name}
+            </AppText>
+          </TactilePressable>
+        </View>
       </View>
 
-      {/* Paper Style & Texture & Accent Color Modal (Doop 26DIvsEVtC) */}
+      {/* Block Insert & Format Sheet */}
+      <BlockInsertSheet
+        visible={insertOpen}
+        onClose={() => {
+          setInsertOpen(false);
+          setEditingBlockId(null);
+        }}
+        size={insertSize}
+        breath={insertBreath}
+        onSizeChange={changeSize}
+        onBreathChange={changeBreath}
+        onPickKind={editingBlockId ? undefined : handleInsertKind}
+        sizeOptions={
+          editingBlock
+            ? allowedSizes(editingBlock.kind === 'media' ? editingBlock.mediaType : 'sketch')
+            : undefined
+        }
+        onDeleteBlock={
+          editingBlockId
+            ? () => {
+                const targetId = editingBlockId;
+                setInsertOpen(false);
+                setEditingBlockId(null);
+                removeMedia(targetId);
+              }
+            : undefined
+        }
+        accent={textAccent}
+        ink={ink}
+        surface={colors.surface.muted}
+        border={colors.border.subtle}
+      />
+
+      {/* Paper Style & Texture & Accent Color Modal */}
       <PaperStyleModal
         visible={paperModalVisible}
         onClose={() => setPaperModalVisible(false)}
@@ -1549,9 +1001,7 @@ export function JournalEntryScreen() {
                     {item.desc}
                   </AppText>
                 </View>
-                {isSelected ? (
-                  <Ionicons name="checkmark" size={18} color={activeAccent} />
-                ) : null}
+                {isSelected ? <Ionicons name="checkmark" size={18} color={activeAccent} /> : null}
               </TactilePressable>
             );
           })}
@@ -1599,87 +1049,11 @@ export function JournalEntryScreen() {
         </View>
       </Modal>
 
-      {/* Photo / Media Picker Modal */}
-      <Modal
-        visible={photoPickerVisible}
-        onClose={() => setPhotoPickerVisible(false)}
-        position="bottom"
-        title="Attach to page"
-      >
-        <View style={{ gap: 8, paddingVertical: 8 }}>
-          <TactilePressable
-            onPress={() => {
-              setPhotoPickerVisible(false);
-              handlePickCamera();
-            }}
-            scaleDownTo={0.98}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 12,
-              paddingVertical: 12,
-              paddingHorizontal: 10,
-              borderRadius: 12,
-              backgroundColor: colors.surface.muted,
-            }}
-          >
-            <CameraSvgIcon color={activeAccent} />
-            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
-              Take photo with camera
-            </AppText>
-          </TactilePressable>
-
-          <TactilePressable
-            onPress={() => {
-              setPhotoPickerVisible(false);
-              handlePickMedia();
-            }}
-            scaleDownTo={0.98}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 12,
-              paddingVertical: 12,
-              paddingHorizontal: 10,
-              borderRadius: 12,
-              backgroundColor: colors.surface.muted,
-            }}
-          >
-            <Ionicons name="images-outline" size={21} color={activeAccent} />
-            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
-              Choose photo or video
-            </AppText>
-          </TactilePressable>
-
-          <TactilePressable
-            onPress={() => {
-              setPhotoPickerVisible(false);
-              handlePickDocument();
-            }}
-            scaleDownTo={0.98}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 12,
-              paddingVertical: 12,
-              paddingHorizontal: 10,
-              borderRadius: 12,
-              backgroundColor: colors.surface.muted,
-            }}
-          >
-            <Ionicons name="attach-outline" size={21} color={activeAccent} />
-            <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
-              Attach file or document
-            </AppText>
-          </TactilePressable>
-        </View>
-      </Modal>
-
       <AudioRecorderModal
         visible={recorderVisible}
         onClose={() => setRecorderVisible(false)}
         onSaved={(attachment) => {
-          setAttachments((prev) => [...prev, attachment]);
+          placeAttachment(attachment);
         }}
       />
 

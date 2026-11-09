@@ -19,12 +19,15 @@ interface ThemeContextType {
   isDark: boolean;
   /** Whether wallpaper-derived Material You colors override the palette. */
   dynamicColors: boolean;
+  /** Whether high-contrast ink is enabled for body text and typography tokens. */
+  highContrast: boolean;
   colors: ReturnType<typeof resolveColors>;
   /** Semantic design-system tokens (colors etc.) derived from the raw palette. */
   tokens: AppTheme;
   setTheme: (theme: ThemeMode) => Promise<void>;
   setAccent: (accent: AccentColor) => Promise<void>;
   setDynamicColors: (enabled: boolean) => Promise<void>;
+  setHighContrast: (enabled: boolean) => Promise<void>;
   toggleTheme: () => Promise<void>;
   fontRevision?: number;
 }
@@ -34,6 +37,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = 'app_theme';
 const ACCENT_STORAGE_KEY = 'app_accent';
 const DYNAMIC_COLORS_STORAGE_KEY = 'app_dynamic_colors';
+const HIGH_CONTRAST_STORAGE_KEY = 'app_high_contrast';
 const DEFAULT_ACCENT: AccentColor = 'sage';
 
 /** Android 12+ (API 31+) supports Material You dynamic colors.
@@ -48,6 +52,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [accent, setAccentState] = useState<AccentColor>(DEFAULT_ACCENT);
   /** Whether wallpaper-derived colors override the accent. Android 12+ only. */
   const [dynamicColors, setDynamicColorsState] = useState(supportsDynamicColors());
+  const [highContrast, setHighContrastState] = useState(false);
   /** Wallpaper-derived Material 3 theme; on unsupported devices the library
    *  returns a fallback built from fallbackSourceColor. */
   const { theme: m3Theme } = useMaterial3Theme({ fallbackSourceColor: '#2C4F45' });
@@ -70,14 +75,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const [savedTheme, savedAccent, savedDynamic] = await Promise.all([
+        const [savedTheme, savedAccent, savedDynamic, savedHighContrast] = await Promise.all([
           Storage.getString(THEME_STORAGE_KEY),
           Storage.getString(ACCENT_STORAGE_KEY),
           Storage.getString(DYNAMIC_COLORS_STORAGE_KEY),
+          Storage.getString(HIGH_CONTRAST_STORAGE_KEY),
         ]);
         if (savedTheme) setThemeState(savedTheme as ThemeMode);
         if (savedAccent) setAccentState(savedAccent as AccentColor);
         if (typeof savedDynamic === 'string') setDynamicColorsState(savedDynamic === 'true');
+        if (typeof savedHighContrast === 'string') setHighContrastState(savedHighContrast === 'true');
 
         if (!savedTheme || !savedAccent) {
           const dbSettings = await settingsRepository.getSettings();
@@ -89,6 +96,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           }
           if (typeof savedDynamic !== 'string' && dbSettings?.dynamicColors === false) {
             setDynamicColorsState(false);
+          }
+          if (typeof savedHighContrast !== 'string' && (dbSettings as any)?.highContrast) {
+            setHighContrastState(true);
           }
         }
       } catch (error) {
@@ -128,7 +138,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     return resolved;
   }, [resolvedTheme, accent, dynamicTick, dynamicColors, m3Theme]);
-  const tokens = useMemo(() => createAppTheme(colors), [colors]);
+  const tokens = useMemo(() => createAppTheme(colors, highContrast), [colors, highContrast]);
   const themeVars = useMemo(() => {
     try {
       return vars(toCssVars(colors));
@@ -178,6 +188,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setHighContrast = async (enabled: boolean) => {
+    setHighContrastState(enabled);
+    await Storage.setString(HIGH_CONTRAST_STORAGE_KEY, enabled ? 'true' : 'false');
+    try {
+      await settingsRepository.updateSettings({ highContrast: enabled } as any);
+    } catch (e) {
+      // non-blocking
+    }
+  };
+
   const toggleTheme = async () => {
     const newTheme: ThemeMode = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
     await setTheme(newTheme);
@@ -187,7 +207,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider
-      value={{ theme, accent, resolvedTheme, isDark, dynamicColors, colors, tokens, setTheme, setAccent, setDynamicColors, toggleTheme, fontRevision }}
+      value={{
+        theme,
+        accent,
+        resolvedTheme,
+        isDark,
+        dynamicColors,
+        highContrast,
+        colors,
+        tokens,
+        setTheme,
+        setAccent,
+        setDynamicColors,
+        setHighContrast,
+        toggleTheme,
+        fontRevision,
+      }}
     >
       {/* This View carries the CSS variables for the whole native tree. */}
       {/* NOTE: flex:1 is set as a plain style (not only className) so a
