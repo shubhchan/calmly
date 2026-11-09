@@ -11,6 +11,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { ThemeProvider, useThemeColors } from './src/theme/ThemeContext';
 import { AppIcon } from './src/components/AppIcon';
 import { RootNavigator } from './src/routing/navigation';
+import { linking } from './src/routing/linking';
 import { useAppLock } from './src/services/appLock';
 import { AppLockScreen } from './src/features/settings/AppLockScreen';
 import {
@@ -335,6 +336,7 @@ function AppShell({
         <NavigationContainer
           key={`nav-${navKey}`}
           theme={navTheme}
+          linking={linking}
           onReady={handleNavReady}
           onStateChange={handleStateChange}
         >
