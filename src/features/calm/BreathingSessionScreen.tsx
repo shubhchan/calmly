@@ -140,6 +140,8 @@ export function BreathingSessionScreen() {
   const cycleSV = useSharedValue(0);
   const finishedSV = useSharedValue(0);
   const runningSV = useSharedValue(0);
+  const stepTrigger = useSharedValue(0);
+  const remainingSV = useSharedValue(1);
 
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [cycle, setCycle] = useState(0);
@@ -150,9 +152,19 @@ export function BreathingSessionScreen() {
   const lastAnnouncedPhaseRef = useRef(0);
   const isCompleteRef = useRef(false);
 
-  const runPhase = useCallback<(phaseIdx: number, remaining: number) => void>(
-    (index: number, remaining: number) => {
+  // Reactive UI-thread phase driver: triggered by stepTrigger to avoid recursive worklet TDZ
+  useAnimatedReaction(
+    () => stepTrigger.value,
+    (trigger, previous) => {
       'worklet';
+      if (trigger === previous || trigger === 0 || runningSV.value !== 1) {
+        return;
+      }
+
+      const index = phaseSV.value;
+      const remaining = remainingSV.value;
+      remainingSV.value = 1;
+
       const durSec = durations[index] ?? 4;
       const durMs = Math.max(160, Math.round(durSec * 1000 * Math.max(0.02, remaining)));
       const target = targets[index] ?? 1;
@@ -179,7 +191,7 @@ export function BreathingSessionScreen() {
 
         if (nextIdx === 0) cycleSV.value = nextCycle;
         phaseSV.value = nextIdx;
-        runPhase(nextIdx, 1);
+        stepTrigger.value = stepTrigger.value + 1;
       });
     },
     [durations, targets, phaseCount, totalCycles, reducedMotion]
@@ -284,11 +296,12 @@ export function BreathingSessionScreen() {
     }
 
     const remaining = 1 - Math.min(Math.max(clock.value, 0), 1);
+    remainingSV.value = remaining <= 0.02 ? 1 : remaining;
     runningSV.value = 1;
     setIsRunning(true);
     hapticFeedback.medium();
-    runPhase(phaseSV.value, remaining <= 0.02 ? 1 : remaining);
-  }, [isComplete, isRunning, navigation, runPhase, clock, breathLevel, runningSV, phaseSV]);
+    stepTrigger.value = stepTrigger.value + 1;
+  }, [isComplete, isRunning, navigation, clock, breathLevel, runningSV, remainingSV, stepTrigger]);
 
   // --- UI-thread visual mappings ----------------------------------------------
   const arcAnimatedProps = useAnimatedProps(() => {
