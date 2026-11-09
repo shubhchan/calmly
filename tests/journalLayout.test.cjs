@@ -74,3 +74,4 @@ test('serializePageLayout roundtrips with parsePageLayout', () => {
   const parsed = parsePageLayout(serialized);
   assert.deepEqual(parsed, sample);
 });
+

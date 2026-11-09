@@ -34,6 +34,7 @@ import { AudioRecorderModal } from '../../components/journal/AudioRecorderModal'
 import { SketchPad } from '../../components/journal/SketchPad';
 import { DraggableResizable } from '../../components/journal/DraggableResizable';
 import { PaperTexture } from '../../components/journal/PaperTexture';
+import { PaperStyleModal } from '../../components/journal/PaperStyleModal';
 import { paperById, paperColor } from './papers';
 import { SketchStroke, parseSketch, serializeSketch } from './sketch';
 import { PageLayout, ElementLayout, parsePageLayout, serializePageLayout } from '../../types/journalLayout';
@@ -78,7 +79,7 @@ const MOOD_WORDS: { label: string; group: 'accent' | 'gold' | 'neutral' }[] = [
   { label: 'Hopeful', group: 'gold' },
 ];
 
-/** Exact SVG icons from Doop "New page — A · Blank page" (n6PmK9J7dm) */
+/** SVG Icons from Doop */
 function CameraSvgIcon({ color = '#5C6B65' }: { color?: string }) {
   return (
     <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
@@ -94,6 +95,30 @@ function MicSvgIcon({ color = '#5C6B65' }: { color?: string }) {
     <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
       <Rect x="9" y="3" width="6" height="11" rx="3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
       <Path d="M5 11a7 7 0 0014 0M12 18v3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function PenSvgIcon({ color = '#5C6B65' }: { color?: string }) {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4 20l4-1 10-10-3-3L5 16l-1 4z"
+        stroke={color}
+        strokeWidth={1.7}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M14 6l3 3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function PaperSvgIcon({ color = '#5C6B65' }: { color?: string }) {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Rect x="4" y="3" width="16" height="18" rx="2.5" stroke={color} strokeWidth={1.7} />
+      <Path d="M8 8h8M8 12h8M8 16h5" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -117,34 +142,9 @@ function PromptSvgIcon({ color = '#5C6B65' }: { color?: string }) {
   );
 }
 
-function PenSvgIcon({ color = '#5C6B65' }: { color?: string }) {
-  return (
-    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M4 20l4-1 10-10-3-3L5 16l-1 4z"
-        stroke={color}
-        strokeWidth={1.7}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path d="M14 6l3 3" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
 /**
- * Journal entry screen — 1:1 implementation of Doop "New page — A · Blank page"
- * and "Page — Draggable sketch & attachments" (mobile 09dIMTqlOD & desktop 8717GYBYYz).
- *
- * Exact tokens:
- * - Background: #F4F5F1
- * - Header: Cancel (14px #5C6B65) | Your page / New page (14.5px 600 #1A2420) | Save (14px 600 #2C4F45)
- * - Date: Eyebrow (11px 600 uppercase #838F89) | Chip: Category
- * - Title: Newsreader serif (24px #1A2420) + "Move / resize" mode toggle button
- * - Page: Paper texture & ruled lines (32px pitch)
- * - Freeform layout mode: Draggable and resizable sketch pad & attachments anywhere on the sheet
- * - Tool row: Camera, Mic, Pen (Sketch), Mood, Prompt | Word count
- * - Bottom action: "Insert today's prompt" or "Done rearranging"
+ * Journal entry screen — 1:1 implementation of Doop "New page — A · Blank page",
+ * "Page style — Paper & mood (sheet)" (26DIvsEVtC), and "Page — Draggable sketch & attachments" (09dIMTqlOD).
  */
 export function JournalEntryScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'JournalEntry'>>();
@@ -180,16 +180,20 @@ export function JournalEntryScreen() {
   const [saving, setSaving] = useState(false);
   const [attaching, setAttaching] = useState(false);
 
-  // Freeform layout, sketch pad, and paper style states
+  // Paper Style, Texture, and Accent Color states (Doop mock 26DIvsEVtC)
   const [paperId, setPaperId] = useState<string>('dawn');
+  const [accentColor, setAccentColor] = useState<string>(paperById('dawn').accent);
+  const [paperModalVisible, setPaperModalVisible] = useState<boolean>(false);
+
+  // Freeform layout and sketch pad states (Doop mock 09dIMTqlOD)
   const [sketchStrokes, setSketchStrokes] = useState<SketchStroke[]>([]);
   const [isSketchOpen, setIsSketchOpen] = useState<boolean>(false);
   const [pageLayout, setPageLayout] = useState<PageLayout>({ isFreeform: false, attachments: {} });
   const [isFreeform, setIsFreeform] = useState<boolean>(false);
   const [selectedElementId, setSelectedElementId] = useState<'sketch' | string | null>(null);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({
-    width: 342,
-    height: 520,
+    width: 360,
+    height: 1200,
   });
 
   const [recorderVisible, setRecorderVisible] = useState(false);
@@ -198,6 +202,7 @@ export function JournalEntryScreen() {
   const { colors, isDark } = useAppTheme();
   const currentPaper = useMemo(() => paperById(paperId), [paperId]);
   const currentPaperColor = useMemo(() => paperColor(currentPaper, isDark), [currentPaper, isDark]);
+  const activeAccent = accentColor || currentPaper.accent;
 
   useEffect(() => {
     if (!id) return;
@@ -221,6 +226,8 @@ export function JournalEntryScreen() {
           }
           if (entry.pageStyle) {
             setPaperId(entry.pageStyle);
+            const p = paperById(entry.pageStyle);
+            setAccentColor(p.accent);
           }
           if (entry.drawing) {
             const parsed = parseSketch(entry.drawing);
@@ -467,8 +474,8 @@ export function JournalEntryScreen() {
   const contentLines = content
     ? content.split('\n').reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 32)), 0)
     : 0;
-  const lineCount = Math.max(14, contentLines + 6);
-  const pageHeight = lineCount * 32;
+  const lineCount = Math.max(16, contentLines + 8);
+  const pageHeight = Math.max(700, lineCount * 32);
 
   const imageAttachments = attachments.filter((a) => a.type === 'image');
   const audioAttachments = attachments.filter((a) => a.type === 'audio');
@@ -480,13 +487,13 @@ export function JournalEntryScreen() {
     if (pageLayout.attachments && pageLayout.attachments[attId]) {
       return pageLayout.attachments[attId];
     }
-    const defaultW = Math.min(144, Math.floor((containerSize.width - 36) / 2));
-    const defaultH = 152;
+    const defaultW = Math.min(150, Math.floor((containerSize.width - 36) / 2));
+    const defaultH = 158;
     const col = index % 2;
     const row = Math.floor(index / 2);
     return {
-      x: 12 + col * (defaultW + 10),
-      y: 12 + row * (defaultH + 12),
+      x: 12 + col * (defaultW + 12),
+      y: 14 + row * (defaultH + 14),
       width: defaultW,
       height: defaultH,
     };
@@ -497,11 +504,11 @@ export function JournalEntryScreen() {
     if (pageLayout.sketch) {
       return pageLayout.sketch;
     }
-    const defaultW = Math.min(224, containerSize.width - 24);
-    const defaultH = 206;
+    const defaultW = Math.min(232, containerSize.width - 24);
+    const defaultH = 210;
     return {
       x: Math.max(12, containerSize.width - defaultW - 12),
-      y: Math.max(12, containerSize.height - defaultH - 16),
+      y: Math.max(12, 180),
       width: defaultW,
       height: defaultH,
       hideHeader: false,
@@ -509,7 +516,7 @@ export function JournalEntryScreen() {
       compact: false,
       zeroPad: false,
     };
-  }, [pageLayout.sketch, containerSize.width, containerSize.height]);
+  }, [pageLayout.sketch, containerSize.width]);
 
   const renderAttachmentPreview = (att: NoteAttachment) => {
     if (att.type === 'image') {
@@ -556,7 +563,7 @@ export function JournalEntryScreen() {
             gap: 4,
           }}
         >
-          <Ionicons name="mic" size={24} color={colors.primary.default} />
+          <Ionicons name="mic" size={24} color={activeAccent} />
           <AppText numberOfLines={1} style={{ fontSize: 10, color: colors.text.primary, fontWeight: '600' }}>
             {att.name || 'Voice Memo'}
           </AppText>
@@ -581,7 +588,7 @@ export function JournalEntryScreen() {
             gap: 4,
           }}
         >
-          <Ionicons name="videocam" size={24} color={colors.primary.default} />
+          <Ionicons name="videocam" size={24} color={activeAccent} />
           <AppText numberOfLines={1} style={{ fontSize: 10, color: colors.text.primary, fontWeight: '600' }}>
             {att.name || 'Video Clip'}
           </AppText>
@@ -600,7 +607,7 @@ export function JournalEntryScreen() {
           gap: 4,
         }}
       >
-        <Ionicons name="document-text" size={24} color={colors.primary.default} />
+        <Ionicons name="document-text" size={24} color={activeAccent} />
         <AppText numberOfLines={1} style={{ fontSize: 10, color: colors.text.primary, fontWeight: '600' }}>
           {att.name || 'Document'}
         </AppText>
@@ -612,7 +619,7 @@ export function JournalEntryScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <View style={{ flex: 1, paddingTop: topPad }}>
-        {/* Doop 1:1 Header: Cancel | New page | Save */}
+        {/* Doop Header: Cancel | New page / Your page | Save */}
         <View
           style={{
             flexDirection: 'row',
@@ -650,7 +657,7 @@ export function JournalEntryScreen() {
             <AppText
               style={{
                 fontSize: 14,
-                color: saving ? colors.text.tertiary : colors.primary.default,
+                color: saving ? colors.text.tertiary : activeAccent,
                 fontWeight: '600',
               }}
             >
@@ -659,10 +666,10 @@ export function JournalEntryScreen() {
           </TactilePressable>
         </View>
 
-        {/* Date & Category row */}
+        {/* Date, Category, and Paper & Mood Row (Doop 26DIvsEVtC) */}
         <View
           style={{
-            marginTop: 10,
+            marginTop: 8,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -681,37 +688,86 @@ export function JournalEntryScreen() {
             {format(new Date(entryCreatedAt), 'EEEE, d MMMM')}
           </AppText>
 
-          <TactilePressable
-            onPress={() => setTypePickerVisible(true)}
-            scaleDownTo={0.94}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel={`Category: ${typeLabel}. Tap to change`}
-            style={{
-              height: 28,
-              paddingHorizontal: 11,
-              borderRadius: 999,
-              backgroundColor: isGratitude ? (isDark ? 'rgba(176,138,79,0.2)' : '#F4EDE2') : colors.surface.selected,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <AppText
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {/* Category selection chip */}
+            <TactilePressable
+              onPress={() => setTypePickerVisible(true)}
+              scaleDownTo={0.94}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`Category: ${typeLabel}. Tap to change`}
               style={{
-                fontSize: 12.5,
-                fontWeight: '600',
-                color: isGratitude ? (isDark ? '#D2B078' : '#B08A4F') : colors.primary.default,
+                height: 28,
+                paddingHorizontal: 10,
+                borderRadius: 999,
+                backgroundColor: isGratitude
+                  ? isDark
+                    ? 'rgba(176,138,79,0.2)'
+                    : '#F4EDE2'
+                  : colors.surface.selected,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
               }}
             >
-              {typeLabel}
-            </AppText>
-            <Ionicons
-              name="chevron-down"
-              size={11}
-              color={isGratitude ? (isDark ? '#D2B078' : '#B08A4F') : colors.primary.default}
-            />
-          </TactilePressable>
+              <AppText
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  color: isGratitude ? (isDark ? '#D2B078' : '#B08A4F') : activeAccent,
+                }}
+              >
+                {typeLabel}
+              </AppText>
+              <Ionicons
+                name="chevron-down"
+                size={11}
+                color={isGratitude ? (isDark ? '#D2B078' : '#B08A4F') : activeAccent}
+              />
+            </TactilePressable>
+
+            {/* Paper & Mood Chip (opens Doop mock 26DIvsEVtC sheet) */}
+            <TactilePressable
+              onPress={() => {
+                hapticFeedback.light();
+                setPaperModalVisible(true);
+              }}
+              scaleDownTo={0.94}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`Paper style: ${currentPaper.name}. Tap to change style and accent color`}
+              style={{
+                height: 28,
+                paddingHorizontal: 10,
+                borderRadius: 999,
+                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F0F2EC',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                borderWidth: 1,
+                borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(26,36,32,0.08)',
+              }}
+            >
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: activeAccent,
+                }}
+              />
+              <AppText
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  color: colors.text.primary,
+                }}
+              >
+                {currentPaper.name} paper
+              </AppText>
+              <Ionicons name="chevron-down" size={11} color={colors.text.tertiary} />
+            </TactilePressable>
+          </View>
         </View>
 
         {/* Title — Newsreader display serif + Move/resize mode toggle pill */}
@@ -743,7 +799,7 @@ export function JournalEntryScreen() {
             }}
           />
 
-          {/* Mode Pill: "Move / resize" */}
+          {/* Mode Pill: "Move / resize" (Doop mock 09dIMTqlOD) */}
           <TactilePressable
             onPress={() => {
               hapticFeedback.selection();
@@ -752,23 +808,23 @@ export function JournalEntryScreen() {
             scaleDownTo={0.94}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityLabel={isFreeform ? 'Exit freeform mode' : 'Enter freeform mode'}
+            accessibilityLabel={isFreeform ? 'Exit rearrange mode' : 'Enter move and resize mode'}
             style={{
-              height: 26,
-              paddingHorizontal: 9,
-              borderRadius: 7,
-              backgroundColor: isFreeform ? colors.primary.default : colors.surface.selected,
+              height: 28,
+              paddingHorizontal: 10,
+              borderRadius: 8,
+              backgroundColor: isFreeform ? activeAccent : isDark ? '#26332C' : '#E3ECE7',
               flexDirection: 'row',
               alignItems: 'center',
               gap: 5,
               borderWidth: 1,
-              borderColor: isFreeform ? colors.primary.default : 'rgba(44,79,69,0.22)',
+              borderColor: isFreeform ? activeAccent : 'rgba(44,79,69,0.22)',
             }}
           >
-            <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+            <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
-                stroke={isFreeform ? colors.primary.foreground : colors.primary.default}
+                stroke={isFreeform ? '#FFFFFF' : activeAccent}
                 strokeWidth={2.4}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -776,9 +832,9 @@ export function JournalEntryScreen() {
             </Svg>
             <AppText
               style={{
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: '600',
-                color: isFreeform ? colors.primary.foreground : colors.primary.default,
+                color: isFreeform ? '#FFFFFF' : colors.text.primary,
               }}
             >
               {isFreeform ? 'Rearranging' : 'Move / resize'}
@@ -786,12 +842,12 @@ export function JournalEntryScreen() {
           </TactilePressable>
         </View>
 
-        {/* Paper Sheet Container */}
+        {/* Paper Sheet Container (Doop mock 26DIvsEVtC & 09dIMTqlOD) */}
         <View
           onLayout={(e) => {
-            const { width, height } = e.nativeEvent.layout;
-            if (width > 0 && height > 0) {
-              setContainerSize({ width, height });
+            const { width } = e.nativeEvent.layout;
+            if (width > 0) {
+              setContainerSize({ width, height: Math.max(pageHeight, 1000) });
             }
           }}
           style={{
@@ -820,13 +876,12 @@ export function JournalEntryScreen() {
               minHeight: pageHeight,
               paddingHorizontal: 18,
               paddingVertical: 14,
-              paddingBottom: 24,
+              paddingBottom: 28,
             }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            scrollEnabled={!isFreeform}
           >
-            {/* Repeating ruled lines every 32px */}
+            {/* Repeating ruled lines */}
             <View style={{ position: 'absolute', top: 0, left: 18, right: 18, bottom: 0 }} pointerEvents="none">
               {Array.from({ length: lineCount }).map((_, index) => (
                 <View
@@ -837,7 +892,11 @@ export function JournalEntryScreen() {
                     right: 0,
                     top: (index + 1) * 32 - 1,
                     height: 1,
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(44,79,69,0.06)',
+                    backgroundColor: isDark
+                      ? 'rgba(255,255,255,0.04)'
+                      : currentPaper.id === 'dawn'
+                      ? 'rgba(176,138,79,0.12)'
+                      : 'rgba(44,79,69,0.06)',
                   }}
                 />
               ))}
@@ -871,6 +930,7 @@ export function JournalEntryScreen() {
                     <SketchPad
                       strokes={sketchStrokes}
                       onChange={setSketchStrokes}
+                      accentColor={activeAccent}
                       onClose={() => setIsSketchOpen(false)}
                       height={200}
                       isFreeform={false}
@@ -937,7 +997,7 @@ export function JournalEntryScreen() {
 
                 {attaching ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
-                    <ActivityIndicator size="small" color={colors.primary.default} />
+                    <ActivityIndicator size="small" color={activeAccent} />
                     <AppText variant="caption" tone="tertiary">
                       Saving attachment…
                     </AppText>
@@ -961,7 +1021,7 @@ export function JournalEntryScreen() {
             )}
           </ScrollView>
 
-          {/* Freeform Draggable Overlays */}
+          {/* Freeform Draggable & Resizable Overlays (Doop mock 09dIMTqlOD) */}
           {isFreeform && (
             <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
               {/* Draggable Sketch Pad */}
@@ -976,40 +1036,199 @@ export function JournalEntryScreen() {
                   isFreeform={true}
                   isSelected={selectedElementId === 'sketch'}
                   onSelect={() => setSelectedElementId('sketch')}
-                  minWidth={170}
-                  minHeight={140}
+                  minWidth={160}
+                  minHeight={130}
+                  renderHeaderBar={(dragHandlers) => (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: isDark ? '#141C18' : '#1A2420',
+                        borderTopLeftRadius: 14,
+                        borderTopRightRadius: 14,
+                        paddingHorizontal: 8,
+                        paddingVertical: 5,
+                        borderBottomWidth: 1,
+                        borderBottomColor: 'rgba(255,255,255,0.08)',
+                      }}
+                    >
+                      {/* Drag Handle with Grip and Move Icon */}
+                      <View
+                        {...dragHandlers}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingRight: 8,
+                          paddingVertical: 2,
+                          ...(Platform.OS === 'web'
+                            ? ({
+                                cursor: 'grab',
+                                userSelect: 'none',
+                                touchAction: 'none',
+                              } as any)
+                            : {}),
+                        }}
+                      >
+                        <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                          <Path
+                            d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
+                            stroke="#D2B078"
+                            strokeWidth={2.4}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                        <AppText
+                          style={{
+                            fontSize: 10,
+                            fontWeight: '700',
+                            letterSpacing: 0.6,
+                            textTransform: 'uppercase',
+                            color: '#D2B078',
+                          }}
+                        >
+                          Drag
+                        </AppText>
+                      </View>
+
+                      {/* Controls matching Doop 09dIMTqlOD: Footer toggle, ZeroPad toggle, Compact toggle, Close */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {/* Toggle Footer */}
+                        <TouchableOpacity
+                          onPress={() => {
+                            hapticFeedback.light();
+                            setPageLayout((prev) => ({
+                              ...prev,
+                              sketch: { ...(prev.sketch || sketchLayout), hideFooter: !sketchLayout.hideFooter },
+                            }));
+                          }}
+                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Toggle footer"
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 4,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: !sketchLayout.hideFooter
+                              ? 'rgba(255, 255, 255, 0.22)'
+                              : 'rgba(255, 255, 255, 0.08)',
+                          }}
+                        >
+                          <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+                            <Circle cx={6} cy={12} r={2.5} fill="#B4C0BA" />
+                            <Circle cx={12} cy={12} r={2.5} fill="#B4C0BA" />
+                            <Circle cx={18} cy={12} r={2.5} fill="#B4C0BA" />
+                          </Svg>
+                        </TouchableOpacity>
+
+                        {/* Zero Padding */}
+                        <TouchableOpacity
+                          onPress={() => {
+                            hapticFeedback.light();
+                            setPageLayout((prev) => ({
+                              ...prev,
+                              sketch: { ...(prev.sketch || sketchLayout), zeroPad: !sketchLayout.zeroPad },
+                            }));
+                          }}
+                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Zero padding"
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 4,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: sketchLayout.zeroPad
+                              ? 'rgba(255, 255, 255, 0.25)'
+                              : 'rgba(255, 255, 255, 0.08)',
+                          }}
+                        >
+                          <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+                            <Rect
+                              x={3}
+                              y={3}
+                              width={18}
+                              height={18}
+                              rx={2}
+                              stroke={sketchLayout.zeroPad ? '#FFF' : '#B4C0BA'}
+                              strokeWidth={2}
+                            />
+                          </Svg>
+                        </TouchableOpacity>
+
+                        {/* Compact Mode */}
+                        <TouchableOpacity
+                          onPress={() => {
+                            hapticFeedback.light();
+                            setPageLayout((prev) => ({
+                              ...prev,
+                              sketch: { ...(prev.sketch || sketchLayout), compact: !sketchLayout.compact },
+                            }));
+                          }}
+                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Compact mode"
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 4,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: sketchLayout.compact
+                              ? 'rgba(255, 255, 255, 0.25)'
+                              : 'rgba(255, 255, 255, 0.08)',
+                          }}
+                        >
+                          <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+                            <Path
+                              d="M4 14h6v6M20 10h-6V4"
+                              stroke={sketchLayout.compact ? '#FFF' : '#B4C0BA'}
+                              strokeWidth={2}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </Svg>
+                        </TouchableOpacity>
+
+                        {/* Remove / Close */}
+                        <TouchableOpacity
+                          onPress={() => {
+                            hapticFeedback.light();
+                            setIsSketchOpen(false);
+                          }}
+                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Remove sketch"
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 4,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: 'rgba(227, 141, 132, 0.2)',
+                          }}
+                        >
+                          <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+                            <Path d="M18 6L6 18M6 6l12 12" stroke="#E38D84" strokeWidth={2.4} strokeLinecap="round" />
+                          </Svg>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
                 >
                   <SketchPad
                     strokes={sketchStrokes}
                     onChange={setSketchStrokes}
+                    accentColor={activeAccent}
                     zeroPad={sketchLayout.zeroPad}
                     compact={sketchLayout.compact}
-                    hideHeader={sketchLayout.hideHeader}
+                    hideHeader={true}
                     hideFooter={sketchLayout.hideFooter}
-                    onToggleHideHeader={() => {
-                      setPageLayout((prev) => ({
-                        ...prev,
-                        sketch: { ...(prev.sketch || sketchLayout), hideHeader: !sketchLayout.hideHeader },
-                      }));
-                    }}
-                    onToggleHideFooter={() => {
-                      setPageLayout((prev) => ({
-                        ...prev,
-                        sketch: { ...(prev.sketch || sketchLayout), hideFooter: !sketchLayout.hideFooter },
-                      }));
-                    }}
-                    onToggleZeroPad={() => {
-                      setPageLayout((prev) => ({
-                        ...prev,
-                        sketch: { ...(prev.sketch || sketchLayout), zeroPad: !sketchLayout.zeroPad },
-                      }));
-                    }}
-                    onToggleCompact={() => {
-                      setPageLayout((prev) => ({
-                        ...prev,
-                        sketch: { ...(prev.sketch || sketchLayout), compact: !sketchLayout.compact },
-                      }));
-                    }}
                     onClose={() => {
                       setIsSketchOpen(false);
                     }}
@@ -1040,38 +1259,56 @@ export function JournalEntryScreen() {
                     minHeight={100}
                     renderHeaderBar={(dragHandlers) => (
                       <View
-                        {...dragHandlers}
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          paddingHorizontal: 7,
-                          paddingVertical: 3.5,
-                          backgroundColor: isDark ? '#1F2B26' : '#E3ECE7',
+                          backgroundColor: isDark ? '#19241F' : '#E3ECE7',
+                          borderTopLeftRadius: 14,
+                          borderTopRightRadius: 14,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
                           borderBottomWidth: 1,
                           borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(44,79,69,0.15)',
-                          ...(Platform.OS === 'web' ? ({ cursor: 'grab' } as any) : {}),
                         }}
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3.5 }}>
-                          <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#838F89' }} />
-                          <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#838F89' }} />
-                          <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#838F89' }} />
-                        </View>
-                        <AppText
+                        <View
+                          {...dragHandlers}
                           style={{
-                            fontSize: 9.5,
-                            fontWeight: '700',
-                            letterSpacing: 0.8,
-                            textTransform: 'uppercase',
-                            color: colors.primary.default,
+                            flex: 1,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                            paddingVertical: 2,
+                            ...(Platform.OS === 'web'
+                              ? ({
+                                  cursor: 'grab',
+                                  userSelect: 'none',
+                                  touchAction: 'none',
+                                } as any)
+                              : {}),
                           }}
                         >
-                          {att.type}
-                        </AppText>
+                          <View style={{ width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#838F89' }} />
+                          <View style={{ width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#838F89' }} />
+                          <View style={{ width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#838F89' }} />
+                          <AppText
+                            style={{
+                              fontSize: 9.5,
+                              fontWeight: '700',
+                              letterSpacing: 0.8,
+                              textTransform: 'uppercase',
+                              color: activeAccent,
+                              marginLeft: 4,
+                            }}
+                          >
+                            {att.type}
+                          </AppText>
+                        </View>
+
                         <TouchableOpacity
                           onPress={() => handleRemoveAttachment(att.id)}
-                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                           accessibilityRole="button"
                           accessibilityLabel="Remove attachment"
                         >
@@ -1088,14 +1325,14 @@ export function JournalEntryScreen() {
           )}
         </View>
 
-        {/* Tool row — Doop Camera, Mic, Pen (Sketch), Mood, Prompt + Word count */}
+        {/* Tool row — Camera, Mic, Pen (Sketch), Paper & Mood, Emotion, Prompt + Word count */}
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingHorizontal: 24,
-            paddingTop: 14,
+            paddingTop: 12,
             paddingBottom: 6,
             borderTopWidth: 1,
             borderTopColor: colors.border.subtle,
@@ -1138,7 +1375,21 @@ export function JournalEntryScreen() {
               accessibilityRole="button"
               accessibilityLabel="Sketch on page"
             >
-              <PenSvgIcon color={isSketchOpen ? colors.primary.default : colors.text.secondary} />
+              <PenSvgIcon color={isSketchOpen ? activeAccent : colors.text.secondary} />
+            </TactilePressable>
+
+            {/* Paper style and colors button (Doop 26DIvsEVtC) */}
+            <TactilePressable
+              onPress={() => {
+                hapticFeedback.light();
+                setPaperModalVisible(true);
+              }}
+              scaleDownTo={0.9}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Paper style and colors"
+            >
+              <PaperSvgIcon color={paperModalVisible ? activeAccent : colors.text.secondary} />
             </TactilePressable>
 
             <TactilePressable
@@ -1184,15 +1435,15 @@ export function JournalEntryScreen() {
               style={{
                 height: 48,
                 borderRadius: 14,
-                backgroundColor: colors.primary.default,
+                backgroundColor: activeAccent,
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexDirection: 'row',
                 gap: 6,
               }}
             >
-              <Ionicons name="checkmark" size={17} color={colors.primary.foreground} />
-              <AppText style={{ fontSize: 14, fontWeight: '600', color: colors.primary.foreground }}>
+              <Ionicons name="checkmark" size={17} color="#FFFFFF" />
+              <AppText style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>
                 Done rearranging
               </AppText>
             </TactilePressable>
@@ -1212,13 +1463,29 @@ export function JournalEntryScreen() {
                 justifyContent: 'center',
               }}
             >
-              <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.primary.default }}>
+              <AppText style={{ fontSize: 14.5, fontWeight: '600', color: activeAccent }}>
                 Insert today's prompt
               </AppText>
             </TactilePressable>
           </View>
         )}
       </View>
+
+      {/* Paper Style & Texture & Accent Color Modal (Doop 26DIvsEVtC) */}
+      <PaperStyleModal
+        visible={paperModalVisible}
+        onClose={() => setPaperModalVisible(false)}
+        selectedPaperId={paperId}
+        onSelectPaper={(id) => {
+          setPaperId(id);
+          const p = paperById(id);
+          setAccentColor(p.accent);
+        }}
+        accentColor={activeAccent}
+        onSelectAccentColor={(color) => {
+          setAccentColor(color);
+        }}
+      />
 
       {/* Category Selection Modal */}
       <Modal
@@ -1259,20 +1526,20 @@ export function JournalEntryScreen() {
                     borderRadius: 12,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: isSelected ? colors.primary.default : colors.surface.muted,
+                    backgroundColor: isSelected ? activeAccent : colors.surface.muted,
                   }}
                 >
                   <Ionicons
                     name={item.icon}
                     size={18}
-                    color={isSelected ? colors.primary.foreground : colors.primary.default}
+                    color={isSelected ? colors.primary.foreground : activeAccent}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <AppText
                     style={{
                       fontSize: 15,
-                      color: isSelected ? colors.primary.default : colors.text.primary,
+                      color: isSelected ? activeAccent : colors.text.primary,
                       fontWeight: isSelected ? '700' : '600',
                     }}
                   >
@@ -1283,7 +1550,7 @@ export function JournalEntryScreen() {
                   </AppText>
                 </View>
                 {isSelected ? (
-                  <Ionicons name="checkmark" size={18} color={colors.primary.default} />
+                  <Ionicons name="checkmark" size={18} color={activeAccent} />
                 ) : null}
               </TactilePressable>
             );
@@ -1291,7 +1558,7 @@ export function JournalEntryScreen() {
         </View>
       </Modal>
 
-      {/* Mood Emotion Stamp Modal (from Doop New page — B) */}
+      {/* Mood Emotion Stamp Modal */}
       <Modal
         visible={moodPickerVisible}
         onClose={() => setMoodPickerVisible(false)}
@@ -1304,7 +1571,7 @@ export function JournalEntryScreen() {
             let chipTone = colors.text.secondary;
             if (m.group === 'accent') {
               chipBg = colors.primary.subtle;
-              chipTone = colors.primary.default;
+              chipTone = activeAccent;
             } else if (m.group === 'gold') {
               chipBg = isDark ? 'rgba(176,138,79,0.22)' : '#F4EDE2';
               chipTone = isDark ? '#D2B078' : '#B08A4F';
@@ -1356,7 +1623,7 @@ export function JournalEntryScreen() {
               backgroundColor: colors.surface.muted,
             }}
           >
-            <CameraSvgIcon color={colors.primary.default} />
+            <CameraSvgIcon color={activeAccent} />
             <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
               Take photo with camera
             </AppText>
@@ -1378,7 +1645,7 @@ export function JournalEntryScreen() {
               backgroundColor: colors.surface.muted,
             }}
           >
-            <Ionicons name="images-outline" size={21} color={colors.primary.default} />
+            <Ionicons name="images-outline" size={21} color={activeAccent} />
             <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
               Choose photo or video
             </AppText>
@@ -1400,7 +1667,7 @@ export function JournalEntryScreen() {
               backgroundColor: colors.surface.muted,
             }}
           >
-            <Ionicons name="attach-outline" size={21} color={colors.primary.default} />
+            <Ionicons name="attach-outline" size={21} color={activeAccent} />
             <AppText style={{ fontSize: 14.5, fontWeight: '600', color: colors.text.primary }}>
               Attach file or document
             </AppText>
