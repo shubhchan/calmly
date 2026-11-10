@@ -245,7 +245,6 @@ export function JournalEntryScreen() {
     const doc: PageDocument = { version: 2, accentColor: activeAccent, blocks };
     journalRepository
       .update(id, {
-        content: plainTextForSearch(blocks),
         body: plainTextForSearch(blocks),
         layout: serializePageLayout({ accentColor: activeAccent, doc }),
         attachments,
@@ -509,7 +508,6 @@ export function JournalEntryScreen() {
           type: entryType,
           title: trimmedTitle,
           body: plainText,
-          content: plainText,
           favorite: isFavorite,
           attachments,
           pageStyle: paperId,
@@ -520,7 +518,6 @@ export function JournalEntryScreen() {
           type: entryType,
           title: trimmedTitle,
           body: plainText,
-          content: plainText,
           favorite: isFavorite,
           attachments,
           pageStyle: paperId,

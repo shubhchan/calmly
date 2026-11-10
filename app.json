@@ -2,6 +2,7 @@
   "expo": {
     "name": "calmly",
     "slug": "calmly",
+    "scheme": "calmly",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

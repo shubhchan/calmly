@@ -28,7 +28,16 @@ export function getWebBasePath(): string {
 }
 
 export function getLinkingPrefixes(): string[] {
-  const prefixes: string[] = [Linking.createURL('/'), 'calmly://'];
+  const prefixes: string[] = ['calmly://'];
+
+  try {
+    const expoUrl = Linking.createURL('/', { scheme: 'calmly' });
+    if (expoUrl && !prefixes.includes(expoUrl)) {
+      prefixes.push(expoUrl);
+    }
+  } catch {
+    // Standalone fallback: scheme resolution should never crash the app
+  }
 
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
     const origin = window.location.origin;
@@ -153,18 +162,18 @@ export const linking: LinkingOptions<RootStackParamList> = {
     }
     const strippedOptions = options?.screens
       ? {
-          initialRouteName: options.initialRouteName,
-          screens: options.screens,
-        }
+        initialRouteName: options.initialRouteName,
+        screens: options.screens,
+      }
       : undefined;
     return defaultGetStateFromPath(cleanPath, strippedOptions);
   },
   getPathFromState: (state, options) => {
     const strippedOptions = options?.screens
       ? {
-          initialRouteName: options.initialRouteName,
-          screens: options.screens,
-        }
+        initialRouteName: options.initialRouteName,
+        screens: options.screens,
+      }
       : undefined;
     const rawPath = defaultGetPathFromState(state, strippedOptions);
     const base = options?.path?.replace(/^\/+|\/+$/g, '');
