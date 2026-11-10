@@ -151,11 +151,22 @@ export const linking: LinkingOptions<RootStackParamList> = {
         cleanPath = match[1] || '/';
       }
     }
-    const strippedOptions = { ...options, path: undefined };
+    const strippedOptions = options?.screens
+      ? {
+          initialRouteName: options.initialRouteName,
+          screens: options.screens,
+        }
+      : undefined;
     return defaultGetStateFromPath(cleanPath, strippedOptions);
   },
   getPathFromState: (state, options) => {
-    const rawPath = defaultGetPathFromState(state, { ...options, path: undefined });
+    const strippedOptions = options?.screens
+      ? {
+          initialRouteName: options.initialRouteName,
+          screens: options.screens,
+        }
+      : undefined;
+    const rawPath = defaultGetPathFromState(state, strippedOptions);
     const base = options?.path?.replace(/^\/+|\/+$/g, '');
     if (!base) return rawPath;
     if (rawPath === '/') return `/${base}`;
