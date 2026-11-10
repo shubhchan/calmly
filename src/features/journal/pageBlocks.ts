@@ -50,6 +50,8 @@ export type PageBlock =
       strokes: SketchStroke[];
       size: BlockSize;
       breath: BlockBreath;
+      /** A locked sketch ignores touches so a finished drawing stays put. */
+      locked?: boolean;
     };
 
 export interface PageDocument {

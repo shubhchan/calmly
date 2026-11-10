@@ -1,140 +1,120 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useEvent, useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useAppTheme } from '../../theme/ThemeContext';
-import { TactilePressable } from '../interactive/TactilePressable';
+import { setAudioModeAsync } from 'expo-audio';
 import { NoteAttachment } from '../../types/attachment';
-import { formatAudioDuration, formatFileSize } from '../../utils/attachmentStorage';
+import { hapticFeedback } from '../../utils/haptics';
 
 interface VideoAttachmentCardProps {
   attachment: NoteAttachment;
-  onRemove?: () => void;
-  editable?: boolean;
+  /** Called when the viewer taps the video, so the page can show its edit buttons. */
+  onSelect?: () => void;
 }
 
-export function VideoAttachmentCard({
-  attachment,
-  onRemove,
-  editable = false,
-}: VideoAttachmentCardProps) {
-  const { colors, isDark } = useAppTheme();
+/**
+ * A video memory with no card chrome: the clip fills the block, and the page
+ * shows floating edit buttons while the clip is selected.
+ */
+export function VideoAttachmentCard({ attachment, onSelect }: VideoAttachmentCardProps) {
+  // Playback mode must be restored after recording a voice memo. Recording leaves
+  // the audio session routed to the earpiece, which makes video sound inaudible.
+  useEffect(() => {
+    setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+  }, []);
 
   const player = useVideoPlayer(attachment.uri, (p) => {
     p.loop = false;
+    p.muted = false;
+    p.volume = 1;
+    p.timeUpdateEventInterval = 0.25;
   });
 
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
+  const [currentTime, setCurrentTime] = useState(0);
+  useEventListener(player, 'timeUpdate', ({ currentTime: t }) => setCurrentTime(t));
+
+  const duration = player.duration > 0 ? player.duration : attachment.duration || 0;
+  const progress = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
+
+  const handlePress = useCallback(() => {
+    hapticFeedback.selection();
+    if (isPlaying) {
+      player.pause();
+    } else {
+      // Recover sound if a previous recording muted or rerouted playback.
+      if (player.muted) player.muted = false;
+      if (player.volume < 1) player.volume = 1;
+      player.play();
+    }
+    onSelect?.();
+  }, [isPlaying, onSelect, player]);
+
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface.default,
-          borderColor: colors.border.default,
-        },
-      ]}
-    >
-      <View style={styles.headerRow}>
-        <View style={styles.headerLeft}>
-          <Ionicons name="videocam-outline" size={18} color={colors.primary.default} />
-          <Text style={[styles.nameText, { color: colors.text.primary }]} numberOfLines={1}>
-            {attachment.name || 'Video Memory'}
-          </Text>
+    <View style={styles.wrapper}>
+      <VideoView
+        player={player}
+        style={StyleSheet.absoluteFill}
+        contentFit="contain"
+        nativeControls={false}
+        accessibilityLabel={attachment.name || 'Video memory'}
+      />
+
+      {/* Tap target: plays or pauses, and reveals the page's edit buttons. */}
+      <Pressable
+        onPress={handlePress}
+        style={StyleSheet.absoluteFill}
+        accessibilityRole="button"
+        accessibilityLabel={`${attachment.name || 'Video'}. Tap to play or pause.`}
+      />
+
+      {!isPlaying ? (
+        <View pointerEvents="none" style={styles.centerPlay}>
+          <Ionicons name="play" size={20} color="#FFFFFF" style={{ marginLeft: 2 }} />
         </View>
+      ) : null}
 
-        <View style={styles.headerRight}>
-          {attachment.duration ? (
-            <Text style={[styles.durationBadge, { color: colors.text.tertiary }]}>
-              {formatAudioDuration(attachment.duration)}
-            </Text>
-          ) : null}
-
-          {editable && onRemove ? (
-            <TactilePressable
-              onPress={onRemove}
-              hitSlop={8}
-              scaleDownTo={0.88}
-              style={[styles.removeBtn, { backgroundColor: isDark ? '#2A374A' : '#F1F5F9' }]}
-            >
-              <Ionicons name="trash-outline" size={16} color="#EB697F" />
-            </TactilePressable>
-          ) : null}
+      {isPlaying || progress > 0 ? (
+        <View pointerEvents="none" style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
         </View>
-      </View>
-
-      <View style={styles.videoWrapper}>
-        <VideoView
-          player={player}
-          style={styles.videoPlayer}
-          contentFit="cover"
-          nativeControls
-        />
-      </View>
-
-      {attachment.size ? (
-        <Text style={[styles.sizeText, { color: colors.text.tertiary }]}>
-          {formatFileSize(attachment.size)}
-        </Text>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 12,
-    marginVertical: 6,
-    overflow: 'hidden',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-    marginRight: 8,
-  },
-  nameText: {
-    fontSize: 14,
-    fontWeight: '600',
-    flex: 1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  durationBadge: {
-    fontSize: 12,
-    fontVariant: ['tabular-nums'],
-  },
-  removeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  videoWrapper: {
-    height: 190,
-    borderRadius: 14,
+  wrapper: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#000000',
   },
-  videoPlayer: {
-    width: '100%',
-    height: '100%',
+  centerPlay: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 44,
+    height: 44,
+    marginTop: -22,
+    marginLeft: -22,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
-  sizeText: {
-    fontSize: 11,
-    marginTop: 6,
-    textAlign: 'right',
+  progressTrack: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#FFFFFF',
   },
 });

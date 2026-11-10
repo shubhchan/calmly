@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { PanResponder, View, Platform, TouchableOpacity } from 'react-native';
+import { PanResponder, View, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme/ThemeContext';
@@ -10,24 +10,22 @@ import { AppText } from '../ui/AppText';
 export interface SketchPadProps {
   strokes: SketchStroke[];
   onChange: (next: SketchStroke[]) => void;
-  color?: string;
-  onColorChange?: (color: string) => void;
   accentColor?: string;
-  /** Background color of the containing paper — used for the dot ring in inline mode */
-  paperBgColor?: string;
   width?: number | string;
   height?: number;
-  zeroPad?: boolean;
-  compact?: boolean;
-  hideHeader?: boolean;
-  hideFooter?: boolean;
-  isFreeform?: boolean;
-  onClose?: () => void;
+  /** Tools appear only while the pad is selected. */
+  active?: boolean;
+  /** A tap without a drag — used to show or hide the tools. */
+  onToggleControls?: () => void;
+  /** A locked pad ignores touches, so a finished sketch cannot be disturbed. */
+  locked?: boolean;
+  onToggleLock?: (locked: boolean) => void;
   onResize?: () => void;
+  onClose?: () => void;
   accessibilityLabel?: string;
 }
 
-/** Render the undo SVG icon (circular arrow) matching Doop OTWwlveYaS */
+/** Render the undo SVG icon (circular arrow). */
 function UndoIcon({ color = '#6C7873' }: { color?: string }) {
   return (
     <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
@@ -43,7 +41,7 @@ function UndoIcon({ color = '#6C7873' }: { color?: string }) {
   );
 }
 
-/** Render the erase SVG icon (eraser) matching Doop OTWwlveYaS */
+/** Render the erase SVG icon (eraser). */
 function EraseIcon({ color = '#6C7873' }: { color?: string }) {
   return (
     <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
@@ -59,53 +57,48 @@ function EraseIcon({ color = '#6C7873' }: { color?: string }) {
   );
 }
 
+/**
+ * A sketch block on the journal page. The pad is bare paper you draw straight on;
+ * its tools float in only while the pad is selected, and disappear on their own.
+ */
 export function SketchPad({
   strokes,
   onChange,
-  color: activeColorProp,
-  onColorChange,
   accentColor,
-  paperBgColor,
   width = '100%',
-  height,
-  zeroPad = false,
-  compact = false,
-  hideHeader = false,
-  hideFooter = false,
-  isFreeform = false,
-  onClose,
+  height = 168,
+  active = false,
+  onToggleControls,
+  locked = false,
+  onToggleLock,
   onResize,
+  onClose,
   accessibilityLabel = 'Drawing pad',
 }: SketchPadProps) {
   const { colors, isDark } = useAppTheme();
   const availableInks = useMemo(() => sketchInks(isDark, accentColor), [isDark, accentColor]);
-  const [internalColor, setInternalColor] = useState(availableInks[0].color);
-
-  const currentColor = activeColorProp || internalColor;
-  const selectColor = (c: string) => {
-    setInternalColor(c);
-    onColorChange?.(c);
-  };
+  const [currentColor, setCurrentColor] = useState(availableInks[0].color);
 
   const [draft, setDraft] = useState<SketchStroke | null>(null);
   const draftRef = useRef<SketchStroke | null>(null);
+  const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const strokesRef = useRef(strokes);
   strokesRef.current = strokes;
 
   const responder = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponder: () => !locked,
+        onMoveShouldSetPanResponder: () => !locked,
         onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: (event) => {
           const point = {
             x: event.nativeEvent.locationX,
             y: event.nativeEvent.locationY,
           };
-          const stroke: SketchStroke = { color: currentColor, points: [point] };
-          draftRef.current = stroke;
-          setDraft(stroke);
+          draftRef.current = { color: currentColor, points: [point] };
+          startPointRef.current = point;
+          setDraft(draftRef.current);
         },
         onPanResponderMove: (event) => {
           const current = draftRef.current;
@@ -122,18 +115,33 @@ export function SketchPad({
         },
         onPanResponderRelease: () => {
           const current = draftRef.current;
+          const start = startPointRef.current;
           draftRef.current = null;
+          startPointRef.current = null;
           setDraft(null);
-          if (current && current.points.length > 0) {
-            onChange([...strokesRef.current, current]);
+
+          if (!current || current.points.length === 0) return;
+
+          const last = current.points[current.points.length - 1];
+          const isTap =
+            current.points.length <= 3 &&
+            !!start &&
+            Math.hypot(last.x - start.x, last.y - start.y) < 6;
+
+          // A tap means "work on this sketch", not "draw a dot".
+          if (isTap && onToggleControls) {
+            onToggleControls();
+            return;
           }
+          onChange([...strokesRef.current, current]);
         },
         onPanResponderTerminate: () => {
           draftRef.current = null;
+          startPointRef.current = null;
           setDraft(null);
         },
       }),
-    [currentColor, onChange],
+    [currentColor, onChange, onToggleControls, locked],
   );
 
   const handleUndo = () => {
@@ -149,121 +157,27 @@ export function SketchPad({
   };
 
   const visible = draft ? [...strokes, draft] : strokes;
-
-  /**
-   * Ring color behind selected ink dot.
-   * In inline (non-freeform) mode: use the paper background color so it looks like
-   * `box-shadow: 0 0 0 2px <paperBg>, 0 0 0 3.5px currentColor` from the mock.
-   * In freeform mode: use white/surface.
-   */
-  const dotRingColor = paperBgColor || (isDark ? colors.surface.default : '#FFFFFF');
+  const isEmpty = visible.length === 0;
 
   return (
     <View
       style={{
         width: width as any,
-        height: height ?? (isFreeform ? '100%' : 190),
-        borderRadius: zeroPad ? 0 : 16,
-        backgroundColor: zeroPad
-          ? 'transparent'
-          : isDark
-          ? 'rgba(26, 34, 30, 0.94)'
-          : 'rgba(255, 255, 255, 0.72)',
-        borderWidth: zeroPad ? 0 : 1,
-        borderColor: zeroPad
-          ? 'transparent'
-          : isDark
-          ? 'rgba(255,255,255,0.08)'
-          : `rgba(176,138,79,0.28)`,
-        padding: zeroPad ? 0 : compact ? 8 : 10,
-        paddingBottom: zeroPad ? 0 : compact ? 6 : 8,
+        height,
+        borderRadius: 12,
         overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
+        backgroundColor: isDark ? colors.surface.default : '#FFFFFF',
+        borderWidth: isEmpty && !active ? 1 : 0,
+        borderStyle: 'dashed',
+        borderColor: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(176,138,79,0.32)',
       }}
     >
-      {/* ── In-flow header when NOT freeform (Doop mock OTWwlveYaS) ── */}
-      {!isFreeform && !hideHeader && (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 4,
-          }}
-        >
-          <AppText
-            style={{
-              fontSize: 11,
-              fontWeight: '600',
-              letterSpacing: 0.12 * 11,
-              textTransform: 'uppercase',
-              color: accentColor ? darken(accentColor) : '#8A7550',
-            }}
-          >
-            Sketch
-          </AppText>
-
-          {/* Action icons: Undo, Erase, Resize, Close */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <TouchableOpacity
-              onPress={handleUndo}
-              hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-              accessibilityRole="button"
-              accessibilityLabel="Undo"
-              style={{ width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <UndoIcon color={colors.text.secondary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleClear}
-              hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-              accessibilityRole="button"
-              accessibilityLabel="Clear drawing"
-              style={{ width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <EraseIcon color={colors.text.secondary} />
-            </TouchableOpacity>
-            {onResize ? (
-              <TouchableOpacity
-                onPress={onResize}
-                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                accessibilityRole="button"
-                accessibilityLabel="Resize block or adjust spacing"
-                style={{ width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Ionicons name="options-outline" size={15} color={colors.text.secondary} />
-              </TouchableOpacity>
-            ) : null}
-            {onClose ? (
-              <TouchableOpacity
-                onPress={onClose}
-                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                accessibilityRole="button"
-                accessibilityLabel="Remove sketch"
-                style={{ width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Ionicons name="close" size={16} color={colors.text.secondary} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
-      )}
-
-      {/* ── Drawing Canvas Area ── */}
       <View
         {...responder.panHandlers}
         accessibilityRole="image"
         accessibilityLabel={accessibilityLabel}
         style={{
           flex: 1,
-          borderRadius: zeroPad ? 0 : 8,
-          backgroundColor: zeroPad
-            ? 'transparent'
-            : isDark
-            ? colors.surface.default
-            : '#FFFFFF',
-          borderWidth: zeroPad ? 0 : 0,
           overflow: 'hidden',
           ...(Platform.OS === 'web'
             ? ({
@@ -299,80 +213,147 @@ export function SketchPad({
         </Svg>
       </View>
 
-      {/* ── Footer with ink swatches (Doop mock OTWwlveYaS / 09dIMTqlOD) ── */}
-      {!hideFooter && (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingTop: compact ? 5 : 8,
-            borderTopWidth: zeroPad ? 0 : 1,
-            borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(26,36,32,0.08)',
-            marginTop: 2,
-          }}
-        >
-          {/* Ink color palette dots — 14×14 matching mock */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: compact ? 7 : 9 }}>
+      {isEmpty && !active && !locked ? (
+        <View pointerEvents="none" style={styles.emptyHint}>
+          <Ionicons name="pencil-outline" size={13} color={colors.text.tertiary} />
+          <AppText style={{ fontSize: 11.5, color: colors.text.tertiary }}>Tap to sketch</AppText>
+        </View>
+      ) : null}
+
+      {locked ? (
+        <View style={styles.toolRow}>
+          <TouchableOpacity
+            onPress={() => onToggleLock?.(false)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Unlock sketch"
+            style={styles.toolBtn}
+          >
+            <Ionicons name="lock-closed-outline" size={12} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      ) : active ? (
+        <>
+          <View style={styles.toolRow}>
+            {onToggleLock ? (
+              <TouchableOpacity
+                onPress={() => onToggleLock?.(true)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Lock sketch"
+                style={styles.toolBtn}
+              >
+                <Ionicons name="lock-open-outline" size={12} color="#FFFFFF" />
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              onPress={handleUndo}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Undo"
+              style={styles.toolBtn}
+            >
+              <UndoIcon color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleClear}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear drawing"
+              style={styles.toolBtn}
+            >
+              <EraseIcon color="#FFFFFF" />
+            </TouchableOpacity>
+            {onResize ? (
+              <TouchableOpacity
+                onPress={onResize}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Resize block or adjust spacing"
+                style={styles.toolBtn}
+              >
+                <Ionicons name="options-outline" size={12} color="#FFFFFF" />
+              </TouchableOpacity>
+            ) : null}
+            {onClose ? (
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Remove sketch"
+                style={styles.toolBtn}
+              >
+                <Ionicons name="close" size={12} color="#FFFFFF" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          <View style={styles.inkRow}>
             {availableInks.map((ink) => {
               const isSelected = ink.color.toLowerCase() === currentColor.toLowerCase();
               return (
                 <TouchableOpacity
                   key={ink.id}
-                  onPress={() => selectColor(ink.color)}
+                  onPress={() => setCurrentColor(ink.color)}
                   hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
                   accessibilityRole="button"
                   accessibilityLabel={`Color ${ink.id}`}
                   style={{
-                    width: compact ? 12 : 14,
-                    height: compact ? 12 : 14,
+                    width: 13,
+                    height: 13,
                     borderRadius: 999,
                     backgroundColor: ink.color,
-                    // Selected ring: 2px paper-bg gap, then 1.5px accent ring — matching mock CSS
-                    borderWidth: isSelected ? 3.5 : 0,
-                    borderColor: isSelected ? ink.color : 'transparent',
-                    shadowColor: isSelected ? ink.color : '#000',
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: isSelected ? 1 : 0,
-                    shadowRadius: 0,
-                    // Web: use outline for exact ring effect
-                    ...(Platform.OS === 'web' && isSelected
-                      ? ({
-                          outline: `2px solid ${dotRingColor}`,
-                          outlineOffset: '1px',
-                          boxShadow: `0 0 0 3.5px ${ink.color}`,
-                        } as any)
-                      : {}),
+                    borderWidth: isSelected ? 2 : 0,
+                    borderColor: '#FFFFFF',
                   }}
                 />
               );
             })}
           </View>
-
-          {/* "Undo · Clean" text matching freeform mock, plain "Undo" for inline */}
-          <TouchableOpacity
-            onPress={handleUndo}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessibilityRole="button"
-            accessibilityLabel="Undo"
-          >
-            <AppText
-              style={{ fontSize: compact ? 10 : 11.5, color: colors.text.secondary }}
-            >
-              {isFreeform ? 'Undo · Clean' : 'Undo'}
-            </AppText>
-          </TouchableOpacity>
-        </View>
-      )}
+        </>
+      ) : null}
     </View>
   );
 }
 
-/** Slightly darken a hex color for the "Sketch" label in inline mode */
-function darken(hex: string): string {
-  const clean = hex.replace('#', '');
-  const r = Math.max(0, parseInt(clean.substring(0, 2), 16) - 20);
-  const g = Math.max(0, parseInt(clean.substring(2, 4), 16) - 15);
-  const b = Math.max(0, parseInt(clean.substring(4, 6), 16) - 10);
-  return `rgb(${r},${g},${b})`;
-}
+const styles = StyleSheet.create({
+  emptyHint: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  toolRow: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  toolBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(26, 36, 32, 0.65)',
+  },
+  inkRow: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(26, 36, 32, 0.55)',
+  },
+});

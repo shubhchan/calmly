@@ -8,6 +8,7 @@ import { habitRepository } from '../../database/repositories/habitRepository';
 import { journalRepository } from '../../database/repositories/journalRepository';
 import { moodRepository } from '../../database/repositories/moodRepository';
 import { settingsRepository, type AppSettings } from '../../database/repositories/settingsRepository';
+import { getDailyPrompt } from '../../utils/dailyPrompt';
 import Habit from '../../database/models/Habit';
 import { useAppTheme } from '../../theme/ThemeContext';
 import { withAlpha } from '../../theme/tokens/colors';
@@ -148,6 +149,8 @@ export function HomeScreen() {
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
   })();
+
+  const thoughtOfTheDay = getDailyPrompt();
 
   const dateLabel = format(new Date(), 'EEEE, MMMM d');
   const recentPage = journals?.[0];
@@ -445,9 +448,9 @@ export function HomeScreen() {
                 <AppText
                   variant="display"
                   color={isDark ? colors.text.primary : colors.primary.foreground}
-                  style={{ fontSize: isWide ? 36 : 28, lineHeight: isWide ? 44 : 38, marginTop: 10, marginBottom: 8, maxWidth: 300 }}
+                  style={{ fontSize: isWide ? 36 : 28, lineHeight: isWide ? 44 : 30, marginTop: 10, marginBottom: 8, maxWidth: 320 }}
                 >
-                  A quiet minute
+                  {thoughtOfTheDay}
                 </AppText>
                 <AppText
                   variant="bodySmall"

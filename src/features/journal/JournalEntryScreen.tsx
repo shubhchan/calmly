@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   ScrollView,
   TextInput,
   View,
@@ -423,6 +424,7 @@ export function JournalEntryScreen() {
 
   const handleInsertKind = async (kind: InsertKind) => {
     setInsertOpen(false);
+    Keyboard.dismiss();
     if (kind === 'prompt') {
       const prompt = getDailyPrompt();
       if (!prompt) return;
@@ -453,6 +455,9 @@ export function JournalEntryScreen() {
 
   const openInsertAtCursor = () => {
     hapticFeedback.light();
+    // Dismiss the keyboard first: on Android it would cover the sheet and hide
+    // the sketch, photo and prompt choices.
+    Keyboard.dismiss();
     setEditingBlockId(null);
     setInsertOpen(true);
   };
@@ -461,6 +466,7 @@ export function JournalEntryScreen() {
     const b = blocks.find((x) => x.id === id);
     if (!b || b.kind === 'text') return;
     hapticFeedback.light();
+    Keyboard.dismiss();
     setEditingBlockId(id);
     setInsertSize(b.size);
     setInsertBreath(b.breath);
@@ -571,7 +577,7 @@ export function JournalEntryScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <View style={{ flex: 1, paddingTop: topPad }}>
+      <View style={{ flex: 1, paddingTop: topPad, paddingBottom: insets.bottom }}>
         {/* Header: Cancel | New page / Your page | Save */}
         <View
           style={{
@@ -730,7 +736,7 @@ export function JournalEntryScreen() {
               minHeight: 800,
               paddingHorizontal: 18,
               paddingVertical: 14,
-              paddingBottom: 40,
+              paddingBottom: 60,
             }}
             keyboardShouldPersistTaps="handled"
             scrollEnabled={true}
@@ -748,7 +754,6 @@ export function JournalEntryScreen() {
                     ink={ink}
                     inkSoft={inkSoft}
                     accent={textAccent}
-                    paperBg={currentPaperColor}
                     onChangeText={(id, text) =>
                       setBlocks((prev) =>
                         prev.map((b) => (b.id === id && b.kind === 'text' ? { ...b, text } : b)),
@@ -759,12 +764,16 @@ export function JournalEntryScreen() {
                         prev.map((b) => (b.id === id && b.kind === 'sketch' ? { ...b, strokes } : b)),
                       )
                     }
+                    onChangeSketchLock={(id, locked) =>
+                      setBlocks((prev) =>
+                        prev.map((b) => (b.id === id && b.kind === 'sketch' ? { ...b, locked } : b)),
+                      )
+                    }
                     onCursor={(c) => {
                       cursorRef.current = c;
                     }}
                     onLongPressMedia={editBlock}
                     onRemoveMedia={removeMedia}
-                    onLongPressMargin={openInsertAtCursor}
                   />
 
                   {attaching ? (
@@ -794,7 +803,7 @@ export function JournalEntryScreen() {
           </ScrollView>
         </View>
 
-        {/* Toolbar */}
+        {/* Toolbar: insert, mood, prompt, and page style in one row */}
         <View
           style={{
             flexDirection: 'row',
@@ -802,7 +811,7 @@ export function JournalEntryScreen() {
             justifyContent: 'space-between',
             paddingHorizontal: 24,
             paddingTop: 12,
-            paddingBottom: 6,
+            paddingBottom: 14,
             borderTopWidth: 1,
             borderTopColor: colors.border.subtle,
           }}
@@ -829,61 +838,52 @@ export function JournalEntryScreen() {
             >
               <PromptSvgIcon color={colors.text.secondary} />
             </TactilePressable>
+
+            <TactilePressable
+              onPress={() => {
+                hapticFeedback.light();
+                setPaperModalVisible(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Page type: ${currentPaper.name}. Change paper and accent.`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                paddingHorizontal: 12,
+                height: 32,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.border.subtle,
+              }}
+            >
+              <View
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 6,
+                  backgroundColor: currentPaperColor,
+                  borderWidth: 1,
+                  borderColor: colors.border.default,
+                }}
+              />
+              <View
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 6,
+                  backgroundColor: activeAccent,
+                }}
+              />
+              <AppText style={{ fontSize: 12.5, fontWeight: '600', color: colors.text.secondary }}>
+                {currentPaper.name}
+              </AppText>
+            </TactilePressable>
           </View>
+
           <AppText style={{ fontSize: 12, color: colors.text.tertiary }}>
             {wordCount} {wordCount === 1 ? 'word' : 'words'}
           </AppText>
-        </View>
-
-        {/* Footer with page type / paper style chip */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingBottom: 14,
-          }}
-        >
-          <TactilePressable
-            onPress={() => {
-              hapticFeedback.light();
-              setPaperModalVisible(true);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`Page type: ${currentPaper.name}. Change paper and accent.`}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              paddingHorizontal: 12,
-              height: 32,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: colors.border.subtle,
-            }}
-          >
-            <View
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: currentPaperColor,
-                borderWidth: 1,
-                borderColor: colors.border.default,
-              }}
-            />
-            <View
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: activeAccent,
-              }}
-            />
-            <AppText style={{ fontSize: 12.5, fontWeight: '600', color: colors.text.secondary }}>
-              {currentPaper.name}
-            </AppText>
-          </TactilePressable>
         </View>
       </View>
 

@@ -612,7 +612,8 @@ export function AppNavigator() {
         // Finger-tracking paging is for touch layouts only. A pushed page keeps
         // its own horizontal gestures and native swipe-back.
         swipeEnabled: !usesDesktopNav && (route.state?.index ?? 0) === 0,
-        animationEnabled: !usesDesktopNav,
+        // Nav bar taps switch instantly — no pager slide between main screens.
+        animationEnabled: false,
         sceneStyle: usesDesktopNav ? { paddingLeft: DESKTOP_RAIL_WIDTH } : undefined,
       }),
     [usesDesktopNav],
