@@ -23,7 +23,14 @@
       html,
       body {
         height: 100%;
-        background-color: #F8F6F1;
+        background-color: #F4F5F1;
+      }
+      /* Match the splash on dark systems before JS paints. */
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background-color: #0F1513;
+        }
       }
       /* Disable body scrolling when using ScrollView */
       body {

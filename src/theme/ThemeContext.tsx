@@ -48,7 +48,12 @@ export function supportsDynamicColors(): boolean {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [theme, setThemeState] = useState<ThemeMode>('system');
+  // Seed from storage synchronously so the boot splash and the very first
+  // frame already use the saved app theme, not a system-theme guess.
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    const saved = Storage.getString(THEME_STORAGE_KEY);
+    return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
+  });
   const [accent, setAccentState] = useState<AccentColor>(DEFAULT_ACCENT);
   /** Whether wallpaper-derived colors override the accent. Android 12+ only. */
   const [dynamicColors, setDynamicColorsState] = useState(supportsDynamicColors());

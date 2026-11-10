@@ -72,6 +72,19 @@
         }
       ],
       "expo-video",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F4F5F1",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0F1513",
+            "image": "./assets/splash-icon-dark.png"
+          }
+        }
+      ],
       "./plugins/withAppOptimization.js"
     ]
   }

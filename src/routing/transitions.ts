@@ -46,18 +46,3 @@ export function immersiveTransition(reducedMotion: boolean): NativeStackNavigati
     animation: reducedMotion ? 'none' : 'fade',
   };
 }
-
-/**
- * Tab switches: instant swap.
- *
- * A scene cross-fade here dims BOTH pages over the container background and
- * fights the native stack transition, which reads as a flash. Instead the new
- * page paints immediately — opaque and themed, with its skeletons already in
- * place.
- */
-export function tabTransition() {
-  return {
-    headerShown: false,
-    animation: 'none' as const,
-  };
-}

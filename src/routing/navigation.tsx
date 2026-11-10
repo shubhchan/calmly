@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { createMaterialTopTabNavigator, MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { StackActions } from '@react-navigation/native';
 import Animated, {
   useSharedValue,
@@ -58,10 +58,10 @@ import { DesignSystemScreen } from '../design-system/DesignSystemScreen';
 import { BrandedLoader } from '../components/interactive/LoadingState';
 import { useAppReducedMotion } from '../theme/motion';
 import { motion } from '../theme/tokens';
-import { pushTransition, modalTransition, immersiveTransition, tabTransition } from './transitions';
+import { pushTransition, modalTransition, immersiveTransition } from './transitions';
 import { useResponsive } from '../theme/responsive';
 
-const Tab = createBottomTabNavigator<TabParamList>();
+const Tab = createMaterialTopTabNavigator<TabParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 /**
@@ -224,7 +224,7 @@ function tabIcon(routeName: keyof TabParamList, focused: boolean): TabIconName {
 interface AnimatedTabItemProps {
   route: any;
   isFocused: boolean;
-  navigation: BottomTabBarProps['navigation'];
+  navigation: MaterialTopTabBarProps['navigation'];
   colors: any;
 }
 
@@ -403,8 +403,12 @@ const DesktopRailItem = React.memo(function DesktopRailItem({
  * Desktop navigation: a quiet left rail with the wordmark, the same five
  * destinations, and nothing else. Content keeps the full remaining width.
  */
-function DesktopTabRail({ state, navigation, insets }: BottomTabBarProps) {
+function DesktopTabRail({
+  state,
+  navigation,
+}: Pick<MaterialTopTabBarProps, 'state' | 'navigation'>) {
   const colors = useAppTheme().colors;
+  const insets = useSafeAreaInsets();
 
   return (
     <View
@@ -445,6 +449,13 @@ function DesktopTabRail({ state, navigation, insets }: BottomTabBarProps) {
 }
 
 const railStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
   shell: {
     width: 248,
     height: '100%',
@@ -497,12 +508,17 @@ const railStyles = StyleSheet.create({
  * Flat, quiet tab bar. A single surface with a hairline rule, no blur and no
  * shadow — contrast does the separating.
  */
-function CustomTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
+function CustomTabBar({ state, navigation }: MaterialTopTabBarProps) {
   const colors = useAppTheme().colors;
   const { usesDesktopNav } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   if (usesDesktopNav) {
-    return <DesktopTabRail state={state} descriptors={descriptors} navigation={navigation} insets={insets} />;
+    return (
+      <View style={railStyles.overlay}>
+        <DesktopTabRail state={state} navigation={navigation} />
+      </View>
+    );
   }
 
   const bottomInset = insets?.bottom ?? 0;
@@ -575,6 +591,9 @@ const tabBarStyles = StyleSheet.create({
   },
 });
 
+/** Width of the desktop rail. Scenes are inset by the same amount. */
+const DESKTOP_RAIL_WIDTH = 248;
+
 export function AppNavigator() {
   useRenderLog('app-navigator-render');
   const { usesDesktopNav } = useResponsive();
@@ -582,15 +601,48 @@ export function AppNavigator() {
     bootLog('app-navigator-mounted');
   }, []);
 
+  const screenOptions = useMemo(
+    () =>
+      ({ route }: { route: any }) => ({
+        headerShown: false,
+        // Match the previous bottom-tabs laziness: a tab mounts on first visit,
+        // but the page on each side stays ready so a swipe reveals real content.
+        lazy: true,
+        lazyPreloadDistance: 1,
+        // Finger-tracking paging is for touch layouts only. A pushed page keeps
+        // its own horizontal gestures and native swipe-back.
+        swipeEnabled: !usesDesktopNav && (route.state?.index ?? 0) === 0,
+        animationEnabled: !usesDesktopNav,
+        sceneStyle: usesDesktopNav ? { paddingLeft: DESKTOP_RAIL_WIDTH } : undefined,
+      }),
+    [usesDesktopNav],
+  );
+
+  const screenListeners = useMemo(
+    () =>
+      ({ route, navigation }: any) => ({
+        blur: () => {
+          // Stands in for bottom-tabs' popToTopOnBlur: leaving a tab returns it
+          // to its first screen, so the bar never stays hidden on return.
+          const tabRoute = navigation
+            .getState()
+            .routes.find((r: any) => r.key === route.key);
+          const nested = tabRoute?.state;
+          if (nested && (nested.index ?? 0) > 0) {
+            navigation.dispatch({ ...StackActions.popToTop(), target: nested.key });
+          }
+        },
+      }),
+    [],
+  );
+
   return (
     <Tab.Navigator
       initialRouteName="Home"
       tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{
-        ...tabTransition(),
-        popToTopOnBlur: true,
-        tabBarPosition: usesDesktopNav ? 'left' : 'bottom',
-      }}
+      tabBarPosition="bottom"
+      screenOptions={screenOptions}
+      screenListeners={screenListeners}
     >
       <Tab.Screen name="Home" component={GuardedHomeStack} />
       <Tab.Screen name="Calm" component={GuardedCalmStack} />
